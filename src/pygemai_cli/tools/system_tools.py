@@ -36,25 +36,29 @@ def list_directory(path: str = ".") -> str:
         return f"Unexpected error while listing path '{path}': {e}"
 
 
-def _get_shell_args() -> dict:
+def _get_shell_args(command: str) -> dict:
     """
-    Returns the appropriate subprocess keyword arguments for the current OS.
+    Returns the appropriate subprocess keyword arguments for the current OS,
+    including a potentially rewritten 'args' key for the command itself.
 
-    Windows: Routes through PowerShell (pwsh or powershell.exe) for consistent
-             behavior with Unix-style commands. Falls back to cmd.exe if
-             PowerShell is not found.
+    Windows: Routes through PowerShell (pwsh or powershell.exe) by building
+             an explicit argument list [pwsh, '-Command', command] with
+             shell=False. This avoids the OS splitting paths with spaces
+             (e.g. 'C:\\Program Files\\PowerShell\\7\\pwsh.exe').
+             Falls back to cmd.exe via shell=True if PowerShell is absent.
     Unix:    Uses the default /bin/sh behavior via shell=True.
     """
     if platform.system() != "Windows":
-        return {"shell": True}
+        return {"args": command, "shell": True}
 
     # Prefer pwsh (PowerShell 7+) over legacy powershell.exe
     pwsh = shutil.which("pwsh") or shutil.which("powershell")
     if pwsh:
-        return {"executable": pwsh, "shell": True}
+        # Build explicit arg list so subprocess never splits the executable path
+        return {"args": [pwsh, "-Command", command], "shell": False}
 
     # Absolute fallback — cmd.exe, which is always present on Windows
-    return {"shell": True}
+    return {"args": command, "shell": True}
 
 
 def execute_bash(command: str) -> str:
@@ -75,9 +79,10 @@ def execute_bash(command: str) -> str:
         The output of the executed command or a failure message if the command crashes or isn't found.
     """
     try:
-        shell_kwargs = _get_shell_args()
+        shell_kwargs = _get_shell_args(command)
+        run_args = shell_kwargs.pop("args")
         result = subprocess.run(
-            command,
+            run_args,
             capture_output=True,
             text=True,
             check=False,           # Exit codes handled manually to avoid crashing the agentic loop

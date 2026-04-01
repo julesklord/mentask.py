@@ -49,19 +49,17 @@ class TestListDirectory:
 
 class TestGetShellArgs:
     def test_returns_dict(self):
-        result = _get_shell_args()
+        result = _get_shell_args("echo test")
         assert isinstance(result, dict)
 
-    def test_always_has_shell_true(self):
-        result = _get_shell_args()
-        assert result.get("shell") is True
+    def test_always_has_shell_key(self):
+        result = _get_shell_args("echo test")
+        assert "shell" in result
 
     @pytest.mark.skipif(platform.system() != "Windows", reason="Windows-only test")
-    def test_windows_has_executable(self):
-        result = _get_shell_args()
-        # On Windows, should have an executable key pointing to PowerShell
-        # (or at minimum, shell=True for cmd.exe fallback)
-        assert "shell" in result
+    def test_windows_has_args_key(self):
+        result = _get_shell_args("echo test")
+        assert "args" in result
 
 
 class TestExecuteBash:
@@ -95,7 +93,7 @@ class TestExecuteBash:
 
     def test_multiline_output(self):
         if platform.system() == "Windows":
-            result = execute_bash("echo line1 & echo line2")
+            result = execute_bash("echo line1; echo line2")
         else:
             result = execute_bash("echo line1 && echo line2")
         assert "line1" in result

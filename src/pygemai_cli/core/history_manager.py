@@ -17,6 +17,28 @@ def _get_history_dir() -> str:
 MAX_CONTEXT_WINDOW = 20
 
 
+def _safe_dict_cast(obj) -> dict:
+    """
+    Safely converts protobuf MapComposite / repeated container objects
+    into plain Python dicts. Falls back gracefully if the object resists
+    standard dict() conversion (common with deeply nested SDK types).
+    """
+    if obj is None:
+        return {}
+    if isinstance(obj, dict):
+        return obj
+    # MapComposite and similar protobuf wrappers support .items()
+    try:
+        return {k: v for k, v in obj.items()}
+    except (AttributeError, TypeError):
+        pass
+    # Last resort: plain cast — may raise on exotic types
+    try:
+        return dict(obj)
+    except Exception:
+        return {"__raw__": repr(obj)}
+
+
 class HistoryManager:
     """
     Handles persistent storage and retrieval of chat sessions.
@@ -46,14 +68,14 @@ class HistoryManager:
                 parts_list.append({
                     "function_call": {
                         "name": part.function_call.name,
-                        "args": dict(part.function_call.args or {}),
+                        "args": _safe_dict_cast(part.function_call.args),
                     }
                 })
             elif part.function_response:
                 parts_list.append({
                     "function_response": {
                         "name": part.function_response.name,
-                        "response": dict(part.function_response.response or {}),
+                        "response": _safe_dict_cast(part.function_response.response),
                     }
                 })
         return {"role": content.role, "parts": parts_list}

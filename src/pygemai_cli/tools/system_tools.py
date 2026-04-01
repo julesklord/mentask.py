@@ -1,15 +1,17 @@
 import os
+import platform
 import subprocess
-from typing import List
+import shutil
+
 
 def list_directory(path: str = ".") -> str:
     """
     Lists all files and folders inside a specific directory on the host system.
     Useful for exploring the current working environment, finding code or other resources.
-    
+
     Args:
         path: The absolute or relative path of the directory to list. Empty defaults to the current directory.
-        
+
     Returns:
         A formatted string with the found items or an error message if the path is invalid.
     """
@@ -17,14 +19,14 @@ def list_directory(path: str = ".") -> str:
         elements = os.listdir(path)
         if not elements:
             return f"The directory '{path}' is empty."
-        
+
         listing = [f"Directory: {path}"]
         listing.append("Items:")
         for item in sorted(elements):
             full_path = os.path.join(path, item)
             item_type = "📁" if os.path.isdir(full_path) else "📄"
             listing.append(f"- {item_type} {item}")
-            
+
         return "\n".join(listing)
     except FileNotFoundError:
         return f"Error: The path '{path}' does not exist."
@@ -34,29 +36,53 @@ def list_directory(path: str = ".") -> str:
         return f"Unexpected error while listing path '{path}': {e}"
 
 
+def _get_shell_args() -> dict:
+    """
+    Returns the appropriate subprocess keyword arguments for the current OS.
+
+    Windows: Routes through PowerShell (pwsh or powershell.exe) for consistent
+             behavior with Unix-style commands. Falls back to cmd.exe if
+             PowerShell is not found.
+    Unix:    Uses the default /bin/sh behavior via shell=True.
+    """
+    if platform.system() != "Windows":
+        return {"shell": True}
+
+    # Prefer pwsh (PowerShell 7+) over legacy powershell.exe
+    pwsh = shutil.which("pwsh") or shutil.which("powershell")
+    if pwsh:
+        return {"executable": pwsh, "shell": True}
+
+    # Absolute fallback — cmd.exe, which is always present on Windows
+    return {"shell": True}
+
+
 def execute_bash(command: str) -> str:
     """
-    Executes a shell command (bash or cmd), captures its standard output (stdout) and errors (stderr), 
+    Executes a shell command, captures its standard output (stdout) and errors (stderr),
     and returns them as text.
-    
+
+    On Windows the command is explicitly routed through PowerShell (if available) so that
+    commands like `ls`, `cat`, `grep` behave consistently across platforms.
+
     WARNING: Use primarily for safe script executions, automated testing,
     git status checks, version checks, or compilations.
-    
+
     Args:
         command: The exact command to execute in the local user's terminal.
-        
+
     Returns:
         The output of the executed command or a failure message if the command crashes or isn't found.
     """
     try:
-        # shell=True allows literal command execution (e.g., supporting Pipes, 'cd')
+        shell_kwargs = _get_shell_args()
         result = subprocess.run(
             command,
-            shell=True,
             capture_output=True,
             text=True,
             check=False,           # Exit codes handled manually to avoid crashing the agentic loop
-            timeout=60             # Safety cap: prevents a hung command from locking the CLI forever
+            timeout=60,            # Safety cap: prevents a hung command from locking the CLI forever
+            **shell_kwargs,
         )
 
         output = ""

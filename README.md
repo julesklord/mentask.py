@@ -1,61 +1,64 @@
-# PyGemAi v1.3.0 (Beta)
+# PyGemAi v2.0 (Beta)
 
-PyGemAi es un potente cliente de línea de comandos (CLI) para interactuar con los modelos de inteligencia artificial Google Gemini. Diseñado para la simplicidad y la eficiencia, ofrece una experiencia de chat rica y personalizable directamente desde tu terminal.
+PyGemAi is a powerful, autonomous command-line interface (CLI) client for interacting with Google's Gemini AI models. Designed for terminal-based development, it now comes equipped with agentic tools that allow it to read, write, and execute commands directly on your machine.
 
 ![PyGemAi Logo](docs/PyGemAi.webp)
 
-## ✨ Características Principales
+## ✨ Key Features (v2.0 Redesign)
 
-*   **⚡ Arquitectura Modular (NUEVO v1.3.0):** Código reestructurado para máxima estabilidad y facilidad de desarrollo.
-*   **🏠 Configuración Centralizada:** Todos tus ajustes y llaves API se guardan en `~/.pygemai/` (Carpeta de usuario).
-*   **🔐 Seguridad Reforzada:** Almacenamiento seguro de llaves API con encriptación PBKDF2 + Fernet.
-*   **🎨 Temas Personalizables:** Soporte para múltiples esquemas de colores (Cyberpunk, Matrix, Dracula, etc.).
-*   **👤 Gestión de Perfiles:** Crea perfiles específicos con diferentes modelos, prompts del sistema y niveles de seguridad.
-*   **📚 Historial de Chat:** Guardado automático de conversaciones por modelo.
-*   **🌈 Renderizado Markdown:** Visualización fluida de código, listas y formato de texto en el terminal.
+*   **⚡ Autonomous Agentic Engine:** PyGemAi integrates natively with `google-genai>=0.2.0`, enabling multi-step reasoning, filesystem exploration (`list_directory`, `read_file`), and autonomous actions (`edit_file`, `execute_bash`).
+*   **🛡️ Human-in-the-Loop Safety:** A built-in guardrail system prompts for user confirmation before executing potentially destructive actions like modifying files or running bash scripts. Use `/mode auto` if you trust the model completely, or `/mode manual` to explicitly approve every action. Mandatory `*.bkp` files are generated for all edits.
+*   **🏠 Centralized Configuration:** Easily manage settings via `~/.pygemai/settings.json`.
+*   **📚 Smart Context Windows:** Sessions are persisted automatically per model (`~/.pygemai/history/`). Loads old chat logs utilizing dynamic token "Rolling Windows" to conserve API costs.
+*   **🌈 Interactive Markdown:** Rich terminal rendering with real-time UI streaming for code blocks, tables, and standard outputs.
 
-## 🚀 Instalación Rápida
+## 🚀 Quick Installation
 
-### Prerrequisitos
-*   Python 3.8 o superior.
-*   Una Google API Key (Consíguela en [Google AI Studio](https://aistudio.google.com/)).
+### Prerequisites
+*   Python 3.8 or higher.
+*   A Google API Key (Get yours at [Google AI Studio](https://aistudio.google.com/)).
 
-### Desde el repositorio
+### Install for Development
 ```bash
 git clone https://github.com/julesklord/PyGemAi.git
 cd PyGemAi
-pip install .
-```
-
-O para desarrollo:
-```bash
+# Install development dependencies and the cli globally
 pip install -e ".[dev]"
 ```
 
-## 📖 Uso Básico
+## 📖 Basic Usage
 
-Solo escribe el comando principal para iniciar:
+Launch the interactive assistant by running:
 ```bash
 pygemai
 ```
 
-### Comandos de teclado en el chat:
-*   `salir`, `exit`, `quit`: Finaliza la sesión actual.
-*   `Ctrl+C`: Interrumpe la generación o sale del programa.
+### In-Chat Slash Commands:
+*   `/model [model_name]`: Switch the active generation model seamlessly (e.g., `/model gemini-2.5-flash`). Run `/model` alone to see all available models for your API key.
+*   `/mode [auto|manual]`: Toggle safety prompt blocks for CLI/filesystem side-effects.
+*   `/history list`: Browse automatically saved past sessions.
+*   `/history load [id]`: Reload an old context.
+*   `/history delete [id]`: Remove specific conversations.
+*   `/clear`: Wipe the current working context for a fresh slate without losing saved disk history.
+*   `/help`: View the full command sheet.
 
-## 🛠️ Desarrollo y Pruebas
+*   `exit`, `quit`: Close the CLI.
+*   `Ctrl+C`: Interrupt generation or forcefully close the program.
 
-Si deseas contribuir o ejecutar las pruebas unitarias:
+## 🛠️ Development & Testing
+
+Since PyGemAi directly manipulates your filesystem during development requests, it is strongly recommended to isolate dependencies properly or run it in a container if working on highly sensitive tasks.
+
 ```bash
-# Instalar dependencias de desarrollo
+# Install dependencies including testing tools
 pip install -e ".[dev]"
 
-# Ejecutar tests
-pytest
+# Run test suite
+pytest tests/
 ```
 
-## 📝 Licencia
-Este proyecto está bajo la licencia **GNU General Public License v3 (GPLv3)**. Consulta el archivo `LICENSE` para más detalles.
+## 📝 License
+This project is licensed under the **GNU General Public License v3 (GPLv3)**. Please review the `LICENSE` file for details.
 
 ---
-Hecho con ❤️ por [julesklord](mailto:julioglez.93@gmail.com)
+Built with ❤️ by [julesklord](mailto:julioglez.93@gmail.com)

@@ -3,15 +3,15 @@ requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "PyGemAi"  # 
+name = "PyGemAi"
 version = "2.0.0-dev2"
-description="Chatbot CLI para Google Gemini con gestión de API Keys, historial y selección de modelos."
+description = "Autonomous AI coding agent CLI powered by Google Gemini with agentic filesystem tools."
 readme = "README.md"
 authors = [{ name = "julesklord", email = "julioglez@gmail.com" }]
 license = { file = "LICENSE" }
 classifiers = [
     "Development Status :: 4 - Beta",
-    "Intended Audience :: End Users/Desktop",
+    "Intended Audience :: Developers",
     "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.8",
@@ -19,9 +19,10 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Operating System :: OS Independent",
     "Environment :: Console",
-    "Topic :: Communications :: Chat",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Utilities",
 ]
@@ -34,13 +35,28 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0.0",
+    "ruff>=0.4.0",
     "build",
     "twine",
+    "tox>=4.0.0",
 ]
-# Esto es NUEVO y esencial:
+
 [project.scripts]
 pygemai = "pygemai_cli.main:run_chatbot"
 
 [project.urls]
 Homepage = "https://github.com/julesklord/PyGemAi"
-Documentation = "https://github.com/julesklord/PyGemAi/blob/main/GUIDE_OF_USE.md"
+Documentation = "https://github.com/julesklord/PyGemAi/blob/main/README.md"
+Changelog = "https://github.com/julesklord/PyGemAi/blob/main/CHANGELOG.md"
+
+[tool.ruff]
+target-version = "py38"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]

@@ -1,6 +1,7 @@
 import sys
 import os
 import platform
+import logging
 from typing import List, Union
 
 from google import genai
@@ -11,10 +12,21 @@ from rich.prompt import Confirm
 from rich.table import Table
 
 from ..ui.console import console
-from ..core.config_manager import ConfigManager
+from ..core.config_manager import ConfigManager, get_config_dir
 from ..core.history_manager import HistoryManager
 from ..tools.system_tools import list_directory, execute_bash
 from ..tools.file_tools import read_file, edit_file
+
+# Debug logger — writes to ~/.pygemai/pygemai.log so silent SDK failures
+# leave a trace without crashing the streaming UI.
+_log_path = os.path.join(str(get_config_dir()), "pygemai.log")
+logging.basicConfig(
+    filename=_log_path,
+    level=logging.DEBUG,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+_logger = logging.getLogger("pygemai")
 
 
 class QueryEngine:
@@ -168,8 +180,8 @@ class QueryEngine:
                             if key not in _seen_calls:
                                 _seen_calls.add(key)
                                 function_calls_received.append(fc)
-                    except Exception:
-                        pass
+                    except Exception as _sdk_err:
+                        _logger.debug("SDK function_calls property failed on chunk: %s", _sdk_err)
 
                     # --- Fallback detection: direct candidate parts traversal ---
                     # Some SDK versions only expose function_calls on the final
@@ -185,8 +197,8 @@ class QueryEngine:
                                     if key not in _seen_calls:
                                         _seen_calls.add(key)
                                         function_calls_received.append(fc)
-                    except Exception:
-                        pass
+                    except Exception as _candidate_err:
+                        _logger.debug("Candidate parts fallback failed on chunk: %s", _candidate_err)
 
             console.print("")
 

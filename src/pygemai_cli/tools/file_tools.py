@@ -79,9 +79,13 @@ def edit_file(path: str, find_text: str, replace_text: str) -> str:
         with open(path, 'r', encoding='utf-8') as f:
             content = f.read()
             
-        # Target must exist exactly
-        if find_text and find_text not in content:
-            return f"Error: The exact block 'find_text' was not found in '{path}'. Remember that indentation and inner blank lines must match perfectly. Did you hallucinate the exact spacing? Please use read_file to check the exact content first."
+        # Guard: empty find_text on an existing file would corrupt every character via str.replace behavior
+        if not find_text:
+            return f"Error: 'find_text' cannot be empty when the file '{path}' already exists. Provide the exact block to replace, or delete the file first."
+            
+        # Target must exist exactly in the file
+        if find_text not in content:
+            return f"Error: The exact block 'find_text' was not found in '{path}'. Remember that indentation and inner blank lines must match perfectly. Use read_file to verify the exact content first."
             
         # Create a backup before proceeding (simple suffix logic)
         backup_path = f"{path}.bkp"

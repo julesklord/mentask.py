@@ -55,18 +55,21 @@ def execute_bash(command: str) -> str:
             shell=True,
             capture_output=True,
             text=True,
-            check=False # We handle exit codes manually to prevent Python loop crashes
+            check=False,           # Exit codes handled manually to avoid crashing the agentic loop
+            timeout=60             # Safety cap: prevents a hung command from locking the CLI forever
         )
-        
+
         output = ""
         if result.stdout:
             output += f"STDOUT:\n{result.stdout}\n"
         if result.stderr:
             output += f"STDERR:\n{result.stderr}\n"
-            
+
         if not output:
             output = "Command executed successfully. (No output printed on screen)"
-            
+
         return output.strip()
+    except subprocess.TimeoutExpired:
+        return f"Error: Command '{command}' timed out after 60 seconds and was terminated."
     except Exception as e:
         return f"Critical error attempting to execute command '{command}': {e}"

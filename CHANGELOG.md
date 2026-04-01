@@ -1,4 +1,4 @@
-# Changelog - PyGemAi
+# Changelog - askgem
 
 ## [2.0.0-dev2] - 2026-04-01
 
@@ -10,11 +10,11 @@
 
 ### Arquitectura Modular Renovada
 - **Desacoplamiento:** Estructura limpia y orientada a capas: `core/`, `engine/`, `tools/` y `ui/`.
-- **Configuración JSON Pura:** `ConfigManager` actualizado. Todas las configuraciones (`~/.pygemai/settings.json`) ahora son manejadas con simpleza y persistencia automática.
+- **Configuración JSON Pura:** `ConfigManager` actualizado. Todas las configuraciones (`~/.askgem/settings.json`) ahora son manejadas con simpleza y persistencia automática.
 - **Limpieza Total:** Eliminación completa de features obsoletos de la v1.x (sistema de cifrado con `cryptography`, temas rígidos, seguridad compleja) para facilitar su transición a una herramienta de desarrollo DevOps ligera.
 
 ### Contexto y Memoria
-- **Historial con "Rolling Window":** `HistoryManager` guarda sesión automáticamente en `~/.pygemai/history/` optimizando y truncando las ventanas de tokens en cargas completas.
+- **Historial con "Rolling Window":** `HistoryManager` guarda sesión automáticamente en `~/.askgem/history/` optimizando y truncando las ventanas de tokens en cargas completas.
 
 ### Interfaz Renovada
 - **Comandos de Barra:** Introducidos `/history load|list|delete`, `/clear`, `/model`, `/mode` (auto/manual) y `/help`.

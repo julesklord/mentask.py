@@ -1,14 +1,15 @@
-import os
 import json
+import os
 import uuid
 from datetime import datetime
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional
 
 from google.genai import types
 
+
 # Where config lives — mirrors ConfigManager's approach without circular imports
 def _get_history_dir() -> str:
-    history_dir = os.path.join(os.path.expanduser("~"), ".pygemai", "history")
+    history_dir = os.path.join(os.path.expanduser("~"), ".askgem", "history")
     os.makedirs(history_dir, exist_ok=True)
     return history_dir
 
@@ -138,7 +139,7 @@ class HistoryManager:
             return None
 
         try:
-            with open(filepath, "r", encoding="utf-8") as f:
+            with open(filepath, encoding="utf-8") as f:
                 data = json.load(f)
 
             # Token optimization: only feed the most recent N messages back

@@ -1,6 +1,7 @@
 import os
 import shutil
 
+
 def read_file(path: str, start_line: int = None, end_line: int = None) -> str:
     """
     Reads the content of a local file. Allows reading specific line ranges to prevent
@@ -17,27 +18,27 @@ def read_file(path: str, start_line: int = None, end_line: int = None) -> str:
     try:
         if not os.path.exists(path):
             return f"Error: File '{path}' does not exist."
-            
+
         if not os.path.isfile(path):
             return f"Error: '{path}' is a directory, not a file. Use list_directory instead."
-            
-        with open(path, 'r', encoding='utf-8') as f:
+
+        with open(path, encoding='utf-8') as f:
             lines = f.readlines()
-            
+
         total_lines = len(lines)
         if total_lines == 0:
             return f"The file '{path}' is completely empty."
-            
+
         start = max(1, start_line) if start_line is not None else 1
         end = min(total_lines, end_line) if end_line is not None else total_lines
-        
+
         if start > total_lines or start > end:
             return f"Error: Invalid line range [{start}-{end}]. File only has {total_lines} lines."
-            
+
         # Extract lines (0-indexed extraction)
         selected_lines = lines[start - 1 : end]
         content = "".join(selected_lines)
-        
+
         info_header = f"--- Reading '{path}' (Lines {start} to {end} of {total_lines}) ---\n"
         return info_header + content
 
@@ -68,7 +69,7 @@ def edit_file(path: str, find_text: str, replace_text: str) -> str:
             # In that case, find_text should be empty.
             if find_text:
                 return f"Error: File '{path}' does not exist, so we cannot search for text. To create a new file, leave 'find_text' empty."
-            
+
             # Create subdirectories if needed
             os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
             with open(path, 'w', encoding='utf-8') as f:
@@ -76,29 +77,29 @@ def edit_file(path: str, find_text: str, replace_text: str) -> str:
             return f"Success: Created new file '{path}' and wrote the content."
 
         # Read existing content
-        with open(path, 'r', encoding='utf-8') as f:
+        with open(path, encoding='utf-8') as f:
             content = f.read()
-            
+
         # Guard: empty find_text on an existing file would corrupt every character via str.replace behavior
         if not find_text:
             return f"Error: 'find_text' cannot be empty when the file '{path}' already exists. Provide the exact block to replace, or delete the file first."
-            
+
         # Target must exist exactly in the file
         if find_text not in content:
             return f"Error: The exact block 'find_text' was not found in '{path}'. Remember that indentation and inner blank lines must match perfectly. Use read_file to verify the exact content first."
-            
+
         # Create a backup before proceeding (simple suffix logic)
         backup_path = f"{path}.bkp"
         shutil.copy2(path, backup_path)
-        
+
         # Apply replacement
         new_content = content.replace(find_text, replace_text)
-        
+
         with open(path, 'w', encoding='utf-8') as f:
             f.write(new_content)
-            
+
         return f"Success: Replaced text in '{path}'. Original file backed up securely at '{backup_path}'."
-        
+
     except UnicodeDecodeError:
         return f"Error: '{path}' appears to be a binary file. Refusing to edit."
     except PermissionError:

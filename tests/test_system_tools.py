@@ -1,11 +1,11 @@
 """
 Tests for tools/system_tools.py — list_directory and execute_bash
 """
-import os
 import platform
+
 import pytest
 
-from pygemai_cli.tools.system_tools import list_directory, execute_bash, _get_shell_args
+from askgem.tools.system_tools import _get_shell_args, execute_bash, list_directory
 
 
 class TestListDirectory:

@@ -2,8 +2,8 @@
 Tests for tools/file_tools.py — read_file and edit_file
 """
 import os
-import pytest
-from pygemai_cli.tools.file_tools import read_file, edit_file
+
+from askgem.tools.file_tools import edit_file, read_file
 
 
 class TestReadFile:

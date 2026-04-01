@@ -3,7 +3,7 @@ requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "PyGemAi"
+name = "askgem"
 version = "2.0.0-dev2"
 description = "Autonomous AI coding agent CLI powered by Google Gemini with agentic filesystem tools."
 readme = "README.md"
@@ -42,12 +42,12 @@ dev = [
 ]
 
 [project.scripts]
-pygemai = "pygemai_cli.main:run_chatbot"
+askgem = "askgem.main:run_chatbot"
 
 [project.urls]
-Homepage = "https://github.com/julesklord/PyGemAi"
-Documentation = "https://github.com/julesklord/PyGemAi/blob/main/README.md"
-Changelog = "https://github.com/julesklord/PyGemAi/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/julesklord/askgem"
+Documentation = "https://github.com/julesklord/askgem/blob/main/README.md"
+Changelog = "https://github.com/julesklord/askgem/blob/main/CHANGELOG.md"
 
 [tool.ruff]
 target-version = "py38"

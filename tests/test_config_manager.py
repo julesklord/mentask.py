@@ -1,15 +1,13 @@
 """
 Tests for core/config_manager.py — ConfigManager v2.0
 """
-import json
 import os
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 # Patch the console so no Rich output is emitted during tests
 _mock_console = MagicMock()
 
-from pygemai_cli.core.config_manager import ConfigManager, get_config_dir, get_config_path
+from askgem.core.config_manager import ConfigManager, get_config_dir, get_config_path
 
 
 class TestGetConfigDir:
@@ -18,9 +16,9 @@ class TestGetConfigDir:
         from pathlib import Path
         assert isinstance(result, Path)
 
-    def test_directory_name_is_pygemai(self):
+    def test_directory_name_is_askgem(self):
         result = get_config_dir()
-        assert result.name == ".pygemai"
+        assert result.name == ".askgem"
 
     def test_directory_exists_after_call(self):
         result = get_config_dir()
@@ -32,9 +30,9 @@ class TestGetConfigPath:
         path = get_config_path("settings.json")
         assert os.path.isabs(path)
 
-    def test_contains_pygemai(self):
+    def test_contains_askgem(self):
         path = get_config_path("settings.json")
-        assert ".pygemai" in path
+        assert ".askgem" in path
 
     def test_ends_with_filename(self):
         path = get_config_path("myfile.json")
@@ -53,7 +51,7 @@ class TestConfigManagerSettings:
 
     def test_save_and_reload_settings(self, tmp_path):
         """Verifies the round-trip: save → reload recovers the same values."""
-        with patch("pygemai_cli.core.config_manager.get_config_path") as mock_path:
+        with patch("askgem.core.config_manager.get_config_path") as mock_path:
             settings_file = str(tmp_path / "settings.json")
             mock_path.return_value = settings_file
 
@@ -68,7 +66,7 @@ class TestConfigManagerSettings:
 
     def test_load_settings_handles_corrupt_json(self, tmp_path):
         """ConfigManager must not crash when the settings file is corrupted."""
-        with patch("pygemai_cli.core.config_manager.get_config_path") as mock_path:
+        with patch("askgem.core.config_manager.get_config_path") as mock_path:
             settings_file = str(tmp_path / "settings.json")
             mock_path.return_value = settings_file
             with open(settings_file, "w") as f:
@@ -87,14 +85,14 @@ class TestConfigManagerApiKey:
 
     def test_returns_none_when_no_key(self, tmp_path):
         with patch.dict(os.environ, {}, clear=True):
-            with patch("pygemai_cli.core.config_manager.get_config_path") as mock_path:
+            with patch("askgem.core.config_manager.get_config_path") as mock_path:
                 mock_path.return_value = str(tmp_path / "nonexistent.key")
                 cm = ConfigManager(_mock_console)
                 assert cm.load_api_key() is None
 
     def test_saves_and_loads_api_key(self, tmp_path):
         with patch.dict(os.environ, {}, clear=True):
-            with patch("pygemai_cli.core.config_manager.get_config_path") as mock_path:
+            with patch("askgem.core.config_manager.get_config_path") as mock_path:
                 key_file = str(tmp_path / ".gemini_api_key_unencrypted")
                 mock_path.return_value = key_file
                 cm = ConfigManager(_mock_console)

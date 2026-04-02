@@ -45,3 +45,4 @@ local_settings.py
 
 # Third-party tool artifacts and completely isolated external source code
 _reference_code/
+prompt_drafts.md

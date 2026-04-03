@@ -206,15 +206,22 @@ class ChatAgent:
                 # Milestone 4.1: Ensure session exists and use it for streaming
                 await self._ensure_session()
                 response_stream = await self.chat_session.send_message_stream(message=user_input)
-                full_text = ""
                 seen_calls: set = set()
                 function_calls_received: List[types.FunctionCall] = []
+
+                # Milestone 4.3/5: Interruption support
+                self.interrupted = False
 
                 if callback:
                     # TUI Output mode
                     async for chunk in response_stream:
+                        if self.interrupted:
+                            callback("\n\n[bold red][INTERRUMPIDO POR EL USUARIO][/bold red]")
+                            break
+                        
                         if chunk.text:
                             callback(chunk.text)
+                            full_text += chunk.text
 
                         new_calls = self._extract_function_calls(chunk, seen_calls)
                         function_calls_received.extend(new_calls)

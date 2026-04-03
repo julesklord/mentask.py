@@ -45,27 +45,13 @@ This document outlines the comprehensive engineering roadmap for `askgem`, organ
 
 ### Architecture Diagram
 
-```
-┌─────────────────────────────────────────────────────┐
-│                    main.py                           │
-│              (CLI Entry + Welcome Panel)             │
-└────────────────────┬────────────────────────────────┘
-                     │
-┌────────────────────▼────────────────────────────────┐
-│               engine/query_engine.py                 │
-│         (Agentic Loop + Tool Dispatch)               │
-│                                                      │
-│  ┌──────────┐  ┌──────────┐  ┌──────────────────┐   │
-│  │ Gemini   │  │ History  │  │ Config Manager   │   │
-│  │ SDK      │  │ Manager  │  │ (settings.json)  │   │
-│  └──────────┘  └──────────┘  └──────────────────┘   │
-│                                                      │
-│  Registered Tools:                                   │
-│  ┌────────────┐ ┌────────────┐ ┌────────────────┐   │
-│  │read_file   │ │edit_file   │ │list_directory  │   │
-│  │execute_bash│ │ (future)   │ │ (future)       │   │
-│  └────────────┘ └────────────┘ └────────────────┘   │
-└─────────────────────────────────────────────────────┘
+```mermaid
+graph TD
+    A[main.py CLI Entry] --> B[agent/chat.py GenAI Engine]
+    B --> C[core/history_manager.py]
+    B --> D[core/config_manager.py]
+    B --> E[tools/file_tools.py]
+    B --> F[tools/system_tools.py]
 ```
 
 ### Known Limitations in v2.0
@@ -135,6 +121,7 @@ This document outlines the comprehensive engineering roadmap for `askgem`, organ
 - `locales/*.json` (add `cmd.desc.undo`, `cmd.undo.success`, `cmd.undo.none` keys)
 
 **Acceptance Criteria:**
+
 - [ ] `/undo` restores the last modified file from its `.bkp` copy
 - [ ] If no `.bkp` exists, a clean message is shown
 - [ ] The undo action itself creates a recovery point

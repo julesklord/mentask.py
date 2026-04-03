@@ -77,6 +77,7 @@ graph TD
 **Problem:** Currently, a single `google.api_core.exceptions.ResourceExhausted` (HTTP 429) terminates the entire model turn. The user loses their input and must re-type it.
 
 **Solution:** Implement a retry decorator in `engine/query_engine.py::_stream_response` with:
+
 - Maximum 3 retry attempts
 - Exponential backoff: 2s → 4s → 8s
 - Jitter of ±500ms to avoid thundering herd
@@ -84,10 +85,12 @@ graph TD
 - Graceful fallback message after all retries exhausted
 
 **Files Modified:**
+
 - `engine/query_engine.py` (retry wrapper around `chat_session.send_message_stream`)
 - `locales/*.json` (add `engine.retry`, `engine.retry_exhausted` keys)
 
 **Acceptance Criteria:**
+
 - [ ] A simulated 429 error triggers an automatic retry without user intervention
 - [ ] The user sees a spinner with countdown during the backoff
 - [ ] After 3 failures, a clean error message appears (not a Python traceback)
@@ -99,13 +102,16 @@ graph TD
 **Solution:** Extract new-file creation into a first-class `write_file(path, content)` tool.
 
 **Files Created:**
+
 - Extend `tools/file_tools.py` with `write_file()` function
 
 **Files Modified:**
+
 - `engine/query_engine.py` (register new tool, add dispatch case)
 - `locales/*.json` (add `tool.wants_write` keys)
 
 **Acceptance Criteria:**
+
 - [ ] `write_file("new_folder/new_file.py", "print('hello')")` creates the file and all parent directories
 - [ ] Human-in-the-loop confirmation is shown in manual mode
 - [ ] Unit test covers creation, overwrite protection, and permission errors
@@ -117,6 +123,7 @@ graph TD
 **Solution:** Implement `/undo` slash command that restores the most recent `.bkp` file.
 
 **Files Modified:**
+
 - `engine/query_engine.py` (add `_cmd_undo`, track last edited path)
 - `locales/*.json` (add `cmd.desc.undo`, `cmd.undo.success`, `cmd.undo.none` keys)
 
@@ -133,6 +140,7 @@ graph TD
 **Solution:** Catch `InvalidArgument` in `_stream_response`, automatically truncate the oldest 50% of history, and retry once.
 
 **Files Modified:**
+
 - `engine/query_engine.py`
 - `core/history_manager.py` (add `truncate_half()` method)
 
@@ -151,18 +159,23 @@ graph TD
 **Solution:** Implement `grep_search(pattern, path, case_sensitive, is_regex)` that wraps Python's `pathlib.Path.rglob()` + line-by-line regex matching.
 
 **Technical Details:**
+
 - Recursively walk the directory tree, skipping `.git/`, `node_modules/`, `__pycache__/`, `.venv/`
 - Return results as `file:line_number: matching_line` (capped at 50 results)
 - Support both literal string and regex modes
 - Binary file detection via null-byte check in first 8KB
 
 **Files Created:**
+
 - `tools/search_tools.py`
 
 **Files Modified:**
-- `engine/query_engine.py` (register tool, add dispatch)
+
+- `agent/chat.py` (register tool, add dispatch)
+- `locales/*.json` (add `tool.grep_search` keys)
 
 **Acceptance Criteria:**
+
 - [ ] `grep_search("def authenticate", "src/")` returns file paths and line numbers
 - [ ] Results are capped at 50 to prevent token overflow
 - [ ] Binary files are skipped silently
@@ -175,9 +188,11 @@ graph TD
 **Solution:** Implement `glob_find(pattern, path)` using `pathlib.Path.rglob()`.
 
 **Files Created:**
-- Add to `tools/search_tools.py`
+
+- `tools/search_tools.py` (Add `glob_find`)
 
 **Acceptance Criteria:**
+
 - [ ] `glob_find("*.py", "src/")` returns all Python files
 - [ ] Results exclude `.git/`, `node_modules/`, `__pycache__/`
 
@@ -188,9 +203,11 @@ graph TD
 **Solution:** Implement `diff_file(path)` that compares a file against its `.bkp` version using Python's `difflib.unified_diff`.
 
 **Files Created:**
+
 - Add to `tools/file_tools.py`
 
 **Acceptance Criteria:**
+
 - [ ] Shows a colored unified diff in the terminal
 - [ ] Returns "No changes detected" if file matches backup
 - [ ] Works even if no `.bkp` exists (shows "No backup found")
@@ -210,23 +227,28 @@ graph TD
 **Solution:** Integrate the [Google Custom Search JSON API](https://developers.google.com/custom-search/v1/overview) as a registered tool.
 
 **Configuration Requirements:**
+
 - `GOOGLE_SEARCH_API_KEY` — stored in `~/.askgem/settings.json` or environment variable
 - `GOOGLE_CX_ID` — Programmable Search Engine ID
 
 **Technical Details:**
+
 - HTTP requests via `urllib.request` (zero new dependencies)
 - Returns top 5 results: title, URL, snippet
 - Rate limit: 100 queries/day on free tier
 
 **Files Created:**
+
 - `tools/web_tools.py`
 
 **Files Modified:**
+
 - `engine/query_engine.py` (register tool, add dispatch, add config prompts)
 - `core/config_manager.py` (add search API key fields)
 - `locales/*.json` (add `tool.web_search.*` keys)
 
 **Acceptance Criteria:**
+
 - [ ] `web_search("python asyncio tutorial")` returns 5 titled results with URLs
 - [ ] Missing API key triggers a friendly setup wizard
 - [ ] Rate limit errors are caught and surfaced cleanly
@@ -239,15 +261,18 @@ graph TD
 **Solution:** Implement `web_fetch(url)` that downloads a page and extracts readable text.
 
 **Technical Details:**
+
 - Use `urllib.request.urlopen` with a 10s timeout
 - Strip HTML tags using a lightweight regex-based cleaner (avoid `beautifulsoup4` dependency)
 - Truncate output to 4000 characters to prevent token explosion
 - Support `text/plain`, `text/html`, and `application/json` content types
 
 **Files Created:**
+
 - Add to `tools/web_tools.py`
 
 **Acceptance Criteria:**
+
 - [ ] `web_fetch("https://docs.python.org/3/library/os.html")` returns readable text
 - [ ] Binary/media URLs return a clean error message
 - [ ] Output is capped at 4000 characters with a truncation notice
@@ -267,19 +292,23 @@ graph TD
 **Solution:** After each model response, extract `usage_metadata` from the Gemini API response and maintain a running tally.
 
 **Technical Details:**
+
 - Read `response.usage_metadata.prompt_token_count` and `candidates_token_count`
 - Maintain session totals in `QueryEngine` instance variables
 - Display in the TUI footer or via a new `/usage` command
 - Cost estimation based on published Gemini pricing (configurable per model)
 
 **Files Created:**
+
 - `core/metrics.py` (TokenTracker class)
 
 **Files Modified:**
+
 - `engine/query_engine.py` (extract metadata after each response)
 - `locales/*.json` (add `cmd.usage.*` keys)
 
 **Acceptance Criteria:**
+
 - [ ] `/usage` shows: total input tokens, output tokens, estimated cost
 - [ ] Token counts persist per session
 - [ ] Cost estimates update when switching models
@@ -291,6 +320,7 @@ graph TD
 **Solution:** On exit, show a mini-report: total messages exchanged, tools invoked, files modified, tokens consumed.
 
 **Files Modified:**
+
 - `engine/query_engine.py::start()` (add exit summary panel)
 
 ---
@@ -308,40 +338,34 @@ graph TD
 **Solution:** Implement a synchronous LSP client that communicates with local Language Servers via JSON-RPC over stdio.
 
 **Technical Details:**
+
 - Spawn a language server subprocess (e.g., `pyright-langserver --stdio`)
 - Implement the LSP initialization handshake (`initialize` → `initialized`)
 - Support `textDocument/didOpen`, `textDocument/didChange`, `textDocument/publishDiagnostics`
 - Expose as `get_diagnostics(file_path)` tool to the Gemini agent
 
 **Architecture:**
-```
-askgem QueryEngine
-    │
-    ├── get_diagnostics("app.py")
-    │       │
-    │       ▼
-    │   LSPClient (JSON-RPC over stdio)
-    │       │
-    │       ▼
-    │   pyright-langserver --stdio
-    │       │
-    │       ▼
-    │   Returns: [{line: 42, message: "Cannot find name 'foo'", severity: "error"}]
-    │
-    ▼
-Agent uses diagnostics to self-correct before proposing edits
+
+```mermaid
+graph TD
+    A[askgem QueryEngine] --> B[get_diagnostics app.py]
+    B --> C[LSPClient JSON-RPC]
+    C --> D[pyright-langserver --stdio]
+    D --> E[Returns Diagnostics Errors/Warnings]
 ```
 
 **Risk Assessment:**
+
 - **High complexity:** JSON-RPC framing (Content-Length headers), async notification handling
 - **Mitigation:** Keep it strictly synchronous and read-only (no completions, no refactoring — diagnostics only)
 - **Dependency:** Requires the user to have a compatible language server installed
 
 **Files Created:**
-- `tools/lsp_tools.py`
-- `core/lsp_client.py`
+
+- `core/lsp_server.py` [NEW] (Base server loop)
 
 **Acceptance Criteria:**
+
 - [ ] `get_diagnostics("test.py")` returns syntax errors from Pyright
 - [ ] Graceful fallback if no language server is installed
 - [ ] Timeout protection (5s max per diagnostic request)
@@ -361,12 +385,14 @@ Agent uses diagnostics to self-correct before proposing edits
 **Solution:** Implement a plugin discovery system that loads tools from a `~/.askgem/plugins/` directory.
 
 **Technical Details:**
+
 - Each plugin is a Python file with a `register(engine)` function
 - The function receives the engine instance and can call `engine.register_tool(func)`
 - Plugins are loaded at startup via `importlib`
 - A `plugin.json` manifest declares the plugin name, version, and tool descriptions
 
 **Files Created:**
+
 - `core/plugin_loader.py`
 
 ### 6.2 Built-in Plugin: Git Integration
@@ -376,6 +402,7 @@ Agent uses diagnostics to self-correct before proposing edits
 **Solution:** Create a bundled plugin providing `git_status()`, `git_diff()`, `git_log(n)`, and `git_commit(message)` tools.
 
 **Files Created:**
+
 - `plugins/git_tools.py`
 
 ---
@@ -385,7 +412,7 @@ Agent uses diagnostics to self-correct before proposing edits
 These items should be addressed continuously alongside milestone work:
 
 | Item | Priority | Description |
-|---|---|---|
+| :--- | :--- | :--- |
 | **Test Coverage** | High | Current: 38 tests covering config, file tools, system tools. Missing: query engine integration tests, i18n tests, history manager edge cases. Target: 80%+ coverage. |
 | **Type Hints** | Medium | Add `py.typed` marker and complete `mypy` strict compliance across all modules. |
 | **CI/CD Pipeline** | Medium | Set up GitHub Actions workflow: `ruff check` → `pytest` → `python -m build` on every PR. |
@@ -401,7 +428,7 @@ These items should be addressed continuously alongside milestone work:
 The following features are **intentionally excluded** from this roadmap to maintain focus and realistic scope for a solo maintainer:
 
 | Feature | Reason |
-|---|---|
+| :--- | :--- |
 | **Multi-agent orchestration** | Requires a full process management layer, IPC, and debugging infrastructure that is impractical for a single developer to maintain reliably. |
 | **Voice input/output** | Hardware-dependent, requires microphone access and speech recognition SDKs. |
 | **GUI / Electron wrapper** | askgem is a terminal-first tool by design. GUI development is an entirely separate project. |
@@ -414,7 +441,7 @@ The following features are **intentionally excluded** from this roadmap to maint
 
 ## Version Release Timeline (Estimated)
 
-```
+```text
 2026-04     v2.0.0  ████████████████  CURRENT RELEASE
 2026-05     v2.1.0  ░░░░░░░░          Stability & Error Resilience
 2026-06     v2.2.0  ░░░░░░            Advanced Code Tools

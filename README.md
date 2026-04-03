@@ -55,19 +55,24 @@ If your language is not available, askgem gracefully falls back to English. You 
 
 Sessions are persisted automatically to `~/.askgem/history/`. The rolling window context manager keeps the most relevant messages loaded, discarding older ones to optimize token usage and API costs.
 
-### 🌈 Premium Terminal UI
-
-Rich terminal rendering powered by the `rich` library — real-time Markdown streaming, syntax-highlighted code blocks, stylized panels, spinners during tool execution, and interactive prompts.
-
 ---
 
-## 🚀 Installation
+## 🛠️ Key Components
+
+- **Agentic Engine**: Manages the multi-turn state-machine and tool execution.
+- **TUI Console**: Provides a rich, terminal-based interface with markdown support.
+- **Context Manager**: Handles rolling token windows and session history.
+- **Tool Suite**: Extensible system for file operations and bash execution.
+
+## 📦 Installation
 
 ### Prerequisites
+
 - **Python 3.8** or higher
 - A **Google API Key** — get one free at [Google AI Studio](https://aistudio.google.com/)
 
 ### Install from Source (Development)
+
 ```bash
 git clone https://github.com/julesklord/askgem.git
 cd askgem
@@ -85,11 +90,16 @@ pip install askgem
 ## 📖 Usage
 
 Launch the interactive agent:
+
 ```bash
 askgem
 ```
 
 On first launch, askgem will prompt you for your Google API Key and optionally save it to `~/.askgem/` for future sessions.
+
+### ⌨️ Commands
+
+In-session commands start with `/`:
 
 ### Slash Commands
 
@@ -124,6 +134,7 @@ src/askgem/
 ## 📚 Documentation & Wiki
 
 For detailed guides, please visit our **[GitHub Wiki](https://github.com/julesklord/askgem.py/wiki)**:
+
 - [Installation Guide](https://github.com/julesklord/askgem.py/wiki/Installation_and_Setup)
 - [Command Reference](https://github.com/julesklord/askgem.py/wiki/Usage)
 - [Architecture Deep-Dive](https://github.com/julesklord/askgem.py/wiki/Architecture)
@@ -177,22 +188,23 @@ API keys and settings are stored in your home directory:
 ## 🗺️ Roadmap
 
 See [ROADMAP.md](ROADMAP.md) for the full development roadmap covering upcoming features:
+
 - **v2.1** — Stability & error resilience (retry logic, `/undo`, `write_file`)
 - **v2.2** — Advanced code tools (`grep_search`, `glob_find`, `diff_file`)
 - **v2.3** — Web research integration (Google Custom Search API)
 - **v2.4** — Token economy & cost tracking
-- **v2.5** — LSP integration (syntax-aware diagnostics)
-- **v3.0** — Plugin ecosystem
-
----
+- **v2.5** — LSP integration (syntax-aware)
+- `src/askgem/locales/*.json`: Multi-language dictionary files.
 
 ## 🤝 Contributing
 
-Contributions are welcome! To add a new language translation:
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-1. Copy `src/askgem/locales/en.json` to `src/askgem/locales/<your_lang_code>.json`
-2. Translate all string values (keep the keys untouched)
-3. Submit a pull request
+1. Fork the repository.
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`).
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`).
+4. Push to the branch (`git push origin feature/AmazingFeature`).
+5. Open a Pull Request.
 
 ---
 

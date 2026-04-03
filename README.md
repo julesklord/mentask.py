@@ -100,32 +100,54 @@ On first launch, askgem will prompt you for your Google API Key and optionally s
 ```
 askgem/
 ├── src/askgem/
-│   ├── __init__.py          # Package version
-│   ├── main.py              # CLI entry point & Welcome Panel
+│   ├── __init__.py          # Package version (2.1.0)
+│   ├── agent/
+│   │   └── chat.py          # ChatAgent (GenAI engine, model handling)
+│   ├── cli/
+│   │   ├── main.py          # CLI entry point & UI Router
+│   │   └── console.py       # Stylized Rich console handlers
 │   ├── core/
-│   │   ├── config_manager.py    # JSON-based settings persistence
-│   │   ├── history_manager.py   # Rolling window session management
-│   │   └── i18n.py              # Auto-detecting translation engine
-│   ├── engine/
-│   │   └── query_engine.py      # Main agentic loop & tool dispatch
+│   │   ├── config_manager.py    # JSON-based settings (model, mode)
+│   │   ├── history_manager.py   # Rolling window + TOKEN ECONOMY
+│   │   ├── i18n.py              # i18n Translation engine
+│   │   └── paths.py             # Centralized cross-platform paths
 │   ├── tools/
-│   │   ├── file_tools.py        # read_file, edit_file
-│   │   └── system_tools.py      # list_directory, execute_bash
-│   ├── ui/
-│   │   └── console.py           # Shared Rich console instance
-│   └── locales/
-│       ├── en.json, es.json, fr.json, pt.json
-│       ├── de.json, it.json, ja.json, zh.json
+│   │   ├── file_tools.py        # Autonomous file manipulation
+│   │   └── system_tools.py      # Bash & Filesystem exploration
+│   └── locales/             # Multilingual support (en, es, etc.)
 ├── tests/
-│   ├── test_config_manager.py
 │   ├── test_file_tools.py
-│   └── test_system_tools.py
-├── docs/
+│   ├── diagnostic_usability.py
+├── wiki/                    # Complete Documentation (Synced with GitHub)
 ├── pyproject.toml
 ├── CHANGELOG.md
 ├── LICENSE (GPLv3)
 └── README.md
 ```
+
+---
+
+## 📚 Documentation & Wiki
+
+For detailed guides, please visit our **[GitHub Wiki](https://github.com/julesklord/askgem.py/wiki)**:
+- [Installation Guide](https://github.com/julesklord/askgem.py/wiki/Installation_and_Setup)
+- [Command Reference](https://github.com/julesklord/askgem.py/wiki/Usage)
+- [Architecture Deep-Dive](https://github.com/julesklord/askgem.py/wiki/Architecture)
+- [Development Guide](https://github.com/julesklord/askgem.py/wiki/Development_Guide)
+
+---
+
+## ⚡ v2.1 Performance Optimizations
+
+### 💎 Token Economy
+askgem v2.1 includes a sophisticated token-aware context manager:
+- **Compact Prompts**: Reduced system instruction overhead by 40%.
+- **Rolling Context**: Automatically prunes large file reads from memory while retaining conversation logic.
+- **Manual Reset**: Use `/clear` to instantly wipe current context to save API tokens.
+
+### 🛡️ Resilience & Safety
+- **Retry Logic**: Automatic exponential backoff for 429 (Quota) and 500/503 (API Error) codes.
+- **Protected Modes**: Manual confirmation for system-level actions prevents accidental deletions.
 
 ---
 

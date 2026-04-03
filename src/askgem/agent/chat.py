@@ -100,10 +100,50 @@ class ChatAgent:
     # Core response loop                                                 #
     # ------------------------------------------------------------------ #
 
+    def _extract_function_calls(self, chunk: types.GenerateContentResponsePart, seen_calls: set) -> List[types.FunctionCall]:
+        """Extracts unique function calls from a streaming response chunk.
+
+        Handles both standard SDK properties and candidate parts fallbacks for various
+        SDK versions.
+
+        Args:
+            chunk (types.GenerateContentResponsePart): The chunk received from the stream.
+            seen_calls (set): A set of (name, args) tuples to prevent duplicate execution.
+
+        Returns:
+            List[types.FunctionCall]: A list of newly discovered function calls.
+        """
+        found = []
+
+        # --- Primary detection: SDK aggregated helper property ---
+        try:
+            for fc in (chunk.function_calls or []):
+                key = (fc.name, str(sorted(fc.args.items()) if fc.args else []))
+                if key not in seen_calls:
+                    seen_calls.add(key)
+                    found.append(fc)
+        except Exception as _sdk_err:
+            _logger.debug("SDK function_calls property failed on chunk: %s", _sdk_err)
+
+        # --- Fallback detection: direct candidate parts traversal ---
+        try:
+            for candidate in (chunk.candidates or []):
+                content = getattr(candidate, "content", None)
+                parts = getattr(content, "parts", []) or []
+                for part in parts:
+                    fc = getattr(part, "function_call", None)
+                    if fc and getattr(fc, "name", None):
+                        key = (fc.name, str(sorted(fc.args.items()) if fc.args else []))
+                        if key not in seen_calls:
+                            seen_calls.add(key)
+                            found.append(fc)
+        except Exception as _candidate_err:
+            _logger.debug("Candidate parts fallback failed on chunk: %s", _candidate_err)
+
+        return found
+
     def _stream_response(self, user_input: Union[str, List]) -> None:
         """Sends a message to the model and streams the response to the terminal.
-
-        # TODO: [refactor] this function has too many responsibilities — split into streaming payload rendering, function execution routing, and SDK fallback/retry handling.
 
         Args:
             user_input: The user or tool generated message payload.
@@ -117,45 +157,19 @@ class ChatAgent:
         for attempt in range(1, max_retries + 1):
             try:
                 response_stream = self.chat_session.send_message_stream(user_input)
-
                 full_text = ""
-                # Use a set to deduplicate function calls that may appear in both detection paths
-                _seen_calls: set = set()
+                seen_calls: set = set()
                 function_calls_received: List[types.FunctionCall] = []
 
                 with Live(Markdown(""), console=console, refresh_per_second=15) as live:
                     for chunk in response_stream:
-                        # Text payload — render progressively
                         if chunk.text:
                             full_text += chunk.text
                             live.update(Markdown(full_text))
 
-                        # --- Primary detection: SDK aggregated helper property ---
-                        try:
-                            for fc in (chunk.function_calls or []):
-                                key = (fc.name, str(sorted(fc.args.items()) if fc.args else []))
-                                if key not in _seen_calls:
-                                    _seen_calls.add(key)
-                                    function_calls_received.append(fc)
-                        except Exception as _sdk_err:
-                            _logger.debug("SDK function_calls property failed on chunk: %s", _sdk_err)
-
-                        # --- Fallback detection: direct candidate parts traversal ---
-                        # Some SDK versions only expose function_calls on the final
-                        # accumulated response, not on individual streaming chunks.
-                        try:
-                            for candidate in (chunk.candidates or []):
-                                content = getattr(candidate, "content", None)
-                                parts = getattr(content, "parts", []) or []
-                                for part in parts:
-                                    fc = getattr(part, "function_call", None)
-                                    if fc and getattr(fc, "name", None):
-                                        key = (fc.name, str(sorted(fc.args.items()) if fc.args else []))
-                                        if key not in _seen_calls:
-                                            _seen_calls.add(key)
-                                            function_calls_received.append(fc)
-                        except Exception as _candidate_err:
-                            _logger.debug("Candidate parts fallback failed on chunk: %s", _candidate_err)
+                        # Extract tools using helper
+                        new_calls = self._extract_function_calls(chunk, seen_calls)
+                        function_calls_received.extend(new_calls)
 
                 console.print("")
 

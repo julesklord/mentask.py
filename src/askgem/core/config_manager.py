@@ -22,7 +22,7 @@ class ConfigManager:
         """
         self.console = console
         self.settings = {
-            "model_name": "gemini-2.0-flash",
+            "model_name": "gemini-2.5-flash",
             "edit_mode": "manual",  # "manual" or "auto"
             "google_search_api_key": "",
             "google_cx_id": "",

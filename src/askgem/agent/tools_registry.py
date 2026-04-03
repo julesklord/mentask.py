@@ -4,7 +4,8 @@ Central tool registry and dispatcher for the AskGem agent.
 Decouples the tool execution logic from the main conversational loop.
 """
 
-from typing import List
+import functools
+from typing import List, Dict, Callable
 
 from google.genai import types
 from rich.prompt import Confirm
@@ -15,14 +16,27 @@ from ..core.i18n import _
 from ..tools.file_tools import diff_file, edit_file, read_file
 from ..tools.search_tools import glob_find, grep_search
 from ..tools.system_tools import execute_bash, list_directory
+from ..tools.web_tools import web_fetch, web_search
 
 
 class ToolDispatcher:
     """Handles tool registration and execution routing for the ChatAgent."""
 
-    def __init__(self, edit_mode: str = "manual"):
-        """Initializes the dispatcher with a specific edit mode."""
+    def __init__(self, edit_mode: str = "manual", search_api_key: str = "", search_cx_id: str = "", logger: Optional[Callable[[str], None]] = None):
+        """Initializes the dispatcher with a logger and credentials."""
         self.edit_mode = edit_mode
+        self.logger = logger
+        self.modified_files_count = 0
+        
+        # Pre-bind keys to the web_search tool
+        bound_web_search = functools.partial(
+            web_search, 
+            api_key=search_api_key, 
+            cx_id=search_cx_id
+        )
+        # Preserve original docstring for the LLM
+        bound_web_search.__doc__ = web_search.__doc__
+
         self._tools = [
             list_directory,
             execute_bash,
@@ -30,15 +44,17 @@ class ToolDispatcher:
             edit_file,
             diff_file,
             grep_search,
-            glob_find
+            glob_find,
+            bound_web_search,
+            web_fetch
         ]
 
     def get_tools_list(self) -> List:
         """Returns the list of registered tool functions for the Gemini SDK."""
         return self._tools
 
-    def execute(self, function_call: types.FunctionCall) -> types.Part:
-        """Routes and executes a model-requested function call.
+    async def execute(self, function_call: types.FunctionCall) -> types.Part:
+        """Routes and executes a model-requested function call (Async).
 
         Args:
             function_call (types.FunctionCall): The tool request from the API.
@@ -53,15 +69,15 @@ class ToolDispatcher:
 
         # Tool execution UI Wrapper
         with Status(f"[google.blue]{_('tool.spawning')} {tool_name}[/google.blue]", spinner="dots", console=console):
-            result = self._dispatch(tool_name, args)
+            result = await self._dispatch(tool_name, args)
 
         return types.Part.from_function_response(
             name=tool_name,
             response={"result": result},
         )
 
-    def _dispatch(self, tool_name: str, args: dict) -> str:
-        """Internal dispatch logic for registered tools."""
+    async def _dispatch(self, tool_name: str, args: dict) -> str:
+        """Internal async dispatch logic for registered tools."""
 
         # 1. System/Filesystem Tools
         if tool_name == "list_directory":
@@ -101,11 +117,17 @@ class ToolDispatcher:
                     f"[dim]-----------------[/dim]"
                 )
                 if Confirm.ask(_('tool.confirm.edit')):
-                    return edit_file(path, find_text, replace_text)
+                    res = edit_file(path, find_text, replace_text)
+                    if res.startswith("Success:"):
+                        self.modified_files_count += 1
+                    return res
                 return _('tool.denied.edit')
 
             console.print(f"[italic success]{_('tool.edit.auto', path=path)}[/italic success]")
-            return edit_file(path, find_text, replace_text)
+            res = edit_file(path, find_text, replace_text)
+            if res.startswith("Success:"):
+                self.modified_files_count += 1
+            return res
 
         elif tool_name == "diff_file":
             return diff_file(

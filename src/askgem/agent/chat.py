@@ -5,24 +5,25 @@ Manages the conversational loop, tool routing, and API interactions with the gen
 It does NOT manage filesystem paths or raw terminal rendering.
 """
 
+import asyncio
 import logging
 import os
 import platform
 import sys
-from typing import List, Union
+from typing import Callable, List, Optional, Union
 
 from google import genai
 from google.genai import types
 from rich.live import Live
 from rich.markdown import Markdown
 from rich.prompt import Prompt
-from rich.status import Status
 from rich.table import Table
 
 from ..cli.console import console
 from ..core.config_manager import ConfigManager
 from ..core.history_manager import HistoryManager
 from ..core.i18n import _
+from ..core.metrics import TokenTracker
 from ..core.paths import get_config_dir
 from .tools_registry import ToolDispatcher
 
@@ -53,15 +54,29 @@ class ChatAgent:
         self.model_name = self.config.settings.get("model_name", "gemini-2.5-pro")
         self.edit_mode = self.config.settings.get("edit_mode", "manual")
 
-        # Centralized tool dispatcher & Milestone 2 registration
-        self.dispatcher = ToolDispatcher(edit_mode=self.edit_mode)
+        # Centralized tool dispatcher & Milestone 2/3 registration
+        self.dispatcher = ToolDispatcher(
+            edit_mode=self.edit_mode,
+            search_api_key=self.config.settings.get("google_search_api_key"),
+            search_cx_id=self.config.settings.get("google_cx_id"),
+            logger=None # Will be set by Dashboard
+        )
+
+        # Milestone 4: Metrics engine
+        self.metrics = TokenTracker(model_name=self.model_name)
+        self.session_messages = 0
+        self.session_tools = 0
+
+    def set_status_logger(self, logger_func: Callable[[str], None]):
+        """Sets the callback for real-time status/debug logging."""
+        self.dispatcher.logger = logger_func
 
     # ------------------------------------------------------------------ #
     # Setup                                                                #
     # ------------------------------------------------------------------ #
 
-    def setup_api(self) -> bool:
-        """Loads and validates the Google API key, prompting the user if absent.
+    async def setup_api(self) -> bool:
+        """Loads and validates the Google API key (Async).
 
         Returns:
             bool: True if the client was successfully initialized, False otherwise.
@@ -70,6 +85,8 @@ class ChatAgent:
 
         if not api_key:
             console.print(f"\n[error]{_('api.missing')}[/error]")
+            # Note: Prompt.ask is blocking, but in Dashboard we will use TUI input.
+            # In legacy CLI, it's fine for now.
             api_key = Prompt.ask(f"[google.blue]{_('api.prompt')}[/google.blue]").strip()
 
             if not api_key:
@@ -80,7 +97,8 @@ class ChatAgent:
             if save_choice != 'n':
                 self.config.save_api_key(api_key)
 
-        self.client = genai.Client(api_key=api_key)
+        # Milestone 4.1: Use AsyncClient for TUI responsive streaming
+        self.client = genai.Client(api_key=api_key, http_options={'api_version': 'v1beta'})
         return True
 
     def _build_config(self) -> types.GenerateContentConfig:
@@ -142,56 +160,79 @@ class ChatAgent:
 
         return found
 
-    def _stream_response(self, user_input: Union[str, List]) -> None:
-        """Sends a message to the model and streams the response to the terminal.
+    async def _stream_response(self, user_input: Union[str, List], callback: Optional[Callable[[str], None]] = None) -> None:
+        """Sends a message to the model and streams the response (Async).
 
         Args:
             user_input: The user or tool generated message payload.
+            callback: Optional async function to receive streamed text chunks.
         """
         import random
-        import time
 
         max_retries = 3
         base_delay = 2.0  # seconds
 
         for attempt in range(1, max_retries + 1):
             try:
-                response_stream = self.chat_session.send_message_stream(user_input)
+                # Milestone 4.1: Ensure session exists and use it for streaming
+                await self._ensure_session()
+                response_stream = await self.chat_session.send_message_stream(
+                    message=user_input
+                )
                 full_text = ""
                 seen_calls: set = set()
                 function_calls_received: List[types.FunctionCall] = []
 
-                with Live(Markdown(""), console=console, refresh_per_second=15) as live:
-                    for chunk in response_stream:
+                if callback:
+                    # TUI Output mode
+                    async for chunk in response_stream:
                         if chunk.text:
-                            full_text += chunk.text
-                            live.update(Markdown(full_text))
+                            callback(chunk.text)
 
-                        # Extract tools using helper
                         new_calls = self._extract_function_calls(chunk, seen_calls)
                         function_calls_received.extend(new_calls)
+
+                        if hasattr(chunk, "usage_metadata") and chunk.usage_metadata:
+                            self.metrics.add_usage(
+                                chunk.usage_metadata.prompt_token_count,
+                                chunk.usage_metadata.candidates_token_count
+                            )
+                else:
+                    # Legacy CLI Output mode (using rich.Live)
+                    with Live(Markdown(""), console=console, refresh_per_second=15) as live:
+                        async for chunk in response_stream:
+                            if chunk.text:
+                                full_text += chunk.text
+                                live.update(Markdown(full_text))
+
+                            new_calls = self._extract_function_calls(chunk, seen_calls)
+                            function_calls_received.extend(new_calls)
+
+                            if hasattr(chunk, "usage_metadata") and chunk.usage_metadata:
+                                self.metrics.add_usage(
+                                    chunk.usage_metadata.prompt_token_count,
+                                    chunk.usage_metadata.candidates_token_count
+                                )
 
                 console.print("")
 
                 if function_calls_received:
-                    # Execute tools via dispatcher and collect results
-                    function_responses = [
-                        self.dispatcher.execute(fc) for fc in function_calls_received
-                    ]
-                    # Recursive feedback loop
+                    function_responses = []
+                    for fc in function_calls_received:
+                        self.session_tools += 1
+                        function_responses.append(await self.dispatcher.execute(fc))
                     if function_responses:
-                        self._stream_response(function_responses)
+                        # Recursive loop for tool feedback
+                        await self._stream_response(function_responses, callback=callback)
                 elif not full_text:
-                    # Model returned neither text nor function calls — surface a diagnostic hint
                     console.print(f"[dim]{_('engine.rate_limit_hint')}[/dim]")
 
-                # Autosave history after every fully resolved model turn
+                # Autosave
                 if self.chat_session:
-                    raw_history = getattr(self.chat_session, "history", None)
+                    raw_history = await self.chat_session.get_history()
                     if raw_history:
                         self.history.save_session(raw_history)
 
-                # Success — break out of the retry loop
                 return
 
             except Exception as e:
@@ -208,13 +249,13 @@ class ChatAgent:
                     console.print(
                         f"\n[warning]{_('engine.retry', attempt=attempt, max=max_retries, delay=f'{delay:.1f}')}[/warning]"
                     )
-                    with Status(f"[dim]{_('engine.retry_waiting')}[/dim]", spinner="dots", console=console):
-                        time.sleep(delay)
+                    # We can't use Status(..., console=console) inside as easily if we want purely non-blocking,
+                    # but for legacy CLI it's fine.
+                    await asyncio.sleep(delay)
                     continue
                 else:
                     if is_retryable:
                         _logger.error("All %d retry attempts exhausted: %s", max_retries, e)
-                        console.print(f"\n[error]{_('engine.retry_exhausted', max=max_retries)}[/error]")
                     console.print(f"[error]{_('engine.api_error')}[/error] {e}")
                     return
 
@@ -224,8 +265,8 @@ class ChatAgent:
     # Slash commands                                                       #
     # ------------------------------------------------------------------ #
 
-    def _process_slash_command(self, user_input: str) -> None:
-        """Parses and dispatches mid-conversation slash commands.
+    async def _process_slash_command(self, user_input: str) -> None:
+        """Parses and dispatches mid-conversation slash commands (Async).
 
         Args:
             user_input (str): The raw string command prefixed with '/'.
@@ -238,16 +279,22 @@ class ChatAgent:
             self._cmd_help()
 
         elif command == "/model":
-            self._cmd_model(args)
+            await self._cmd_model(args)
 
         elif command == "/mode":
             self._cmd_mode(args)
 
         elif command == "/clear":
-            self._cmd_clear()
+            await self._cmd_clear()
 
         elif command == "/history":
-            self._cmd_history(args)
+            await self._cmd_history(args)
+
+        elif command == "/usage":
+            self._cmd_usage()
+
+        elif command == "/stats":
+            self._cmd_stats()
 
         else:
             console.print(f"[warning]{_('cmd.unknown')}[/warning] {command} {_('cmd.hint_help')}")
@@ -267,20 +314,22 @@ class ChatAgent:
         table.add_row("/history list", _('cmd.desc.history_list'))
         table.add_row("/history load <id>", _('cmd.desc.history_load'))
         table.add_row("/history delete <id>", _('cmd.desc.history_delete'))
+        table.add_row("/usage", _('cmd.desc.usage'))
+        table.add_row("/stats", _('cmd.desc.stats'))
         table.add_row("exit / quit / q", _('cmd.desc.exit'))
 
         console.print(table)
 
-    def _cmd_model(self, args: List[str]) -> None:
-        """Lists available models or switches to the specified one.
-        """
+    async def _cmd_model(self, args: List[str]) -> None:
+        """Lists available models or switches to the specified one (Async)."""
         if not args:
             console.print(f"[warning]{_('cmd.active_model')}[/warning] {self.model_name}")
             try:
                 console.print(f"[dim]{_('cmd.model.fetching')}[/dim]")
                 available = []
-                for model_obj in self.client.models.list():
-                    # Check attribute name defensively — SDK versions differ
+                # Use aio for model listing
+                models_response = await self.client.aio.models.list()
+                async for model_obj in models_response:
                     actions = getattr(model_obj, "supported_actions", None) or getattr(
                         model_obj, "supported_generation_methods", []
                     )
@@ -305,10 +354,10 @@ class ChatAgent:
         self.config.settings["model_name"] = new_model
         self.config.save_settings()
 
-        # Preserve history across model switch
-        current_history = getattr(self.chat_session, "history", None)
+        # Preserve history
+        current_history = await self.chat_session.get_history() if self.chat_session else None
         try:
-            self.chat_session = self.client.chats.create(
+            self.chat_session = await self.client.aio.chats.create(
                 model=self.model_name,
                 config=self._build_config(),
                 history=current_history,
@@ -335,10 +384,18 @@ class ChatAgent:
         self.config.save_settings()
         console.print(f"[success]{_('cmd.mode.set')}[/success] {self.edit_mode}")
 
-    def _cmd_clear(self) -> None:
-        """Resets the in-memory context window without ending the session."""
+    async def _ensure_session(self) -> None:
+        """Ensures an active chat session is correctly initialized."""
+        if self.chat_session is None:
+            self.chat_session = self.client.aio.chats.create(
+                model=self.model_name,
+                config=self._build_config(),
+            )
+
+    async def _cmd_clear(self) -> None:
+        """Resets the in-memory context window without ending the session (Async)."""
         try:
-            self.chat_session = self.client.chats.create(
+            self.chat_session = self.client.aio.chats.create(
                 model=self.model_name,
                 config=self._build_config(),
             )
@@ -349,8 +406,8 @@ class ChatAgent:
         except Exception as e:
             console.print(f"[error]{_('cmd.clear.failed')}[/error] {e}")
 
-    def _cmd_history(self, args: List[str]) -> None:
-        """Manages saved sessions: list, load, or delete.
+    async def _cmd_history(self, args: List[str]) -> None:
+        """Manages saved sessions: list, load, or delete (Async).
 
         Args:
             args (List[str]): Target history management command flags.
@@ -380,7 +437,7 @@ class ChatAgent:
                 console.print(f"[error]{_('cmd.history.load.not_found', id=session_id)}[/error]")
                 return
             try:
-                self.chat_session = self.client.chats.create(
+                self.chat_session = self.client.aio.chats.create(
                     model=self.model_name,
                     config=self._build_config(),
                     history=history_data,
@@ -406,19 +463,39 @@ class ChatAgent:
             console.print(f"[warning]{_('cmd.history.unknown')}[/warning] {sub}")
             console.print(f"[dim]{_('cmd.history.available')}[/dim]")
 
+    def _cmd_usage(self) -> None:
+        """Displays current session token usage and estimated cost."""
+        console.print(f"\n[google.blue]— {_('cmd.usage.title')} —[/google.blue]")
+        console.print(f"  {self.metrics.get_summary()}\n")
+
+    def _cmd_stats(self) -> None:
+        """Displays a summary of accomplishments in the current session."""
+        from rich.panel import Panel
+        stats_content = (
+            f"{_('cmd.stats.messages', count=f'[bold]{self.session_messages}[/bold]')}\n"
+            f"{_('cmd.stats.tools', count=f'[bold]{self.session_tools}[/bold]')}\n"
+            f"{_('cmd.stats.files', count=f'[bold]{self.dispatcher.modified_files_count}[/bold]')}"
+        )
+        console.print(Panel(
+            stats_content,
+            title=f"[google.blue]{_('cmd.stats.title')}[/google.blue]",
+            border_style="google.blue",
+            expand=False
+        ))
+
     # ------------------------------------------------------------------ #
     # Main loop                                                            #
     # ------------------------------------------------------------------ #
 
-    def start(self) -> None:
-        """Initializes the client and runs the main interactive CLI loop."""
-        if not self.setup_api():
+    async def start(self) -> None:
+        """Initializes the client and runs the main interactive CLI loop (Async)."""
+        if not await self.setup_api():
             sys.exit(1)
 
         self.running = True
 
         try:
-            self.chat_session = self.client.chats.create(
+            self.chat_session = self.client.aio.chats.create(
                 model=self.model_name,
                 config=self._build_config(),
             )
@@ -437,11 +514,12 @@ class ChatAgent:
                     break
 
                 if user_input.startswith("/"):
-                    self._process_slash_command(user_input)
+                    await self._process_slash_command(user_input)
                     continue
 
+                self.session_messages += 1
                 console.print("[agent]AskGem:[/agent]")
-                self._stream_response(user_input)
+                await self._stream_response(user_input)
 
             except (KeyboardInterrupt, EOFError):
                 self.running = False

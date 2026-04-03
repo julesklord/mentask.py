@@ -13,9 +13,14 @@ from typing import Any, Dict
 
 
 class Translator:
-    """Manages multi-language translations and OS locale auto-detection."""
-    def __init__(self):
-        """Initializes the Translator with the fallback language."""
+    """Manages multi-language translations and OS locale auto-detection.
+
+    Attributes:
+        language (str): The two-letter ISO language code currently in use.
+        translations (Dict[str, str]): The loaded key-value translation map.
+    """
+    def __init__(self) -> None:
+        """Initializes the Translator with default fallback and auto-detection."""
         self.language = "en"  # fallback
         self.translations: Dict[str, str] = {}
         self._load_translations()
@@ -42,7 +47,10 @@ class Translator:
         return "en"
 
     def _load_translations(self) -> None:
-        """Loads the translation JSON file corresponding to the detected locale."""
+        """Loads the translation JSON file corresponding to the detected locale.
+
+        Falls back to 'en.json' if the detected language is not supported.
+        """
         detected_lang = self._detect_language()
 
         # Resolve the absolute path of this module to find locales/

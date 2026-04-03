@@ -159,7 +159,7 @@ class ChatAgent:
                     else:
                         result = _('tool.denied.edit')
                 else:
-                    console.print(f"[italic google.green]{_('tool.edit.auto', path=path)}[/italic google.green]")
+                    console.print(f"[italic success]{_('tool.edit.auto', path=path)}[/italic success]")
                     result = edit_file(path, find_text, replace_text)
 
             else:
@@ -274,8 +274,8 @@ class ChatAgent:
                 else:
                     if is_retryable:
                         _logger.error("All %d retry attempts exhausted: %s", max_retries, e)
-                        console.print(f"\n[bold red]{_('engine.retry_exhausted', max=max_retries)}[/bold red]")
-                    console.print(f"[bold red]{_('engine.api_error')}[/bold red] {e}")
+                        console.print(f"\n[error]{_('engine.retry_exhausted', max=max_retries)}[/error]")
+                    console.print(f"[error]{_('engine.api_error')}[/error] {e}")
                     return
 
 
@@ -310,12 +310,12 @@ class ChatAgent:
             self._cmd_history(args)
 
         else:
-            console.print(f"[yellow]{_('cmd.unknown')}[/yellow] {command} {_('cmd.hint_help')}")
+            console.print(f"[warning]{_('cmd.unknown')}[/warning] {command} {_('cmd.hint_help')}")
 
     def _cmd_help(self) -> None:
         """Prints a formatted table of all available slash commands."""
         table = Table(title=_('cmd.help.title'), show_header=True, header_style="google.blue")
-        table.add_column(_('cmd.help.header.cmd'), style="google.green", no_wrap=True)
+        table.add_column(_('cmd.help.header.cmd'), style="success", no_wrap=True)
         table.add_column(_('cmd.help.header.desc'))
 
         table.add_row("/help", _('cmd.desc.help'))
@@ -431,12 +431,12 @@ class ChatAgent:
 
         elif sub == "load":
             if len(args) < 2:
-                console.print(f"[yellow]{_('cmd.history.usage.load')}[/yellow]")
+                console.print(f"[warning]{_('cmd.history.usage.load')}[/warning]")
                 return
             session_id = args[1]
             history_data = self.history.load_session(session_id)
             if history_data is None:
-                console.print(f"[red]{_('cmd.history.load.not_found', id=session_id)}[/red]")
+                console.print(f"[error]{_('cmd.history.load.not_found', id=session_id)}[/error]")
                 return
             try:
                 self.chat_session = self.client.chats.create(
@@ -453,7 +453,7 @@ class ChatAgent:
 
         elif sub == "delete":
             if len(args) < 2:
-                console.print(f"[yellow]{_('cmd.history.usage.del')}[/yellow]")
+                console.print(f"[warning]{_('cmd.history.usage.del')}[/warning]")
                 return
             session_id = args[1]
             if self.history.delete_session(session_id):
@@ -462,7 +462,7 @@ class ChatAgent:
                 console.print(f"[error]{_('cmd.history.del.not_found', id=session_id)}[/error]")
 
         else:
-            console.print(f"[yellow]{_('cmd.history.unknown')}[/yellow] {sub}")
+            console.print(f"[warning]{_('cmd.history.unknown')}[/warning] {sub}")
             console.print(f"[dim]{_('cmd.history.available')}[/dim]")
 
     # ------------------------------------------------------------------ #
@@ -482,7 +482,7 @@ class ChatAgent:
                 config=self._build_config(),
             )
         except Exception as e:
-            console.print(f"[bold red][X] API Error:[/bold red] {e}")
+            console.print(f"[error][X] API Error:[/error] {e}")
             sys.exit(1)
 
         while self.running:

@@ -1,7 +1,7 @@
 # askgem — Development Roadmap
 
 > **Last Updated:** April 2, 2026
-> **Current Version:** `2.1.0`
+> **Current Version:** `2.1.0` (Visual Rebirth)
 > **Maintainer:** [@julesklord](https://github.com/julesklord)
 > **Status:** Active Development
 
@@ -39,6 +39,8 @@ This document outlines the comprehensive engineering roadmap for `askgem`, organ
 | Rolling window context management | `core/history_manager.py` | ✅ Shipped |
 | Session persistence and restore (`/history`) | `core/history_manager.py` | ✅ Shipped |
 | OS-level locale auto-detection (8 languages) | `core/i18n.py` + `locales/*.json` | ✅ Shipped |
+| Google Brand Identity (Blue/Yellow Theme) | `cli/console.py` + `cli/main.py` | ✅ Shipped |
+| Friendly Prism Mascot & Visual Assets | `docs/assets/` | ✅ Shipped |
 | Rich TUI with panels, spinners, Markdown streaming | `cli/console.py` + `rich` | ✅ Shipped |
 | JSON-based centralized configuration | `core/config_manager.py` | ✅ Shipped |
 | Debug logging to `~/.askgem/askgem.log` | `core/paths.py` | ✅ Shipped |
@@ -66,11 +68,11 @@ graph TD
 
 ---
 
-## Milestone 1 — Stability & Error Resilience (v2.1)
+## Milestone 1 — Visual Identity & Stability (v2.1)
 
 **Priority:** 🔴 Critical
-**Estimated Effort:** 1-2 weeks
-**Theme:** Make the existing features bulletproof before adding new ones.
+**Estimated Effort:** Completed
+**Theme:** Establish a premium Google-inspired identity and bulletproof core logic.
 
 ### 1.1 API Error Retry with Exponential Backoff
 
@@ -442,9 +444,9 @@ The following features are **intentionally excluded** from this roadmap to maint
 ## Version Release Timeline (Estimated)
 
 ```text
-2026-04     v2.0.0  ████████████████  CURRENT RELEASE
-2026-05     v2.1.0  ░░░░░░░░          Stability & Error Resilience
-2026-06     v2.2.0  ░░░░░░            Advanced Code Tools
+2026-04     v2.1.0  ████████████████  CURRENT RELEASE (Visual Rebirth)
+2026-05     v2.2.0  ░░░░░░░░          Advanced Code Tools
+2026-06     v2.3.0  ░░░░░░            Web Research Integration
 2026-07     v2.3.0  ░░░░              Web Research Integration
 2026-Q3     v2.4.0  ░░░               Token Economy & Metrics
 2026-Q4     v2.5.0  ░░                LSP Integration

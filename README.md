@@ -8,6 +8,11 @@
 
 ![askgem Banner](docs/assets/banner.png)
 
+## 📸 Preview
+
+**askgem in action (screenshot)**  
+![askgem v0.8.0 Terminal UI](docs/assets/askgem_v080.png)
+
 ---
 
 ## ✨ Key Features
@@ -22,9 +27,12 @@
 
 askgem integrates natively with `google-genai`, enabling multi-step reasoning and autonomous actions through registered tool functions:
 
-- **`list_directory`** — Explore filesystem trees.
-- **`read_file`** — Read source code with optional line ranges.
+- **`list_directory`** — Explore filesystem trees (capped at 100 items).
+- **`read_file`** — Read source code with safety character truncated (30kb).
 - **`edit_file`** — Precise find-and-replace code blocks with mandatory `.bkp` backups.
+- **`diff_file`** — [NEW] Pre-auditing for proposed changes through unified diffs.
+- **`grep_search`** — [NEW] Recursive text/regex searching across entire codebases.
+- **`glob_find`** — [NEW] Recursive file discovery by filename patterns.
 - **`execute_bash`** — Run shell commands with configurable timeout.
 
 ### 🛡️ Human-in-the-Loop Safety

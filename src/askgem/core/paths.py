@@ -1,8 +1,13 @@
 """
 Path resolution utilities for askgem.
 
-This module provides centralized access to application data directories,
-ensuring consistent paths and avoiding circular imports between managers.
+This module provides centralized access to application data directories (e.g., ~/.askgem),
+ensuring consistent paths across different OS environments and avoiding circular
+imports between core logic and CLI managers.
+
+Key directories handled:
+- Config: ~/.askgem (API keys, settings.json)
+- History: ~/.askgem/history/ (Chat session persistence)
 
 This module does NOT handle the creation or parsing of files within these directories.
 """
@@ -14,7 +19,7 @@ def get_config_dir() -> Path:
     """Gets the base configuration directory for the application.
 
     Returns:
-        Path: A Path object pointing to ~/.askgem.
+        Path: A Path object pointing to the ~/.askgem directory.
     """
     config_dir = Path.home() / ".askgem"
     config_dir.mkdir(parents=True, exist_ok=True)

@@ -1,444 +1,426 @@
 # askgem — Development Roadmap
 
-> **Last Updated:** April 1, 2026
-> **Current Version:** `2.0.0`
+> **Version:** `0.8.0` (current)
+> **Target:** `1.0.0` stable release
+> **Updated:** April 2026
 > **Maintainer:** [@julesklord](https://github.com/julesklord)
-> **Status:** Active Development
 
-This document outlines the comprehensive engineering roadmap for `askgem`, organized into prioritized milestones. Each milestone contains detailed technical specifications, acceptance criteria, and dependency mappings to guide development decisions.
+This document maps the path from the current `0.8.0` pre-release to a `1.0.0`
+stable release, and beyond. Milestones are sequenced by dependency and priority.
+Each item includes the technical problem, the proposed solution, and acceptance
+criteria so progress is unambiguous.
 
 ---
 
 ## Table of Contents
 
-1. [Current State Assessment](#1-current-state-assessment)
-2. [Milestone 1 — Stability & Error Resilience (v2.1)](#milestone-1--stability--error-resilience-v21)
-3. [Milestone 2 — Advanced Code Tools (v2.2)](#milestone-2--advanced-code-tools-v22)
-4. [Milestone 3 — Web Research Integration (v2.3)](#milestone-3--web-research-integration-v23)
-5. [Milestone 4 — Token Economy & Metrics (v2.4)](#milestone-4--token-economy--metrics-v24)
-6. [Milestone 5 — LSP Integration (v2.5)](#milestone-5--lsp-integration-v25)
-7. [Milestone 6 — Plugin Ecosystem (v3.0)](#milestone-6--plugin-ecosystem-v30)
-8. [Technical Debt & Continuous Improvement](#technical-debt--continuous-improvement)
-9. [Non-Goals (Explicitly Out of Scope)](#non-goals-explicitly-out-of-scope)
+1. [Where we are: v0.8.0](#1-where-we-are-v080)
+2. [v0.9.0 — Correctness & Robustness](#2-v090--correctness--robustness)
+3. [v0.9.5 — Search & Code Intelligence](#3-v095--search--code-intelligence)
+4. [v1.0.0 — Stable Release](#4-v100--stable-release)
+5. [Post-1.0 — Web & Metrics](#5-post-10--web--metrics)
+6. [Long-term — LSP & Plugins](#6-long-term--lsp--plugins)
+7. [Non-goals](#7-non-goals)
+8. [Release timeline](#8-release-timeline)
 
 ---
 
-## 1. Current State Assessment
+## 1. Where we are: v0.8.0
 
-### What askgem v2.0 Can Do Today
+### What works
 
-| Capability | Module | Status |
+| Feature | Module | Status |
 |---|---|---|
-| Interactive multi-turn chat with Gemini models | `engine/query_engine.py` | ✅ Shipped |
-| Read files with line range support | `tools/file_tools.py::read_file` | ✅ Shipped |
-| Edit files with find-and-replace + `.bkp` backups | `tools/file_tools.py::edit_file` | ✅ Shipped |
-| Execute shell commands (PowerShell/bash) with 60s timeout | `tools/system_tools.py::execute_bash` | ✅ Shipped |
-| List directory contents | `tools/system_tools.py::list_directory` | ✅ Shipped |
-| Human-in-the-loop safety confirmations | `engine/query_engine.py` | ✅ Shipped |
-| Model hot-swapping (`/model <name>`) | `engine/query_engine.py::_cmd_model` | ✅ Shipped |
-| Rolling window context management | `core/history_manager.py` | ✅ Shipped |
-| Session persistence and restore (`/history`) | `core/history_manager.py` | ✅ Shipped |
-| OS-level locale auto-detection (8 languages) | `core/i18n.py` + `locales/*.json` | ✅ Shipped |
-| Rich TUI with panels, spinners, Markdown streaming | `ui/console.py` + `rich` | ✅ Shipped |
-| JSON-based centralized configuration | `core/config_manager.py` | ✅ Shipped |
-| Debug logging to `~/.askgem/askgem.log` | `engine/query_engine.py` | ✅ Shipped |
+| Multi-turn chat with Gemini models | `agent/chat.py` | ✅ |
+| `read_file` with line range support | `tools/file_tools.py` | ✅ |
+| `edit_file` with `.bkp` backup | `tools/file_tools.py` | ✅ |
+| `execute_bash` with 60s timeout | `tools/system_tools.py` | ✅ |
+| `list_directory` | `tools/system_tools.py` | ✅ |
+| Human-in-the-loop confirmations | `agent/chat.py` | ✅ |
+| `/mode auto\|manual` | `agent/chat.py` | ✅ |
+| `/model` hot-swap | `agent/chat.py` | ✅ |
+| Exponential backoff retry (3 attempts) | `agent/chat.py` | ✅ |
+| Rolling window session persistence | `core/history_manager.py` | ✅ |
+| `/history list\|load\|delete` | `agent/chat.py` | ✅ |
+| i18n auto-detection (8 languages) | `core/i18n.py` + `locales/` | ✅ |
+| Rich TUI — streaming Markdown, spinners | `cli/` + `rich` | ✅ |
+| JSON config persistence | `core/config_manager.py` | ✅ |
+| Debug logging to `~/.askgem/askgem.log` | `agent/chat.py` | ✅ |
 
-### Architecture Diagram
+### Known gaps (blocking 1.0.0)
 
-```
-┌─────────────────────────────────────────────────────┐
-│                    main.py                           │
-│              (CLI Entry + Welcome Panel)             │
-└────────────────────┬────────────────────────────────┘
-                     │
-┌────────────────────▼────────────────────────────────┐
-│               engine/query_engine.py                 │
-│         (Agentic Loop + Tool Dispatch)               │
-│                                                      │
-│  ┌──────────┐  ┌──────────┐  ┌──────────────────┐   │
-│  │ Gemini   │  │ History  │  │ Config Manager   │   │
-│  │ SDK      │  │ Manager  │  │ (settings.json)  │   │
-│  └──────────┘  └──────────┘  └──────────────────┘   │
-│                                                      │
-│  Registered Tools:                                   │
-│  ┌────────────┐ ┌────────────┐ ┌────────────────┐   │
-│  │read_file   │ │edit_file   │ │list_directory  │   │
-│  │execute_bash│ │ (future)   │ │ (future)       │   │
-│  └────────────┘ └────────────┘ └────────────────┘   │
-└─────────────────────────────────────────────────────┘
-```
-
-### Known Limitations in v2.0
-
-1. **No retry logic on API errors** — A single `429 Resource Exhausted` or `500 Internal Server Error` from Gemini crashes the current turn with no automatic recovery.
-2. **No search capabilities** — The agent cannot search inside files for patterns (grep) or find files by name glob.
-3. **No internet access** — The agent cannot look up documentation, APIs, or package versions online.
-4. **No cost awareness** — Users have zero visibility into how many tokens each conversation consumes or what it costs.
-5. **No `write_file` tool** — Creating a new file requires using `edit_file` with empty `find_text`, which is semantically awkward and error-prone.
-6. **Single-file editing only** — Cannot apply multi-file refactors atomically.
-7. **No undo mechanism** — `.bkp` files exist but there's no `/undo` command to restore them.
+1. **No `write_file` tool** — creating new files requires abusing `edit_file` with
+   empty `find_text`, which is semantically wrong and has edge cases.
+2. **No `/undo` command** — `.bkp` files exist but there's no in-session way to
+   restore them.
+3. **No search tools** — the agent can't grep for patterns or find files by glob
+   without burning tokens reading every file manually.
+4. **No context overflow protection** — if a session exceeds the model's context
+   limit, the SDK throws an opaque `InvalidArgument` instead of recovering gracefully.
+5. **`edit_file` uniqueness guard missing** *(fixed in `[Unreleased]`)* — was
+   silently replacing all occurrences.
+6. **`read_file` no char cap** *(fixed in `[Unreleased]`)* — could explode context
+   on large files.
+7. **CI/CD not wired** — no automated test run on push.
+8. **PyPI package not current** — published version predates the rewrite.
 
 ---
 
-## Milestone 1 — Stability & Error Resilience (v2.1)
+## 2. v0.9.0 — Correctness & Robustness
 
-**Priority:** 🔴 Critical
-**Estimated Effort:** 1-2 weeks
-**Theme:** Make the existing features bulletproof before adding new ones.
+**Priority:** 🔴 Critical — fix the gaps that cause data loss or silent failures.
+**Target:** May 2026
 
-### 1.1 API Error Retry with Exponential Backoff
+### 2.1 `write_file` tool
 
-**Problem:** Currently, a single `google.api_core.exceptions.ResourceExhausted` (HTTP 429) terminates the entire model turn. The user loses their input and must re-type it.
+**Problem:** Creating new files via `edit_file(path, find_text="", ...)` is a hack.
+The intent is ambiguous and the edge case where `os.path.dirname()` returns `""` on
+a bare filename causes a silent `FileNotFoundError`.
 
-**Solution:** Implement a retry decorator in `engine/query_engine.py::_stream_response` with:
-- Maximum 3 retry attempts
-- Exponential backoff: 2s → 4s → 8s
-- Jitter of ±500ms to avoid thundering herd
-- Clear `rich.status.Status` feedback to the user during waits (e.g., "Rate limited, retrying in 4s...")
-- Graceful fallback message after all retries exhausted
+**Solution:** First-class `write_file(path, content)` tool with explicit semantics.
 
-**Files Modified:**
-- `engine/query_engine.py` (retry wrapper around `chat_session.send_message_stream`)
-- `locales/*.json` (add `engine.retry`, `engine.retry_exhausted` keys)
+```python
+def write_file(path: str, content: str) -> str:
+    """Creates a new file at path with the given content.
+    Fails if the file already exists to prevent accidental overwrites.
+    Use edit_file to modify existing files."""
+```
 
-**Acceptance Criteria:**
-- [ ] A simulated 429 error triggers an automatic retry without user intervention
-- [ ] The user sees a spinner with countdown during the backoff
-- [ ] After 3 failures, a clean error message appears (not a Python traceback)
+- Creates all parent directories as needed
+- Refuses to overwrite an existing file (returns error, doesn't silently clobber)
+- Human-in-the-loop confirmation in manual mode
+- Unit tests: creation, parent dir creation, overwrite rejection, permission errors
 
-### 1.2 Dedicated `write_file` Tool
+**Files:** `tools/file_tools.py`, `agent/chat.py` (register + dispatch)
 
-**Problem:** Creating new files currently requires passing an empty `find_text` to `edit_file`, which is unintuitive and has edge-case bugs when `os.path.dirname()` returns an empty string.
+**Acceptance criteria:**
+- [ ] `write_file("src/new_module.py", "...")` creates the file and all parent dirs
+- [ ] Calling it on an existing path returns a clear error
+- [ ] Test coverage ≥ 4 cases
 
-**Solution:** Extract new-file creation into a first-class `write_file(path, content)` tool.
+### 2.2 `/undo` command
 
-**Files Created:**
-- Extend `tools/file_tools.py` with `write_file()` function
+**Problem:** Every `edit_file` creates a `.bkp` but there's no in-session way to
+restore it. Users have to manually copy files from the terminal.
 
-**Files Modified:**
-- `engine/query_engine.py` (register new tool, add dispatch case)
-- `locales/*.json` (add `tool.wants_write` keys)
+**Solution:** Track the last edited file path in `ChatAgent`. `/undo` copies
+`<path>.bkp` back to `<path>` and confirms success.
 
-**Acceptance Criteria:**
-- [ ] `write_file("new_folder/new_file.py", "print('hello')")` creates the file and all parent directories
-- [ ] Human-in-the-loop confirmation is shown in manual mode
-- [ ] Unit test covers creation, overwrite protection, and permission errors
+- Only the most recent edit is undoable (single-level undo — `/undo` again does nothing)
+- Clear message if no backup exists
+- Manual mode: shows what will be restored, asks confirmation
+- Adds i18n keys: `cmd.desc.undo`, `cmd.undo.success`, `cmd.undo.none`,
+  `cmd.undo.confirm`
 
-### 1.3 `/undo` Command
+**Files:** `agent/chat.py`
 
-**Problem:** Every `edit_file` call creates a `.bkp` backup, but users have no easy way to restore it.
+**Acceptance criteria:**
+- [ ] `/undo` after an `edit_file` restores the previous content
+- [ ] `/undo` with no prior edit shows a clean "nothing to undo" message
+- [ ] The restored file matches the `.bkp` byte-for-byte
 
-**Solution:** Implement `/undo` slash command that restores the most recent `.bkp` file.
+### 2.3 Graceful context overflow recovery
 
-**Files Modified:**
-- `engine/query_engine.py` (add `_cmd_undo`, track last edited path)
-- `locales/*.json` (add `cmd.desc.undo`, `cmd.undo.success`, `cmd.undo.none` keys)
+**Problem:** When a reloaded session + new input exceeds the model's context limit,
+the SDK raises `InvalidArgument: ... tokens exceed the limit`. The user gets a raw
+Python exception.
 
-**Acceptance Criteria:**
-- [ ] `/undo` restores the last modified file from its `.bkp` copy
-- [ ] If no `.bkp` exists, a clean message is shown
-- [ ] The undo action itself creates a recovery point
+**Solution:** Catch `InvalidArgument` in `_stream_response`. If the error string
+mentions tokens/context, call `history_manager.truncate_half()` and retry once
+before surfacing an error.
 
-### 1.4 Graceful Handling of Oversized Context
+```python
+def truncate_half(self) -> None:
+    """Drops the oldest 50% of the current session history in-memory."""
+```
 
-**Problem:** If the rolling window still exceeds the model's context limit, the SDK throws an opaque `InvalidArgument` error.
+- Notifies the user that context was trimmed
+- Retries the same message automatically
+- Falls through to normal error handling if retry also fails
 
-**Solution:** Catch `InvalidArgument` in `_stream_response`, automatically truncate the oldest 50% of history, and retry once.
+**Files:** `agent/chat.py`, `core/history_manager.py`
 
-**Files Modified:**
-- `engine/query_engine.py`
-- `core/history_manager.py` (add `truncate_half()` method)
+**Acceptance criteria:**
+- [ ] A session with a loaded history that overflows triggers one automatic trim+retry
+- [ ] User sees "Context trimmed, retrying..." — not a stack trace
+- [ ] Second attempt with trimmed context succeeds (tested with a mock that raises
+  once then succeeds)
+
+### 2.4 CI/CD via GitHub Actions
+
+**Problem:** No automated quality gate on push or PR.
+
+**Solution:** `.github/workflows/ci.yml` that runs on every push and PR to `main`:
+
+```
+ruff check src/ tests/
+pytest tests/ -v
+python -m build --check
+```
+
+- Fails fast on lint errors before running tests
+- Matrix: Python 3.10, 3.11, 3.12
+- Separate `publish.yml` triggered on version tag push (`v*`) that uploads to PyPI
+  via `twine`
+
+**Files:** `.github/workflows/ci.yml`, `.github/workflows/publish.yml`
+
+**Acceptance criteria:**
+- [ ] Push with a ruff violation fails CI at the lint step
+- [ ] Push with a broken test fails CI at the test step
+- [ ] Tag push `v0.9.0` triggers publish workflow
 
 ---
 
-## Milestone 2 — Advanced Code Tools (v2.2)
+## 3. v0.9.5 — Search & Code Intelligence
 
-**Priority:** 🟠 High
-**Estimated Effort:** 2-3 weeks
-**Theme:** Give the agent the ability to search and navigate codebases like a human developer.
+**Priority:** 🟠 High — transforms the agent from a file editor into a codebase navigator.
+**Target:** June 2026
 
-### 2.1 `grep_search` Tool (Pattern Matching)
+### 3.1 `grep_search` tool
 
-**Problem:** The agent currently has no way to search for a string across multiple files. If asked "where is the `authenticate` function defined?", it must manually `list_directory` + `read_file` every single file — burning tokens and time.
+**Problem:** The agent has no way to find where a function is defined, where a
+variable is used, or which files import a given module. It must read every file
+manually — expensive in tokens and slow.
 
-**Solution:** Implement `grep_search(pattern, path, case_sensitive, is_regex)` that wraps Python's `pathlib.Path.rglob()` + line-by-line regex matching.
+**Solution:** `grep_search(pattern, path, is_regex, case_sensitive)` using Python's
+`pathlib.Path.rglob()` + line-by-line matching.
 
-**Technical Details:**
-- Recursively walk the directory tree, skipping `.git/`, `node_modules/`, `__pycache__/`, `.venv/`
-- Return results as `file:line_number: matching_line` (capped at 50 results)
-- Support both literal string and regex modes
-- Binary file detection via null-byte check in first 8KB
+```python
+def grep_search(
+    pattern: str,
+    path: str = ".",
+    is_regex: bool = False,
+    case_sensitive: bool = False,
+) -> str:
+    """Search for a string or regex pattern across all text files under path.
+    Returns matching lines with file:line_number prefixes, capped at 50 results.
+    Skips binary files, .git/, __pycache__/, node_modules/, .venv/."""
+```
 
-**Files Created:**
-- `tools/search_tools.py`
+- Returns `file:line: matching_line` format, max 50 results
+- Binary detection via null-byte check in first 8KB
+- Skips common noise dirs automatically
+- Result cap prevents context overflow
 
-**Files Modified:**
-- `engine/query_engine.py` (register tool, add dispatch)
+**Files:** `tools/search_tools.py` (new), `agent/chat.py` (register + dispatch)
 
-**Acceptance Criteria:**
+**Acceptance criteria:**
 - [ ] `grep_search("def authenticate", "src/")` returns file paths and line numbers
-- [ ] Results are capped at 50 to prevent token overflow
-- [ ] Binary files are skipped silently
-- [ ] Unit tests cover recursive search, regex mode, empty results
+- [ ] Results capped at 50
+- [ ] Binary files skipped silently
+- [ ] Regex mode works (`is_regex=True`)
+- [ ] Unit tests: match, no match, binary skip, cap enforcement
 
-### 2.2 `glob_find` Tool (File Discovery)
+### 3.2 `glob_find` tool
 
-**Problem:** The agent cannot find files by name pattern (e.g., "find all `.yaml` files in the project").
+**Problem:** The agent can't discover files by name pattern — e.g., "find all YAML
+configs" or "which Python files are in the tests directory".
 
-**Solution:** Implement `glob_find(pattern, path)` using `pathlib.Path.rglob()`.
+**Solution:** `glob_find(pattern, path)` using `pathlib.Path.rglob()`.
 
-**Files Created:**
-- Add to `tools/search_tools.py`
-
-**Acceptance Criteria:**
-- [ ] `glob_find("*.py", "src/")` returns all Python files
-- [ ] Results exclude `.git/`, `node_modules/`, `__pycache__/`
-
-### 2.3 `diff_file` Tool (Change Preview)
-
-**Problem:** The agent applies edits blindly. There's no way for the user to see a unified diff of what changed.
-
-**Solution:** Implement `diff_file(path)` that compares a file against its `.bkp` version using Python's `difflib.unified_diff`.
-
-**Files Created:**
-- Add to `tools/file_tools.py`
-
-**Acceptance Criteria:**
-- [ ] Shows a colored unified diff in the terminal
-- [ ] Returns "No changes detected" if file matches backup
-- [ ] Works even if no `.bkp` exists (shows "No backup found")
-
----
-
-## Milestone 3 — Web Research Integration (v2.3)
-
-**Priority:** 🟡 Medium
-**Estimated Effort:** 1-2 weeks
-**Theme:** Connect the agent to the live internet for documentation lookups.
-
-### 3.1 `web_search` Tool (Google Custom Search API)
-
-**Problem:** The agent has zero access to external information. When asked about a library it wasn't trained on, it can only hallucinate.
-
-**Solution:** Integrate the [Google Custom Search JSON API](https://developers.google.com/custom-search/v1/overview) as a registered tool.
-
-**Configuration Requirements:**
-- `GOOGLE_SEARCH_API_KEY` — stored in `~/.askgem/settings.json` or environment variable
-- `GOOGLE_CX_ID` — Programmable Search Engine ID
-
-**Technical Details:**
-- HTTP requests via `urllib.request` (zero new dependencies)
-- Returns top 5 results: title, URL, snippet
-- Rate limit: 100 queries/day on free tier
-
-**Files Created:**
-- `tools/web_tools.py`
-
-**Files Modified:**
-- `engine/query_engine.py` (register tool, add dispatch, add config prompts)
-- `core/config_manager.py` (add search API key fields)
-- `locales/*.json` (add `tool.web_search.*` keys)
-
-**Acceptance Criteria:**
-- [ ] `web_search("python asyncio tutorial")` returns 5 titled results with URLs
-- [ ] Missing API key triggers a friendly setup wizard
-- [ ] Rate limit errors are caught and surfaced cleanly
-- [ ] No new pip dependencies required
-
-### 3.2 `web_fetch` Tool (Page Content Extraction)
-
-**Problem:** Even with search results, the agent can't read the actual page content.
-
-**Solution:** Implement `web_fetch(url)` that downloads a page and extracts readable text.
-
-**Technical Details:**
-- Use `urllib.request.urlopen` with a 10s timeout
-- Strip HTML tags using a lightweight regex-based cleaner (avoid `beautifulsoup4` dependency)
-- Truncate output to 4000 characters to prevent token explosion
-- Support `text/plain`, `text/html`, and `application/json` content types
-
-**Files Created:**
-- Add to `tools/web_tools.py`
-
-**Acceptance Criteria:**
-- [ ] `web_fetch("https://docs.python.org/3/library/os.html")` returns readable text
-- [ ] Binary/media URLs return a clean error message
-- [ ] Output is capped at 4000 characters with a truncation notice
-
----
-
-## Milestone 4 — Token Economy & Metrics (v2.4)
-
-**Priority:** 🟡 Medium
-**Estimated Effort:** 1 week
-**Theme:** Give users visibility into their API consumption.
-
-### 4.1 Token Counter & Cost Tracker
-
-**Problem:** Users have no idea how many tokens each conversation is consuming or what it costs.
-
-**Solution:** After each model response, extract `usage_metadata` from the Gemini API response and maintain a running tally.
-
-**Technical Details:**
-- Read `response.usage_metadata.prompt_token_count` and `candidates_token_count`
-- Maintain session totals in `QueryEngine` instance variables
-- Display in the TUI footer or via a new `/usage` command
-- Cost estimation based on published Gemini pricing (configurable per model)
-
-**Files Created:**
-- `core/metrics.py` (TokenTracker class)
-
-**Files Modified:**
-- `engine/query_engine.py` (extract metadata after each response)
-- `locales/*.json` (add `cmd.usage.*` keys)
-
-**Acceptance Criteria:**
-- [ ] `/usage` shows: total input tokens, output tokens, estimated cost
-- [ ] Token counts persist per session
-- [ ] Cost estimates update when switching models
-
-### 4.2 Session Summary on Exit
-
-**Problem:** When the user exits, there's no summary of what was accomplished.
-
-**Solution:** On exit, show a mini-report: total messages exchanged, tools invoked, files modified, tokens consumed.
-
-**Files Modified:**
-- `engine/query_engine.py::start()` (add exit summary panel)
-
----
-
-## Milestone 5 — LSP Integration (v2.5)
-
-**Priority:** 🔵 Low (High Complexity)
-**Estimated Effort:** 3-4 weeks
-**Theme:** Give the agent language-aware code intelligence.
-
-### 5.1 LSP Client Bridge
-
-**Problem:** The agent modifies code blindly — it has no way to verify syntax correctness, resolve imports, or check for type errors before submitting a change.
-
-**Solution:** Implement a synchronous LSP client that communicates with local Language Servers via JSON-RPC over stdio.
-
-**Technical Details:**
-- Spawn a language server subprocess (e.g., `pyright-langserver --stdio`)
-- Implement the LSP initialization handshake (`initialize` → `initialized`)
-- Support `textDocument/didOpen`, `textDocument/didChange`, `textDocument/publishDiagnostics`
-- Expose as `get_diagnostics(file_path)` tool to the Gemini agent
-
-**Architecture:**
-```
-askgem QueryEngine
-    │
-    ├── get_diagnostics("app.py")
-    │       │
-    │       ▼
-    │   LSPClient (JSON-RPC over stdio)
-    │       │
-    │       ▼
-    │   pyright-langserver --stdio
-    │       │
-    │       ▼
-    │   Returns: [{line: 42, message: "Cannot find name 'foo'", severity: "error"}]
-    │
-    ▼
-Agent uses diagnostics to self-correct before proposing edits
+```python
+def glob_find(pattern: str, path: str = ".") -> str:
+    """Find all files matching a glob pattern under path.
+    Example: glob_find('*.py', 'src/') or glob_find('**/*.yaml', '.')
+    Skips .git/, __pycache__/, node_modules/, .venv/."""
 ```
 
-**Risk Assessment:**
-- **High complexity:** JSON-RPC framing (Content-Length headers), async notification handling
-- **Mitigation:** Keep it strictly synchronous and read-only (no completions, no refactoring — diagnostics only)
-- **Dependency:** Requires the user to have a compatible language server installed
+**Files:** `tools/search_tools.py`
 
-**Files Created:**
-- `tools/lsp_tools.py`
-- `core/lsp_client.py`
+**Acceptance criteria:**
+- [ ] `glob_find("*.py", "src/")` returns all Python files under `src/`
+- [ ] `glob_find("**/*.json", ".")` finds nested JSON files
+- [ ] Noise dirs excluded from results
 
-**Acceptance Criteria:**
-- [ ] `get_diagnostics("test.py")` returns syntax errors from Pyright
-- [ ] Graceful fallback if no language server is installed
-- [ ] Timeout protection (5s max per diagnostic request)
+### 3.3 `diff_file` tool
 
----
+**Problem:** After an edit, the agent (and the user) has no easy way to review
+what changed. `.bkp` files exist but aren't surfaced as diffs.
 
-## Milestone 6 — Plugin Ecosystem (v3.0)
+**Solution:** `diff_file(path)` compares the file against its `.bkp` using
+`difflib.unified_diff`.
 
-**Priority:** ⚪ Future
-**Estimated Effort:** 4-6 weeks
-**Theme:** Allow community-contributed tools without modifying core code.
+```python
+def diff_file(path: str) -> str:
+    """Show a unified diff between the current file and its last .bkp backup.
+    Returns 'No backup found' if no .bkp exists."""
+```
 
-### 6.1 Plugin Loader Architecture
+- Output is standard unified diff format
+- Works on any file that has a `.bkp` alongside it
+- Useful as a pre-commit review step
 
-**Problem:** Adding new tools currently requires modifying `query_engine.py` directly. This doesn't scale for community contributions.
+**Files:** `tools/file_tools.py`
 
-**Solution:** Implement a plugin discovery system that loads tools from a `~/.askgem/plugins/` directory.
-
-**Technical Details:**
-- Each plugin is a Python file with a `register(engine)` function
-- The function receives the engine instance and can call `engine.register_tool(func)`
-- Plugins are loaded at startup via `importlib`
-- A `plugin.json` manifest declares the plugin name, version, and tool descriptions
-
-**Files Created:**
-- `core/plugin_loader.py`
-
-### 6.2 Built-in Plugin: Git Integration
-
-**Problem:** The agent has no native git awareness.
-
-**Solution:** Create a bundled plugin providing `git_status()`, `git_diff()`, `git_log(n)`, and `git_commit(message)` tools.
-
-**Files Created:**
-- `plugins/git_tools.py`
+**Acceptance criteria:**
+- [ ] Shows correct unified diff after an `edit_file` call
+- [ ] Returns clean message when no `.bkp` exists
+- [ ] Empty diff when file and backup are identical
 
 ---
 
-## Technical Debt & Continuous Improvement
+## 4. v1.0.0 — Stable Release
 
-These items should be addressed continuously alongside milestone work:
+**Priority:** 🔴 Gate — nothing ships as 1.0 until all items below are complete.
+**Target:** July 2026
 
-| Item | Priority | Description |
-|---|---|---|
-| **Test Coverage** | High | Current: 38 tests covering config, file tools, system tools. Missing: query engine integration tests, i18n tests, history manager edge cases. Target: 80%+ coverage. |
-| **Type Hints** | Medium | Add `py.typed` marker and complete `mypy` strict compliance across all modules. |
-| **CI/CD Pipeline** | Medium | Set up GitHub Actions workflow: `ruff check` → `pytest` → `python -m build` on every PR. |
-| **PyPI Publishing** | Medium | Automate `twine upload` via GitHub Actions on tag push (e.g., `v2.1.0`). |
-| **Docstrings** | Low | Ensure every public function has Google-style docstrings with Args/Returns/Raises. |
-| **Windows Terminal Encoding** | Low | Handle `cp1252` / `utf-8` mismatches in `execute_bash` output on legacy Windows consoles. |
-| **Configuration Validation** | Low | Add JSON Schema validation for `settings.json` to catch corrupted config files early. |
+### Requirements for 1.0.0
+
+All of the following must be true before tagging `v1.0.0`:
+
+**Correctness**
+- [ ] All items in v0.9.0 and v0.9.5 shipped and tested
+- [ ] `edit_file` uniqueness guard in place (done in `[Unreleased]`)
+- [ ] `read_file` char cap in place (done in `[Unreleased]`)
+- [ ] No known data-loss bugs
+
+**Stability**
+- [ ] CI passes on Python 3.10, 3.11, 3.12
+- [ ] Test coverage ≥ 70% across `tools/` and `core/`
+- [ ] No bare `except:` blocks anywhere in production code
+- [ ] All public functions have complete Google-style docstrings
+
+**Documentation**
+- [ ] README accurate and complete
+- [ ] All 8 locale files have every key present (verified by `diagnostic_usability.py`)
+- [ ] CHANGELOG up to date
+- [ ] `wiki/` covers Installation, Usage, API Reference, Architecture, FAQ
+
+**Distribution**
+- [ ] PyPI package current and installable via `pip install askgem`
+- [ ] `pip install askgem && askgem` works on a clean Python 3.10+ environment
+- [ ] Version string consistent across `pyproject.toml`, `__init__.py`, and git tag
+
+### 4.1 Session exit summary
+
+Small but polished: on `exit`/`quit`, show a brief panel with session stats.
+
+```
+┌─────────────────────────────┐
+│       Session Summary       │
+│  Messages:      12          │
+│  Tool calls:     7          │
+│  Files modified: 3          │
+└─────────────────────────────┘
+```
+
+Requires tracking `session_messages`, `session_tools`, `modified_files_count` in
+`ChatAgent` — straightforward counters incremented in the dispatch loop.
+
+**Files:** `agent/chat.py`
 
 ---
 
-## Non-Goals (Explicitly Out of Scope)
+## 5. Post-1.0 — Web & Metrics
 
-The following features are **intentionally excluded** from this roadmap to maintain focus and realistic scope for a solo maintainer:
+**Priority:** 🟡 Medium. Valuable but not blocking 1.0.
+**Target:** Q3 2026
+
+### 5.1 `web_search` tool (Google Custom Search API)
+
+Integrate the [Google Custom Search JSON API](https://developers.google.com/custom-search/v1/overview)
+as a registered tool. Returns top 5 results: title, URL, snippet.
+
+- Config: `google_search_api_key` + `google_cx_id` in `settings.json`
+- HTTP via `urllib.request` — zero new dependencies
+- Setup wizard on first use if keys are missing
+- 100 free queries/day on the free tier
+
+### 5.2 `web_fetch` tool
+
+Download a URL and extract readable text content.
+
+- `urllib.request.urlopen` with 10s timeout
+- Lightweight HTML tag stripping (no `beautifulsoup4` dependency)
+- Output capped at 4,000 characters with truncation notice
+- Supports `text/html`, `text/plain`, `application/json`
+
+### 5.3 Token usage tracking (`/usage` command)
+
+Extract `usage_metadata` from each Gemini response chunk and maintain session totals.
+
+```
+/usage
+  Input tokens:   4,821
+  Output tokens:  1,203
+  Estimated cost: $0.003 (gemini-2.0-flash)
+```
+
+- `core/metrics.py` — `TokenTracker` class
+- Cost estimates based on published Gemini pricing, configurable per model
+- Shown automatically on session exit summary
+
+---
+
+## 6. Long-term — LSP & Plugins
+
+**Priority:** 🔵 Research / Future. High complexity, low urgency.
+**Target:** 2027
+
+### 6.1 LSP diagnostics bridge
+
+Spawn a language server subprocess (e.g., `pyright-langserver --stdio`) and expose
+a `get_diagnostics(file_path)` tool that returns syntax and type errors before an
+edit is applied.
+
+```
+get_diagnostics("src/auth.py")
+→ [{line: 42, message: "Cannot find name 'jwt'", severity: "error"}]
+```
+
+The agent can use diagnostics to self-correct instead of applying broken code and
+looping on errors.
+
+- JSON-RPC over stdio — no external dependencies
+- Read-only (diagnostics only, no completions or refactoring)
+- 5s hard timeout per request
+- Graceful fallback if no language server installed
+
+### 6.2 Plugin system
+
+Allow community-contributed tools without modifying core code.
+
+- Plugin discovery from `~/.askgem/plugins/`
+- Each plugin: a Python file with `register(agent)` that calls
+  `agent.register_tool(func)`
+- `plugin.json` manifest per plugin
+- Bundled first-party plugin: git integration (`git_status`, `git_diff`, `git_log`,
+  `git_commit`)
+
+---
+
+## 7. Non-goals
+
+Explicitly out of scope for this project:
 
 | Feature | Reason |
 |---|---|
-| **Multi-agent orchestration** | Requires a full process management layer, IPC, and debugging infrastructure that is impractical for a single developer to maintain reliably. |
-| **Voice input/output** | Hardware-dependent, requires microphone access and speech recognition SDKs. |
-| **GUI / Electron wrapper** | askgem is a terminal-first tool by design. GUI development is an entirely separate project. |
-| **Cross-model support (OpenAI, Anthropic)** | Would fragment the codebase with SDK-specific adapters. askgem is purpose-built for Google Gemini. |
-| **Notebook (.ipynb) editing** | Jupyter notebook JSON structure is complex and error-prone. Users should use Jupyter directly. |
-| **MCP server hosting** | Acting as an MCP server (not client) requires persistent TCP socket management, auth flows, and schema negotiation beyond current scope. |
-| **Real-time collaboration** | Multi-user sessions would require a server component. Out of scope for a CLI tool. |
+| Multi-agent orchestration | Requires IPC + process management infrastructure beyond solo maintainer scope |
+| Voice input/output | Hardware-dependent, out of terminal-first scope |
+| GUI / Electron wrapper | askgem is a terminal tool by design |
+| OpenAI / Anthropic model support | Would fragment the SDK layer; askgem is purpose-built for Gemini |
+| Jupyter notebook editing | `.ipynb` JSON structure is complex and error-prone for find-and-replace |
+| Real-time collaboration | Requires a server component — out of scope for a CLI tool |
+| MCP server hosting | Acting as an MCP server requires persistent TCP + auth beyond current scope |
 
 ---
 
-## Version Release Timeline (Estimated)
+## 8. Release timeline
 
 ```
-2026-04     v2.0.0  ████████████████  CURRENT RELEASE
-2026-05     v2.1.0  ░░░░░░░░          Stability & Error Resilience
-2026-06     v2.2.0  ░░░░░░            Advanced Code Tools
-2026-07     v2.3.0  ░░░░              Web Research Integration
-2026-Q3     v2.4.0  ░░░               Token Economy & Metrics
-2026-Q4     v2.5.0  ░░                LSP Integration
-2027-Q1     v3.0.0  ░                 Plugin Ecosystem
+2026-04   v0.8.0  ████████████████  current — pre-release, rebrand complete
+2026-05   v0.9.0  ░░░░░░░░░░░░      write_file, /undo, context overflow guard, CI
+2026-06   v0.9.5  ░░░░░░░░          grep_search, glob_find, diff_file
+2026-07   v1.0.0  ░░░░░░            stable — full docs, 70%+ coverage, PyPI current
+2026-Q3   v1.1.0  ░░░░              web_search, web_fetch
+2026-Q3   v1.2.0  ░░░               /usage, token tracking, session exit summary
+2027      v2.0.0  ░░                LSP diagnostics, plugin system
 ```
 
-> **Note:** This timeline assumes a single maintainer working part-time. Dates will shift based on community feedback and real-world usage patterns from the v2.0 release.
+> This timeline assumes a solo maintainer working part-time.
+> Dates shift based on real usage feedback after v1.0.0.
 
 ---
 
-*This roadmap is a living document. It will be updated as priorities shift based on user feedback, bug reports, and community contributions.*
+*This is a living document — updated as milestones complete or priorities change.*

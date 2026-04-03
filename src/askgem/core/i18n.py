@@ -5,6 +5,7 @@ Manages language detection and translation string resolution.
 It does NOT manage UI layouts or rich terminal text styling.
 """
 
+import contextlib
 import json
 import locale
 import os
@@ -13,16 +14,22 @@ from typing import Any, Dict
 
 
 class Translator:
-    """Manages multi-language translations and OS locale auto-detection."""
-    def __init__(self):
-        """Initializes the Translator with the fallback language."""
+    """Manages multi-language translations and OS locale auto-detection.
+
+    Attributes:
+        language (str): The two-letter ISO language code currently in use.
+        translations (Dict[str, str]): The loaded key-value translation map.
+    """
+
+    def __init__(self) -> None:
+        """Initializes the Translator with default fallback and auto-detection."""
         self.language = "en"  # fallback
         self.translations: Dict[str, str] = {}
         self._load_translations()
 
     def _detect_language(self) -> str:
         """Attempts to auto-detect the system language code.
-        
+
         Returns:
             str: The two-letter ISO language code (e.g. 'en', 'es').
         """
@@ -42,7 +49,10 @@ class Translator:
         return "en"
 
     def _load_translations(self) -> None:
-        """Loads the translation JSON file corresponding to the detected locale."""
+        """Loads the translation JSON file corresponding to the detected locale.
+
+        Falls back to 'en.json' if the detected language is not supported.
+        """
         detected_lang = self._detect_language()
 
         # Resolve the absolute path of this module to find locales/
@@ -75,14 +85,14 @@ class Translator:
         """
         text = self.translations.get(key, key)
         if kwargs:
-            try:
+            with contextlib.suppress(KeyError):
                 text = text.format(**kwargs)
-            except KeyError:
-                pass # Return unformatted string if args missed
         return text
+
 
 # Singleton instance
 _i18n = Translator()
+
 
 def _(key: str, **kwargs: Any) -> str:
     """Shorthand for translation lookups.
@@ -95,6 +105,7 @@ def _(key: str, **kwargs: Any) -> str:
         str: Resolved string instance.
     """
     return _i18n.get(key, **kwargs)
+
 
 def get_current_language() -> str:
     """Returns the two-letter ISO code currently in use.

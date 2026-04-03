@@ -22,9 +22,16 @@ class ConfigManager:
         """
         self.console = console
         self.settings = {
+<<<<<<< HEAD
             "model_name": "gemini-3.1-flash-lite-preview",
             "edit_mode": "manual", # "manual" or "auto"
             "sandbox_mode": False
+=======
+            "model_name": "gemini-2.0-flash",
+            "edit_mode": "manual",  # "manual" or "auto"
+            "google_search_api_key": "",
+            "google_cx_id": "",
+>>>>>>> 909424b2410b637fb397ae8d3bc04253c24ddf16
         }
         self.load_settings()
 
@@ -40,7 +47,7 @@ class ConfigManager:
                     data = json.load(f)
                     self.settings.update(data)
             except Exception as e:
-                self.console.print(f"[bold red][X] Error loading settings.json: {e}[/bold red]")
+                self.console.print(f"[error][X] Error loading settings.json: {e}[/error]")
 
     def save_settings(self) -> None:
         """Saves current memory settings into the JSON config file."""
@@ -49,7 +56,7 @@ class ConfigManager:
             with open(path, "w", encoding="utf-8") as f:
                 json.dump(self.settings, f, indent=4)
         except Exception as e:
-            self.console.print(f"[bold red][X] Error saving settings: {e}[/bold red]")
+            self.console.print(f"[error][X] Error saving settings: {e}[/error]")
 
     def load_api_key(self) -> Optional[str]:
         """Attempts to load the API_KEY from available sources.
@@ -72,10 +79,12 @@ class ConfigManager:
                 with open(path) as key_file:
                     api_key = key_file.read().strip()
                     if api_key:
-                        self.console.print(f"[bold yellow][!] API Key loaded from unencrypted file:[/bold yellow] [dim]{path}[/dim]")
+                        self.console.print(
+                            f"[warning][!] API Key loaded from unencrypted file:[/warning] [google.blue]{path}[/google.blue]"
+                        )
                         return api_key
             except OSError as e:
-                self.console.print(f"[bold red][X] Error loading API Key from file:[/bold red] {e}")
+                self.console.print(f"[error][X] Error loading API Key from file:[/error] {e}")
 
         return None
 
@@ -92,10 +101,10 @@ class ConfigManager:
         try:
             with open(path, "w") as key_file:
                 key_file.write(api_key.strip())
-            self.console.print(f"[bold green][OK] API Key saved in:[/bold green] [dim]{path}[/dim]")
+            self.console.print(f"[success][OK] API Key saved in:[/success] [google.blue]{path}[/google.blue]")
             if os.name != "nt":
                 os.chmod(path, 0o600)
             return True
         except OSError as e:
-            self.console.print(f"[bold red][X] Error saving API Key:[/bold red] {e}")
+            self.console.print(f"[error][X] Error saving API Key:[/error] {e}")
             return False

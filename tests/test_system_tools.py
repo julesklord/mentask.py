@@ -12,7 +12,7 @@ class TestListDirectory:
     def test_lists_current_directory(self):
         result = list_directory(".")
         assert "Directory: ." in result
-        assert "Items:" in result
+        assert "Items" in result
 
     def test_lists_specific_directory(self, tmp_path):
         (tmp_path / "alpha.txt").write_text("a")
@@ -42,7 +42,7 @@ class TestListDirectory:
         (tmp_path / "a_first.txt").write_text("")
         result = list_directory(str(tmp_path))
         lines = result.split("\n")
-        item_lines = [l for l in lines if l.startswith("- ")]
+        item_lines = [line for line in lines if line.startswith("- ")]
         assert "a_first" in item_lines[0]
         assert "z_last" in item_lines[1]
 

@@ -5,22 +5,20 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "askgem"
 version = "0.8.0"
-description = "Autonomous AI coding agent CLI powered by Google Gemini with agentic filesystem tools."
+description = "Autonomous AI Coding Agent powered by Google Gemini"
 readme = "README.md"
-authors = [{ name = "julesklord", email = "julioglez@gmail.com" }]
-license = { file = "LICENSE" }
+authors = [
+    { name = "julesklord", email = "julioglez.93@gmail.com" }
+]
+license = { text = "GPL-3.0-only" }
 classifiers = [
-    "Development Status :: 5 - Production/Stable",
-    "Intended Audience :: Developers",
-    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Development Status :: 4 - Beta",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
-    "Programming Language :: Python :: 3.14",
     "Operating System :: OS Independent",
     "Environment :: Console",
     "Topic :: Software Development :: Libraries :: Application Frameworks",
@@ -31,12 +29,14 @@ requires-python = ">=3.8"
 dependencies = [
     "google-genai>=0.2.0",
     "rich>=13.0.0",
+    "textual>=0.50.0",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0.0",
     "ruff>=0.4.0",
+    "textual-dev>=1.0.0",
     "build",
     "twine",
     "tox>=4.0.0",
@@ -46,9 +46,9 @@ dev = [
 askgem = "askgem.cli.main:run_chatbot"
 
 [project.urls]
-Homepage = "https://github.com/julesklord/askgem"
-Documentation = "https://github.com/julesklord/askgem/blob/main/README.md"
-Changelog = "https://github.com/julesklord/askgem/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/julesklord/askgem.py"
+Documentation = "https://github.com/julesklord/askgem.py/wiki"
+Changelog = "https://github.com/julesklord/askgem.py/blob/main/CHANGELOG.md"
 
 [tool.setuptools.package-data]
 askgem = ["locales/*.json"]

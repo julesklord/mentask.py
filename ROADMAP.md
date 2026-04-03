@@ -12,14 +12,14 @@ This document outlines the comprehensive engineering roadmap for `askgem`, organ
 ## Table of Contents
 
 1. [Current State Assessment](#current-state-assessment)
-2. [Milestone 1: Stability and Error Resilience](#milestone-1)
-3. [Milestone 2: Advanced Code Tools](#milestone-2)
+2. [Milestone 1: Visual Identity & Stability](#milestone-1---visual-identity-and-stability)
+3. [Milestone 2: Advanced Search Tools](#milestone-2)
 4. [Milestone 3: Web Research Integration](#milestone-3)
-5. [Milestone 4: Token Economy and Metrics](#milestone-4)
-6. [Milestone 5: LSP Integration](#milestone-5)
-7. [Milestone 6: Plugin Ecosystem](#milestone-6)
-8. [Technical Debt and Improvements](#technical-debt)
-9. [Non-Goals (Explicitly Out of Scope)](#non-goals-explicitly-out-of-scope)
+5. [Milestone 4: Terminal Dashboard Overhaul](#milestone-4)
+6. [Milestone 5: Visionary Terminal Experience](#milestone-5---visionary-terminal-experience)
+7. [Milestone 6: LSP Intelligence](#milestone-6)
+8. [Milestone 7: Plugin Ecosystem](#milestone-7)
+9. [Technical Debt](#technical-debt)
 
 ---
 
@@ -68,7 +68,7 @@ graph TD
 
 ---
 
-## Milestone 1 — Visual Identity & Stability (v2.1)
+## Milestone 1 - Visual Identity and Stability
 
 **Priority:** 🔴 Critical
 **Estimated Effort:** Completed
@@ -217,7 +217,7 @@ graph TD
 ## Milestone 3
 
 **Priority:** 🟡 Medium
-**Estimated Effort:** 1-2 weeks
+**Estimated Effort:** Completed
 **Theme:** Connect the agent to the live internet for documentation lookups.
 
 ### 3.1 `web_search` Tool (Google Custom Search API)
@@ -249,10 +249,10 @@ graph TD
 
 **Acceptance Criteria:**
 
-- [ ] `web_search("python asyncio tutorial")` returns 5 titled results with URLs
-- [ ] Missing API key triggers a friendly setup wizard
-- [ ] Rate limit errors are caught and surfaced cleanly
-- [ ] No new pip dependencies required
+- [x] `web_search("python asyncio tutorial")` returns 5 titled results with URLs
+- [x] Missing API key triggers a friendly setup wizard (Fallback to DuckDuckGo)
+- [x] Rate limit errors are caught and surfaced cleanly
+- [x] No new pip dependencies required
 
 ### 3.2 `web_fetch` Tool (Page Content Extraction)
 
@@ -273,55 +273,67 @@ graph TD
 
 **Acceptance Criteria:**
 
-- [ ] `web_fetch("https://docs.python.org/3/library/os.html")` returns readable text
-- [ ] Binary/media URLs return a clean error message
-- [ ] Output is capped at 4000 characters with a truncation notice
+- [x] `web_fetch("https://docs.python.org/3/library/os.html")` returns readable text
+- [x] Binary/media URLs return a clean error message
+- [x] Output is capped at 4000 characters with a truncation notice
 
 ---
 
 ## Milestone 4
 
-**Priority:** 🟡 Medium
-**Estimated Effort:** 1 week
-**Theme:** Give users visibility into their API consumption.
+**Priority:** 🔴 High (UI Overhaul)
 
-### 4.1 Token Counter & Cost Tracker
+**Estimated Effort:** 3-4 weeks
 
-**Problem:** Users have no idea how many tokens each conversation is consuming or what it costs.
+**Theme:** Transition from a linear chat to a professional, multi-pane "Terminal Dashboard."
 
-**Solution:** After each model response, extract `usage_metadata` from the Gemini API response and maintain a running tally.
+### 4.1 The Terminal Console Evolution
+
+**Problem:** The current scrolling terminal is functional but lacks "at-a-glance" observability. Users can't see the file tree, active context, or token metrics alongside the chat without scrolling.
+
+**Solution:** Completely renovate the UI into a comprehensive **Command Dashboard** using the [Textual](https://textual.textualize.io/) framework.
+
+**Key Features:**
+
+- **Dashboard Layout**:
+  - **Header**: Persistent branding (The Friendly Prism) + Active Model + Project Path.
+  - **Left Sidebar**: Interactive Chat History + "Active Files" context list.
+  - **Main Area**: Rich-formatted chat with **Expandable Activity Cards** (integrating tool logs and reasoning).
+  - **Right Sidebar (Optional)**: Live system stats / Token usage.
+  - **Footer**: Command/Input area + Real-time Cost/Token counters.
 
 **Technical Details:**
 
-- Read `response.usage_metadata.prompt_token_count` and `candidates_token_count`
-- Maintain session totals in `QueryEngine` instance variables
-- Display in the TUI footer or via a new `/usage` command
-- Cost estimation based on published Gemini pricing (configurable per model)
+- **Framework**: `textual` for the app engine + `rich` for content rendering.
+- **Components**: Custom widgets for `ChatLog`, `ToolExecutionCard`, and `MetricBar`.
+- **Event-Driven**: Move the `ChatAgent` loop to a background task to keep the UI responsive during long-running tool executions.
 
-**Files Created:**
+### Progress Tracking
 
-- `core/metrics.py` (TokenTracker class)
+- [x] **Milestone 4.1: Asynchronous TUI Foundation (v2.2.0)**
+  - [x] Refactor `ChatAgent` to use `google-genai` AsyncClient.
+  - [x] Implement multi-pane Dashboard (`AskGemDashboard`).
+  - [x] Support legacy CLI mode via `--legacy` flag.
+  - [x] Integrated friendly mascot and Google identity theme in TUI.
 
-**Files Modified:**
+- [ ] **Milestone 5: Visionary Terminal Experience**
+  - [ ] **Integrated File Browser**: Navigate and open files directly within the dash.
+  - [ ] **Code Previewer**: Syntax-highlighted view of current files and proposed diffs.
+  - [ ] **Real-time Stream**: Dedicated pane for real-time tool logs and bash output.
+  - [ ] **Session Tab**: Seamlessly switch between active and archived histories.
+  - [ ] **Memory Inspection**: Visualizing the current context window tokens and model state.
+  - [ ] **Hotkey-driven Workflow**: Shortcuts for model switching and mode toggling.
+  - [ ] **Custom Theme support**: Premium aesthetics with adaptive color palettes.
 
-- `engine/query_engine.py` (extract metadata after each response)
-- `locales/*.json` (add `cmd.usage.*` keys)
+- [ ] **Milestone 4.2: Built-in Metrics & Cost Tracker**
+  - [ ] Token usage updates in the footer with every response.
+  - [ ] Tool executions render as interactive cards with progress logs.
 
-**Acceptance Criteria:**
+### 4.2 Built-in Metrics & Cost Tracker
 
-- [ ] `/usage` shows: total input tokens, output tokens, estimated cost
-- [ ] Token counts persist per session
-- [ ] Cost estimates update when switching models
+**Problem:** Lack of visibility into API consumption.
 
-### 4.2 Session Summary on Exit
-
-**Problem:** When the user exits, there's no summary of what was accomplished.
-
-**Solution:** On exit, show a mini-report: total messages exchanged, tools invoked, files modified, tokens consumed.
-
-**Files Modified:**
-
-- `engine/query_engine.py::start()` (add exit summary panel)
+**Solution:** Integrated real-time counting of Prompt and Completion tokens, with currency conversion based on configurable pricing per model.
 
 ---
 

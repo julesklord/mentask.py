@@ -41,6 +41,8 @@
   "cmd.desc.history_list": "Listar todas las sesiones previas guardadas",
   "cmd.desc.history_load": "Cargar y restaurar una sesión guardada",
   "cmd.desc.history_delete": "Borrar permanentemente una sesión del disco local",
+  "cmd.desc.usage": "Mostrar el uso de tokens y el costo estimado de la sesión",
+  "cmd.desc.stats": "Mostrar un resumen detallado de logros en esta sesión",
   "cmd.desc.exit": "Salir de askgem",
 
   "cmd.active_model": "Modelo activo:",
@@ -71,5 +73,12 @@
   "cmd.history.del.success": "Sesión eliminada completamente:",
   "cmd.history.del.not_found": "La sesión '{id}' no fue encontrada o ya no existe.",
   "cmd.history.unknown": "Sub-comando del historial desconocido:",
-  "cmd.history.available": "Disponibles: /history list | /history load <id> | /history delete <id>"
+  "cmd.history.available": "Disponibles: /history list | /history load <id> | /history delete <id>",
+  "cmd.usage.title": "Uso de Sesión (v2.2.0 Métricas)",
+  "cmd.stats.title": "Estadísticas de la Sesión",
+  "cmd.stats.messages": "Mensajes intercambiados: {count}",
+  "cmd.stats.tools": "Herramientas invocadas: {count}",
+  "cmd.stats.files": "Archivos modificados: {count}",
+  "dashboard.sidebar.context": "Contexto",
+  "dashboard.sidebar.stats": "Estadísticas"
 }

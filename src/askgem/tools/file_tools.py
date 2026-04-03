@@ -152,7 +152,7 @@ def diff_file(path: str, find_text: str, replace_text: str) -> str:
             return f"Error: 'find_text' was not found in '{path}'. Diff cannot be generated."
 
         new_content = content.replace(find_text, replace_text)
-        
+
         lines_before = content.splitlines(keepends=True)
         lines_after = new_content.splitlines(keepends=True)
 

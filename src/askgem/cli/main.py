@@ -23,14 +23,15 @@ ASCII_MASCOT = (
 
 
 def run_chatbot() -> None:
-    """Main entry point for askgem v2.2 CLI.
+    """Main entry point for askgem CLI.
 
     Handles argument parsing for legacy mode and initializes the 
     appropriate UI (Classic CLI or TUI Dashboard).
     """
     parser = argparse.ArgumentParser(description="AskGem: Autonomous AI Coding Agent")
     parser.add_argument("--legacy", action="store_true", help="Run the classic scrolling CLI instead of the Dashboard")
-    parser.add_argument("--version", action="version", version="askgem 2.2.0")
+    from .. import __version__
+    parser.add_argument("--version", action="version", version=f"askgem {__version__}")
     args = parser.parse_args()
 
     from rich.panel import Panel

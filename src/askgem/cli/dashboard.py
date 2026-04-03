@@ -5,42 +5,34 @@ Provides a multi-pane interface with real-time metrics, a mission sidebar,
 and a dedicated activity log for autonomous operations.
 """
 
-
 from textual import on, work
 from textual.app import App, ComposeResult
-from textual.containers import Horizontal, Vertical
+from textual.containers import Horizontal
 from textual.widgets import Footer, Header, Input, RichLog, Static
 
-from ..cli.main import ASCII_MASCOT
 from ..core.i18n import _
 
 # Multi-state Diamond Mascot Frames
 MASCOT_FRAMES = {
-    "idle": [
-        r"[#4285F4]  / \  [/]\n[#4285F4] < [#FBBC05]. [#4285F4]> [/]\n[#4285F4]  \ /  [/]"
-    ],
+    "idle": [r"[#4285F4]  / \  [/]\n[#4285F4] < [#FBBC05]. [#4285F4]> [/]\n[#4285F4]  \ /  [/]"],
     "thinking": [
         r"[#4285F4]  / \  [/]\n[#4285F4] < [#FBBC05]o [#4285F4]> [/]\n[#4285F4]  \ /  [/]",
         r"[#4285F4]  / \  [/]\n[#4285F4] < [#FBBC05]O [#4285F4]> [/]\n[#4285F4]  \ /  [/]",
-        r"[#4285F4]  / \  [/]\n[#4285F4] < [white]O [/#4285F4]> [/]\n[#4285F4]  \ /  [/]"
+        r"[#4285F4]  / \  [/]\n[#4285F4] < [white]O [/#4285F4]> [/]\n[#4285F4]  \ /  [/]",
     ],
     "working": [
         r"[#4285F4]  / \  [/]\n[#4285F4] < [#FBBC05]+ [#4285F4]> [/]\n[#4285F4]  \ /  [/]",
         r"[#4285F4]  / \  [/]\n[#4285F4] < [#FBBC05]x [#4285F4]> [/]\n[#4285F4]  \ /  [/]",
-        r"[#4285F4]  / \  [/]\n[#4285F4] < [#FBBC05]* [#4285F4]> [/]\n[#4285F4]  \ /  [/]"
+        r"[#4285F4]  / \  [/]\n[#4285F4] < [#FBBC05]* [#4285F4]> [/]\n[#4285F4]  \ /  [/]",
     ],
-    "error": [
-        r"[#EA4335]  / \  [/]\n[#EA4335] <  !  > [/]\n[#EA4335]  \ /  [/]"
-    ],
-    "success": [
-        r"[#34A853]  / \  [/]\n[#34A853] <  *  > [/]\n[#34A853]  \ /  [/]"
-    ]
+    "error": [r"[#EA4335]  / \  [/]\n[#EA4335] <  !  > [/]\n[#EA4335]  \ /  [/]"],
+    "success": [r"[#34A853]  / \  [/]\n[#34A853] <  *  > [/]\n[#34A853]  \ /  [/]"],
 }
 
 
 class MascotWidget(Static):
     """Animated multi-state Diamond/Gem mascot."""
-    
+
     def on_mount(self) -> None:
         self.frame_idx = 0
         self.state = "idle"
@@ -62,6 +54,7 @@ class MascotWidget(Static):
         elif self.state != "idle" and self.frame_idx == 0:
             # For static states like 'error' or 'success', just stay on frame 0
             self.update(frames[0])
+
 
 class Sidebar(Static):
     """Left sidebar showing session context and active mission."""
@@ -172,13 +165,13 @@ class AskGemDashboard(App):
 
     def on_mount(self) -> None:
         """Called when the app is first mounted."""
-        self.title = f"AskGem v2.2.0"
+        self.title = "AskGem v2.3.0"
         self.sub_title = _("startup.init")
         self.sidebar.update_context(self.agent.model_name, self.agent.edit_mode)
-        
+
         # Link debug logger
         self.agent.set_status_logger(self.log_debug)
-        
+
         self.chat_log.write(f"\n[#FBBC05][bold]{_('startup.welcome', version='2.3.0')}[/bold][/]")
         self.chat_log.write(_("cmd.hint_help"))
         self._update_metrics()
@@ -209,7 +202,7 @@ class AskGemDashboard(App):
         """Runs the agent's interaction loop in a background task."""
         mascot = self.query_one(MascotWidget)
         mascot.set_state("thinking")
-        
+
         self.chat_log.write("\n[agent]AskGem:[/agent]")
         self.current_response = ""
 

@@ -5,7 +5,7 @@ Decouples the tool execution logic from the main conversational loop.
 """
 
 import functools
-from typing import List, Dict, Callable
+from typing import Callable, List, Optional
 
 from google.genai import types
 from rich.prompt import Confirm
@@ -22,18 +22,20 @@ from ..tools.web_tools import web_fetch, web_search
 class ToolDispatcher:
     """Handles tool registration and execution routing for the ChatAgent."""
 
-    def __init__(self, edit_mode: str = "manual", search_api_key: str = "", search_cx_id: str = "", logger: Optional[Callable[[str], None]] = None):
+    def __init__(
+        self,
+        edit_mode: str = "manual",
+        search_api_key: str = "",
+        search_cx_id: str = "",
+        logger: Optional[Callable[[str], None]] = None,
+    ):
         """Initializes the dispatcher with a logger and credentials."""
         self.edit_mode = edit_mode
         self.logger = logger
         self.modified_files_count = 0
-        
+
         # Pre-bind keys to the web_search tool
-        bound_web_search = functools.partial(
-            web_search, 
-            api_key=search_api_key, 
-            cx_id=search_cx_id
-        )
+        bound_web_search = functools.partial(web_search, api_key=search_api_key, cx_id=search_cx_id)
         # Preserve original docstring for the LLM
         bound_web_search.__doc__ = web_search.__doc__
 
@@ -46,7 +48,7 @@ class ToolDispatcher:
             grep_search,
             glob_find,
             bound_web_search,
-            web_fetch
+            web_fetch,
         ]
 
     def get_tools_list(self) -> List:
@@ -85,13 +87,10 @@ class ToolDispatcher:
 
         elif tool_name == "execute_bash":
             command = args.get("command", "")
-            console.print(
-                f"\n[warning]{_('tool.action_req')}[/warning] "
-                f"{_('tool.wants_run')} [bold]'{command}'[/bold]"
-            )
-            if Confirm.ask(_('tool.confirm.cmd')):
+            console.print(f"\n[warning]{_('tool.action_req')}[/warning] {_('tool.wants_run')} [bold]'{command}'[/bold]")
+            if Confirm.ask(_("tool.confirm.cmd")):
                 return execute_bash(command)
-            return _('tool.denied.cmd')
+            return _("tool.denied.cmd")
 
         # 2. CRUD File Tools
         elif tool_name == "read_file":
@@ -108,20 +107,19 @@ class ToolDispatcher:
 
             if self.edit_mode == "manual":
                 console.print(
-                    f"\n[warning]{_('tool.action_req')}[/warning] "
-                    f"{_('tool.wants_edit')} [bold]'{path}'[/bold]"
+                    f"\n[warning]{_('tool.action_req')}[/warning] {_('tool.wants_edit')} [bold]'{path}'[/bold]"
                 )
                 console.print(
                     f"[dim]--- Replacing ---[/dim]\n{find_text}\n"
                     f"[dim]--- With ---[/dim]\n{replace_text}\n"
                     f"[dim]-----------------[/dim]"
                 )
-                if Confirm.ask(_('tool.confirm.edit')):
+                if Confirm.ask(_("tool.confirm.edit")):
                     res = edit_file(path, find_text, replace_text)
                     if res.startswith("Success:"):
                         self.modified_files_count += 1
                     return res
-                return _('tool.denied.edit')
+                return _("tool.denied.edit")
 
             console.print(f"[italic success]{_('tool.edit.auto', path=path)}[/italic success]")
             res = edit_file(path, find_text, replace_text)
@@ -142,13 +140,10 @@ class ToolDispatcher:
                 args.get("pattern", ""),
                 args.get("path", "."),
                 args.get("is_regex", False),
-                args.get("case_sensitive", False)
+                args.get("case_sensitive", False),
             )
 
         elif tool_name == "glob_find":
-            return glob_find(
-                args.get("pattern", ""),
-                args.get("path", ".")
-            )
+            return glob_find(args.get("pattern", ""), args.get("path", "."))
 
-        return _('tool.unregistered', name=tool_name)
+        return _("tool.unregistered", name=tool_name)

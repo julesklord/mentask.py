@@ -26,11 +26,7 @@ def grep_search(pattern: str, path: str = ".", is_regex: bool = False, case_sens
 
     flags = 0 if case_sensitive else re.IGNORECASE
     try:
-        regex = (
-            re.compile(pattern, flags)
-            if is_regex
-            else re.compile(re.escape(pattern), flags)
-        )
+        regex = re.compile(pattern, flags) if is_regex else re.compile(re.escape(pattern), flags)
     except re.error as e:
         return f"[!] Error: Invalid regex pattern: {e}"
 

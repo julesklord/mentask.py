@@ -23,9 +23,9 @@ class ConfigManager:
         self.console = console
         self.settings = {
             "model_name": "gemini-2.0-flash",
-            "edit_mode": "manual", # "manual" or "auto"
+            "edit_mode": "manual",  # "manual" or "auto"
             "google_search_api_key": "",
-            "google_cx_id": ""
+            "google_cx_id": "",
         }
         self.load_settings()
 
@@ -73,7 +73,9 @@ class ConfigManager:
                 with open(path) as key_file:
                     api_key = key_file.read().strip()
                     if api_key:
-                        self.console.print(f"[warning][!] API Key loaded from unencrypted file:[/warning] [google.blue]{path}[/google.blue]")
+                        self.console.print(
+                            f"[warning][!] API Key loaded from unencrypted file:[/warning] [google.blue]{path}[/google.blue]"
+                        )
                         return api_key
             except OSError as e:
                 self.console.print(f"[error][X] Error loading API Key from file:[/error] {e}")

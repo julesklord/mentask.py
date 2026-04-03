@@ -31,7 +31,7 @@ def read_file(path: str, start_line: int = None, end_line: int = None) -> str:
         if not os.path.isfile(path):
             return f"Error: '{path}' is a directory. Use list_directory instead."
 
-        with open(path, encoding='utf-8') as f:
+        with open(path, encoding="utf-8") as f:
             lines = f.readlines()
 
         total_lines = len(lines)
@@ -51,7 +51,10 @@ def read_file(path: str, start_line: int = None, end_line: int = None) -> str:
         # Character Limit Protection (Milestone 2.4 Optimization)
         char_limit = 30000
         if len(content) > char_limit:
-            content = content[:char_limit] + f"\n\n... [!] Content truncated at {char_limit} characters. Use specific line ranges to read more."
+            content = (
+                content[:char_limit]
+                + f"\n\n... [!] Content truncated at {char_limit} characters. Use specific line ranges to read more."
+            )
 
         info_header = f"--- Reading '{path}' (Lines {start} to {end} of {total_lines}) ---\n"
         return info_header + content
@@ -68,7 +71,7 @@ def edit_file(path: str, find_text: str, replace_text: str) -> str:
     """
     Finds an exact block of text in a local file and replaces it.
     Automatically creates a `.bkp` backup of the file before applying changes to prevent data loss.
-    
+
     Args:
         path: Path to the file to modify.
         find_text: The EXACT literal string block to replace (including whitespaces/indentation).
@@ -86,12 +89,12 @@ def edit_file(path: str, find_text: str, replace_text: str) -> str:
 
             # Create subdirectories if needed
             os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
-            with open(path, 'w', encoding='utf-8') as f:
+            with open(path, "w", encoding="utf-8") as f:
                 f.write(replace_text)
             return f"Success: Created new file '{path}' and wrote the content."
 
         # Read existing content
-        with open(path, encoding='utf-8') as f:
+        with open(path, encoding="utf-8") as f:
             content = f.read()
 
         # Guard: empty find_text on an existing file would corrupt every character via str.replace behavior,
@@ -110,7 +113,7 @@ def edit_file(path: str, find_text: str, replace_text: str) -> str:
         # Apply replacement
         new_content = content.replace(find_text, replace_text)
 
-        with open(path, 'w', encoding='utf-8') as f:
+        with open(path, "w", encoding="utf-8") as f:
             f.write(new_content)
 
         return f"Success: Replaced text in '{path}'. Original file backed up securely at '{backup_path}'."
@@ -122,10 +125,11 @@ def edit_file(path: str, find_text: str, replace_text: str) -> str:
     except Exception as e:
         return f"Fatal error modifying '{path}': {e}"
 
+
 def diff_file(path: str, find_text: str, replace_text: str) -> str:
     """Generates a unified diff preview of a proposed change without modifying the file.
 
-    Useful for verifying that a search-and-replace block targets the correct lines 
+    Useful for verifying that a search-and-replace block targets the correct lines
     and has the intended effect before calling edit_file.
 
     Args:
@@ -145,7 +149,7 @@ def diff_file(path: str, find_text: str, replace_text: str) -> str:
             diff = difflib.unified_diff([], lines_after, fromfile="/dev/null", tofile=path)
             return "".join(diff) or "No changes detected."
 
-        with open(path, encoding='utf-8') as f:
+        with open(path, encoding="utf-8") as f:
             content = f.read()
 
         if find_text not in content:

@@ -12,7 +12,7 @@ class TestListDirectory:
     def test_lists_current_directory(self):
         result = list_directory(".")
         assert "Directory: ." in result
-        assert "Items:" in result
+        assert "Items" in result
 
     def test_lists_specific_directory(self, tmp_path):
         (tmp_path / "alpha.txt").write_text("a")

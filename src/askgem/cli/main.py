@@ -25,12 +25,13 @@ ASCII_MASCOT = (
 def run_chatbot() -> None:
     """Main entry point for askgem CLI.
 
-    Handles argument parsing for legacy mode and initializes the 
+    Handles argument parsing for legacy mode and initializes the
     appropriate UI (Classic CLI or TUI Dashboard).
     """
     parser = argparse.ArgumentParser(description="AskGem: Autonomous AI Coding Agent")
     parser.add_argument("--legacy", action="store_true", help="Run the classic scrolling CLI instead of the Dashboard")
     from .. import __version__
+
     parser.add_argument("--version", action="version", version=f"askgem {__version__}")
     args = parser.parse_args()
 
@@ -57,13 +58,15 @@ def run_chatbot() -> None:
         )
 
         console.print()
-        console.print(Panel(
-            Text.from_markup(welcome_text, justify="center"),
-            border_style="google.blue",
-            padding=(1, 2),
-            title="[google.yellow] AskGem Identity [/google.yellow]",
-            subtitle="[dim] Powered by Google Gemini [/dim]"
-        ))
+        console.print(
+            Panel(
+                Text.from_markup(welcome_text, justify="center"),
+                border_style="google.blue",
+                padding=(1, 2),
+                title="[google.yellow] AskGem Identity [/google.yellow]",
+                subtitle="[dim] Powered by Google Gemini [/dim]",
+            )
+        )
         console.print()
 
         # Launch Classic CLI in async loop
@@ -73,6 +76,7 @@ def run_chatbot() -> None:
         # For now, if dashboard.py doesn't exist, we fallback or just error
         try:
             from .dashboard import AskGemDashboard
+
             app = AskGemDashboard(agent=agent)
             app.run()
         except ImportError:

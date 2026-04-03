@@ -104,8 +104,8 @@ def execute_bash(command: str) -> str:
             run_args,
             capture_output=True,
             text=True,
-            check=False,           # Exit codes handled manually to avoid crashing the agentic loop
-            timeout=60,            # Safety cap: prevents a hung command from locking the CLI forever
+            check=False,  # Exit codes handled manually to avoid crashing the agentic loop
+            timeout=60,  # Safety cap: prevents a hung command from locking the CLI forever
             **shell_kwargs,
         )
 

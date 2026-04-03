@@ -9,8 +9,10 @@ from typing import Dict
 @dataclass
 class ModelPricing:
     """Pricing per 1 million tokens in USD."""
+
     input_1m: float
     output_1m: float
+
 
 # Default pricing (approximate, based on standard Tier 1)
 PRICING_MAP: Dict[str, ModelPricing] = {
@@ -20,9 +22,11 @@ PRICING_MAP: Dict[str, ModelPricing] = {
     "gemini-1.5-pro": ModelPricing(input_1m=1.25, output_1m=3.75),
 }
 
+
 @dataclass
 class TokenTracker:
     """Maintains token counts and cost estimates for a session."""
+
     model_name: str = "gemini-2.0-flash"
     total_prompt_tokens: int = 0
     total_candidate_tokens: int = 0
@@ -39,7 +43,7 @@ class TokenTracker:
     def calculate_cost(self) -> float:
         """Returns the estimated cost in USD."""
         # Strip generation/version markers if present for mapping
-        base_model = self.model_name.split('/')[-1] if '/' in self.model_name else self.model_name
+        base_model = self.model_name.split("/")[-1] if "/" in self.model_name else self.model_name
         # Match partial names if exact match fails
         pricing = next((p for name, p in PRICING_MAP.items() if name in base_model), PRICING_MAP["gemini-2.0-flash"])
 

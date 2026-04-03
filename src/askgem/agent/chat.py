@@ -59,7 +59,7 @@ class ChatAgent:
             edit_mode=self.edit_mode,
             search_api_key=self.config.settings.get("google_search_api_key"),
             search_cx_id=self.config.settings.get("google_cx_id"),
-            logger=None # Will be set by Dashboard
+            logger=None,  # Will be set by Dashboard
         )
 
         # Milestone 4: Metrics engine
@@ -93,12 +93,12 @@ class ChatAgent:
                 console.print(f"[error][X] {_('api.fatal')}[/error]")
                 return False
 
-            save_choice = Prompt.ask(_('api.save')).strip().lower()
-            if save_choice != 'n':
+            save_choice = Prompt.ask(_("api.save")).strip().lower()
+            if save_choice != "n":
                 self.config.save_api_key(api_key)
 
         # Milestone 4.1: Use AsyncClient for TUI responsive streaming
-        self.client = genai.Client(api_key=api_key, http_options={'api_version': 'v1beta'})
+        self.client = genai.Client(api_key=api_key, http_options={"api_version": "v1beta"})
         return True
 
     def _build_config(self) -> types.GenerateContentConfig:
@@ -107,7 +107,7 @@ class ChatAgent:
         Returns:
             types.GenerateContentConfig: The SDK config payload for generation.
         """
-        sys_context = _('sys.context', os=f"{platform.system()} {platform.release()}", cwd=os.getcwd())
+        sys_context = _("sys.context", os=f"{platform.system()} {platform.release()}", cwd=os.getcwd())
         return types.GenerateContentConfig(
             temperature=0.7,
             tools=self.dispatcher.get_tools_list(),
@@ -118,7 +118,9 @@ class ChatAgent:
     # Core response loop                                                 #
     # ------------------------------------------------------------------ #
 
-    def _extract_function_calls(self, chunk: types.GenerateContentResponsePart, seen_calls: set) -> List[types.FunctionCall]:
+    def _extract_function_calls(
+        self, chunk: types.GenerateContentResponsePart, seen_calls: set
+    ) -> List[types.FunctionCall]:
         """Extracts unique function calls from a streaming response chunk.
 
         Handles both standard SDK properties and candidate parts fallbacks for various
@@ -135,7 +137,7 @@ class ChatAgent:
 
         # --- Primary detection: SDK aggregated helper property ---
         try:
-            for fc in (chunk.function_calls or []):
+            for fc in chunk.function_calls or []:
                 key = (fc.name, str(sorted(fc.args.items()) if fc.args else []))
                 if key not in seen_calls:
                     seen_calls.add(key)
@@ -145,7 +147,7 @@ class ChatAgent:
 
         # --- Fallback detection: direct candidate parts traversal ---
         try:
-            for candidate in (chunk.candidates or []):
+            for candidate in chunk.candidates or []:
                 content = getattr(candidate, "content", None)
                 parts = getattr(content, "parts", []) or []
                 for part in parts:
@@ -160,7 +162,9 @@ class ChatAgent:
 
         return found
 
-    async def _stream_response(self, user_input: Union[str, List], callback: Optional[Callable[[str], None]] = None) -> None:
+    async def _stream_response(
+        self, user_input: Union[str, List], callback: Optional[Callable[[str], None]] = None
+    ) -> None:
         """Sends a message to the model and streams the response (Async).
 
         Args:
@@ -176,9 +180,7 @@ class ChatAgent:
             try:
                 # Milestone 4.1: Ensure session exists and use it for streaming
                 await self._ensure_session()
-                response_stream = await self.chat_session.send_message_stream(
-                    message=user_input
-                )
+                response_stream = await self.chat_session.send_message_stream(message=user_input)
                 full_text = ""
                 seen_calls: set = set()
                 function_calls_received: List[types.FunctionCall] = []
@@ -194,8 +196,7 @@ class ChatAgent:
 
                         if hasattr(chunk, "usage_metadata") and chunk.usage_metadata:
                             self.metrics.add_usage(
-                                chunk.usage_metadata.prompt_token_count,
-                                chunk.usage_metadata.candidates_token_count
+                                chunk.usage_metadata.prompt_token_count, chunk.usage_metadata.candidates_token_count
                             )
                 else:
                     # Legacy CLI Output mode (using rich.Live)
@@ -210,8 +211,7 @@ class ChatAgent:
 
                             if hasattr(chunk, "usage_metadata") and chunk.usage_metadata:
                                 self.metrics.add_usage(
-                                    chunk.usage_metadata.prompt_token_count,
-                                    chunk.usage_metadata.candidates_token_count
+                                    chunk.usage_metadata.prompt_token_count, chunk.usage_metadata.candidates_token_count
                                 )
 
                 console.print("")
@@ -237,11 +237,20 @@ class ChatAgent:
 
             except Exception as e:
                 error_str = str(e).lower()
-                is_retryable = any(keyword in error_str for keyword in [
-                    "429", "resource exhausted", "rate limit",
-                    "500", "internal", "503", "unavailable",
-                    "deadline exceeded", "timeout",
-                ])
+                is_retryable = any(
+                    keyword in error_str
+                    for keyword in [
+                        "429",
+                        "resource exhausted",
+                        "rate limit",
+                        "500",
+                        "internal",
+                        "503",
+                        "unavailable",
+                        "deadline exceeded",
+                        "timeout",
+                    ]
+                )
 
                 if is_retryable and attempt < max_retries:
                     delay = base_delay * (2 ** (attempt - 1)) + random.uniform(0, 1)
@@ -258,8 +267,6 @@ class ChatAgent:
                         _logger.error("All %d retry attempts exhausted: %s", max_retries, e)
                     console.print(f"[error]{_('engine.api_error')}[/error] {e}")
                     return
-
-
 
     # ------------------------------------------------------------------ #
     # Slash commands                                                       #
@@ -301,22 +308,22 @@ class ChatAgent:
 
     def _cmd_help(self) -> None:
         """Prints a formatted table of all available slash commands."""
-        table = Table(title=_('cmd.help.title'), show_header=True, header_style="google.blue")
-        table.add_column(_('cmd.help.header.cmd'), style="success", no_wrap=True)
-        table.add_column(_('cmd.help.header.desc'))
+        table = Table(title=_("cmd.help.title"), show_header=True, header_style="google.blue")
+        table.add_column(_("cmd.help.header.cmd"), style="success", no_wrap=True)
+        table.add_column(_("cmd.help.header.desc"))
 
-        table.add_row("/help", _('cmd.desc.help'))
-        table.add_row("/model", _('cmd.desc.model_list'))
-        table.add_row("/model <name>", _('cmd.desc.model_switch'))
-        table.add_row("/mode auto", _('cmd.desc.mode_auto'))
-        table.add_row("/mode manual", _('cmd.desc.mode_manual'))
-        table.add_row("/clear", _('cmd.desc.clear'))
-        table.add_row("/history list", _('cmd.desc.history_list'))
-        table.add_row("/history load <id>", _('cmd.desc.history_load'))
-        table.add_row("/history delete <id>", _('cmd.desc.history_delete'))
-        table.add_row("/usage", _('cmd.desc.usage'))
-        table.add_row("/stats", _('cmd.desc.stats'))
-        table.add_row("exit / quit / q", _('cmd.desc.exit'))
+        table.add_row("/help", _("cmd.desc.help"))
+        table.add_row("/model", _("cmd.desc.model_list"))
+        table.add_row("/model <name>", _("cmd.desc.model_switch"))
+        table.add_row("/mode auto", _("cmd.desc.mode_auto"))
+        table.add_row("/mode manual", _("cmd.desc.mode_manual"))
+        table.add_row("/clear", _("cmd.desc.clear"))
+        table.add_row("/history list", _("cmd.desc.history_list"))
+        table.add_row("/history load <id>", _("cmd.desc.history_load"))
+        table.add_row("/history delete <id>", _("cmd.desc.history_delete"))
+        table.add_row("/usage", _("cmd.desc.usage"))
+        table.add_row("/stats", _("cmd.desc.stats"))
+        table.add_row("exit / quit / q", _("cmd.desc.exit"))
 
         console.print(table)
 
@@ -399,10 +406,7 @@ class ChatAgent:
                 model=self.model_name,
                 config=self._build_config(),
             )
-            console.print(
-                f"[success]{_('cmd.clear.success')}[/success] "
-                f"[dim]{_('cmd.clear.subtitle')}[/dim]"
-            )
+            console.print(f"[success]{_('cmd.clear.success')}[/success] [dim]{_('cmd.clear.subtitle')}[/dim]")
         except Exception as e:
             console.print(f"[error]{_('cmd.clear.failed')}[/error] {e}")
 
@@ -419,7 +423,7 @@ class ChatAgent:
             if not sessions:
                 console.print(f"[dim]{_('cmd.history.none')}[/dim]")
                 return
-            table = Table(title=_('cmd.history.title'), show_header=True, header_style="google.blue")
+            table = Table(title=_("cmd.history.title"), show_header=True, header_style="google.blue")
             table.add_column("#", style="dim", width=4)
             table.add_column("Session ID", style="google.blue")
             for i, s in enumerate(reversed(sessions), 1):
@@ -471,17 +475,20 @@ class ChatAgent:
     def _cmd_stats(self) -> None:
         """Displays a summary of accomplishments in the current session."""
         from rich.panel import Panel
+
         stats_content = (
             f"{_('cmd.stats.messages', count=f'[bold]{self.session_messages}[/bold]')}\n"
             f"{_('cmd.stats.tools', count=f'[bold]{self.session_tools}[/bold]')}\n"
             f"{_('cmd.stats.files', count=f'[bold]{self.dispatcher.modified_files_count}[/bold]')}"
         )
-        console.print(Panel(
-            stats_content,
-            title=f"[google.blue]{_('cmd.stats.title')}[/google.blue]",
-            border_style="google.blue",
-            expand=False
-        ))
+        console.print(
+            Panel(
+                stats_content,
+                title=f"[google.blue]{_('cmd.stats.title')}[/google.blue]",
+                border_style="google.blue",
+                expand=False,
+            )
+        )
 
     # ------------------------------------------------------------------ #
     # Main loop                                                            #

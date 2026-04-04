@@ -198,34 +198,53 @@ class AskGemDashboard(App):
     async def init_api(self) -> None:
         """Initializes the Gemini API in the background and restores last session."""
         self.sidebar.update_context(self.agent.model_name, "Iniciando...")
-        if await self.agent.setup_api(interactive=False):
-            # Milestone 4.3: Auto-Resume last session
-            sessions = self.agent.history.list_sessions()
-            if sessions:
-                last_session = sessions[-1]
-                history_data = self.agent.history.load_session(last_session)
-                if history_data:
-                    self.agent.chat_session = self.agent.client.chats.create(
-                        model=self.agent.model_name,
-                        config=self.agent._build_config(),
-                        history=history_data
-                    )
-                    self.chat_log.write(f"\n[bold sky_blue]Resumiendo sesión anterior: [dim]{last_session}[/dim][/bold sky_blue]")
-                    # Populate UI with historic messages
-                    for msg in history_data:
-                        role = "Tú" if msg.role == "user" else "AskGem"
-                        # Only show text parts in history log for brevity
-                        text_parts = [p.text for p in msg.parts if p.text]
-                        if text_parts:
-                            self.chat_log.write(self.render_message(role, "\n".join(text_parts)))
+        try:
+            # We pass interactive=False because we are in a TUI, we handle keys via config
+            if await self.agent.setup_api(interactive=False):
+                # Milestone 4.3: Auto-Resume last session
+                sessions = self.agent.history.list_sessions()
+                if sessions:
+                    last_session = sessions[-1]
+                    history_data = self.agent.history.load_session(last_session)
+                    if history_data:
+                        try:
+                            self.agent.chat_session = self.agent.client.chats.create(
+                                model=self.agent.model_name,
+                                config=self.agent._build_config(),
+                                history=history_data
+                            )
+                            self.chat_log.write(f"\n[bold sky_blue]Resumiendo sesión anterior: [dim]{last_session}[/dim][/bold sky_blue]")
+                            # Populate UI with historic messages
+                            for msg in history_data:
+                                role = "Tú" if msg.role == "user" else "AskGem"
+                                text_parts = [p.text for p in msg.parts if p.text]
+                                if text_parts:
+                                    self.chat_log.write(self.render_message(role, "\n".join(text_parts)))
+                        except Exception as chat_err:
+                            self.log_output(f"[bold red]WARNING:[/] No se pudo reanudar la sesión: {chat_err}")
+                            # Fallback to empty session
+                            self.agent.chat_session = self.agent.client.chats.create(
+                                model=self.agent.model_name,
+                                config=self.agent._build_config()
+                            )
 
-            self.sidebar.update_context(self.agent.model_name, self.agent.edit_mode)
-            self._update_mission_display()
-            self.query_one("#prompt-input", Input).placeholder = "Escribe tu mensaje..."
-            self.chat_log.write(f"\n[success][OK] Conexión establecida con [bold]{self.agent.model_name}[/bold][/success]")
-        else:
-            self.chat_log.write(f"\n[error][X] Error al inicializar la API. Revisa tu clave y reinicia.[/error]")
+                self.sidebar.update_context(self.agent.model_name, self.agent.edit_mode)
+                self._update_mission_display()
+                self.query_one("#prompt-input", Input).placeholder = "Escribe tu mensaje..."
+                self.chat_log.write(f"\n[success][OK] Conexión establecida con [bold]{self.agent.model_name}[/bold][/success]")
+            else:
+                # If setup_api fails, it means the API key is missing or invalid
+                error_msg = "API Key no configurada o inválida"
+                self.chat_log.write(f"\n[error][X] {error_msg}.[/error]")
+                self.chat_log.write("\n[bold yellow]TIP:[/] Configura tu API Key en el archivo [italic]settings.json[/italic] o mediante variables de entorno.")
+                self.query_one(MascotWidget).set_state("error")
+                self.sidebar.update_context(self.agent.model_name, "Error de Auth")
+        except Exception as e:
+            error_msg = f"Error al inicializar la API: {str(e)}"
+            self.chat_log.write(f"\n[error][X] {error_msg}. Revisa tu configuración.[/error]")
+            self.log_output(f"[bold red]CRITICAL:[/] {error_msg}")
             self.query_one(MascotWidget).set_state("error")
+            self.sidebar.update_context("N/A", "Error")
 
     def on_mount(self) -> None:
         """Called when the app is first mounted."""
@@ -249,11 +268,20 @@ class AskGemDashboard(App):
         """Reads heartbeat.md and updates the sidebar."""
         try:
             mission_text = self.agent.mission.read_missions()
+            if not mission_text:
+                self.sidebar.update_mission("Sin misiones activas.")
+                return
+
             # Extract just the tasks part for the sidebar if it's too long
             if "## Tasks" in mission_text:
-                mission_text = mission_text.split("## Tasks")[1].strip()
+                parts = mission_text.split("## Tasks")
+                mission_text = parts[1].strip() if len(parts) > 1 else parts[0].strip()
+            
             self.sidebar.update_mission(mission_text)
-        except Exception:
+        except FileNotFoundError:
+            self.sidebar.update_mission("Misiones: Archivo no encontrado.")
+        except Exception as e:
+            self.log_output(f"[bold red]ERROR:[/] Fallo al leer misiones: {str(e)}")
             self.sidebar.update_mission("Error al leer misiones.")
 
     def render_message(self, author: str, content: str, is_markdown: bool = True) -> Table:

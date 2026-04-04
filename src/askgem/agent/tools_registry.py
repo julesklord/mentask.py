@@ -14,9 +14,9 @@ from rich.status import Status
 
 from ..cli.console import console
 from ..core.i18n import _
-from ..tools.file_tools import diff_file, edit_file, read_file
+from ..tools.file_tools import delete_file, diff_file, edit_file, move_file, read_file, list_directory
 from ..tools.search_tools import glob_find, grep_search
-from ..tools.system_tools import execute_bash, list_directory
+from ..tools.system_tools import execute_bash
 from ..tools.memory_tools import manage_memory, manage_mission
 from ..tools.web_tools import web_fetch, web_search
 
@@ -46,6 +46,8 @@ class ToolDispatcher:
             execute_bash,
             read_file,
             edit_file,
+            delete_file,
+            move_file,
             diff_file,
             grep_search,
             glob_find,
@@ -98,6 +100,25 @@ class ToolDispatcher:
         # 1. System/Filesystem Tools
         if tool_name == "list_directory":
             return list_directory(args.get("path", "."))
+
+        elif tool_name == "delete_file":
+            path = args.get("path", "")
+            if self.edit_mode == "manual":
+                console.print(f"\n[warning]{_('tool.action_req')}[/warning] ¿Eliminar archivo [bold]'{path}'[/bold]?")
+                if Confirm.ask(_("tool.confirm.edit")):
+                    return delete_file(path)
+                return _("tool.denied.edit")
+            return delete_file(path)
+
+        elif tool_name == "move_file":
+            source = args.get("source", "")
+            destination = args.get("destination", "")
+            if self.edit_mode == "manual":
+                console.print(f"\n[warning]{_('tool.action_req')}[/warning] ¿Mover [bold]'{source}'[/bold] a [bold]'{destination}'[/bold]?")
+                if Confirm.ask(_("tool.confirm.edit")):
+                    return move_file(source, destination)
+                return _("tool.denied.edit")
+            return move_file(source, destination)
 
         elif tool_name == "execute_bash":
             command = args.get("command", "")

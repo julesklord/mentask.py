@@ -38,12 +38,12 @@ with your codebase.
 
 ## How it works
 
-askgem runs a synchronous agentic loop backed by the `google-genai` SDK. On each turn:
+askgem runs an asynchronous agentic loop backed by the `google-genai` SDK. On each turn:
 
 1. Your message is sent to the selected Gemini model with a set of registered tool definitions.
 2. The model reasons about the request and may call one or more tools (read a file,
    run a command, list a directory).
-3. askgem intercepts those tool calls, executes them locally (with confirmation in
+3. askgem intercepts those tool calls via an **Async Dispatcher**, executes them locally (with confirmation in
    manual mode), and feeds results back to the model.
 4. The model synthesizes a final response, streamed to your terminal in real-time Markdown.
 5. The full conversation is auto-saved to `~/.askgem/history/` after every turn.
@@ -60,7 +60,7 @@ This loop repeats until the model stops requesting tools or you exit the session
 |---|---|
 | `list_directory` | Explore filesystem trees |
 | `read_file` | Read any file with optional line ranges — 30k char cap prevents token overflow |
-| `edit_file` | Find-and-replace with uniqueness guard and automatic `.bkp` backup |
+| `edit_file` | Find-and-replace with **atomic writing**, uniqueness guard, and automatic `.bkp` backup |
 | `execute_bash` | Run shell commands with 60s timeout and full stdout/stderr capture |
 
 ### Human-in-the-loop safety
@@ -129,9 +129,10 @@ pip install askgem  # targeting v0.9.0
 askgem loads your key from these sources, in order:
 
 1. **Environment variable** — `GOOGLE_API_KEY=your_key askgem`
-2. **Saved file** — `~/.askgem/.gemini_api_key_unencrypted` (created on first run if you choose to save)
+2. **System Keyring** — Secure storage via `keyring` (recommended)
+3. **Saved file** — `~/.askgem/.gemini_api_key_unencrypted` (Legacy fallback)
 
-On first launch without a key, askgem prompts interactively and optionally saves it.
+On first launch without a key, askgem prompts interactively and saves it securely in your system's keyring.
 
 ### Settings file
 
@@ -139,7 +140,7 @@ Stored at `~/.askgem/settings.json`:
 
 ```json
 {
-    "model_name": "gemini-2.0-flash",
+    "model_name": "gemini-2.5-flash",
     "edit_mode": "manual"
 }
 ```
@@ -151,12 +152,13 @@ All settings are changeable mid-session via slash commands and persist automatic
 | Path | Purpose |
 |---|---|
 | `~/.askgem/settings.json` | Model name, edit mode, and other preferences |
-| `~/.askgem/.gemini_api_key_unencrypted` | Locally stored API key (plaintext) |
+| `~/.askgem/.gemini_api_key_unencrypted` | Legacy plaintext API key (deprecated) |
 | `~/.askgem/history/` | Auto-saved session JSON files |
 | `~/.askgem/askgem.log` | Debug log — silent SDK errors and retry events |
 
-> **Security note:** The API key is stored in plaintext. On POSIX systems, askgem
-> sets permissions to `0600`. On Windows, no additional ACL is applied.
+> **Security note:** The API key is now stored securely in the system keyring by default.
+> Legacy plaintext storage is only supported for backward compatibility and will be
+> removed in future versions.
 
 ---
 
@@ -217,6 +219,7 @@ Type `exit`, `quit`, `q`, or press `Ctrl+C`.
 
 **Always, regardless of mode:**
 - `edit_file` verifies `find_text` appears exactly once — ambiguous replacements rejected
+- `edit_file` uses **atomic writing** (temporary file + rename) to prevent corruption if a failure occurs during save
 - Every file edit creates a `.bkp` backup at `<original_path>.bkp`
 - `read_file` is capped at 30,000 characters
 - Shell commands have a 60-second hard timeout

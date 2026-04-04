@@ -6,8 +6,7 @@ user preferences, and project-specific context.
 """
 
 import os
-from pathlib import Path
-from typing import Optional
+
 from .paths import get_memory_path
 
 DEFAULT_MEMORY_TEMPLATE = """# AskGem Persistent Memory
@@ -22,7 +21,7 @@ DEFAULT_MEMORY_TEMPLATE = """# AskGem Persistent Memory
 - Environment: Linux
 
 ## Lessons Learned & Facts
-- 
+-
 
 ## Rules & Constraints
 - Always communicate and perform internal reasoning in Spanish.
@@ -50,9 +49,9 @@ class MemoryManager:
             str: The raw markdown content.
         """
         try:
-            with open(self.path, "r", encoding="utf-8") as f:
+            with open(self.path, encoding="utf-8") as f:
                 return f.read()
-        except Exception:
+        except OSError:
             return ""
 
     def add_fact(self, fact: str, category: str = "Lessons Learned & Facts") -> bool:
@@ -67,13 +66,13 @@ class MemoryManager:
         """
         content = self.read_memory()
         lines = content.splitlines()
-        
+
         target_index = -1
         for i, line in enumerate(lines):
             if line.strip().lower() == f"## {category}".lower():
                 target_index = i
                 break
-        
+
         if target_index != -1:
             # Insert after the header
             lines.insert(target_index + 1, f"- {fact}")
@@ -86,7 +85,7 @@ class MemoryManager:
             with open(self.path, "w", encoding="utf-8") as f:
                 f.write("\n".join(lines))
             return True
-        except Exception:
+        except OSError:
             return False
 
     def reset_memory(self):

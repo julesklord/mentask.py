@@ -48,22 +48,13 @@ def read_file(path: str, start_line: int = None, end_line: int = None) -> str:
         selected_lines = lines[start - 1 : end]
         content = "".join(selected_lines)
 
-<<<<<<< HEAD
-        # Safety cap: prevent context window explosion on large files
+        # Safety cap: prevent context window explosion on large files (Milestone 2.4 Optimization)
         char_limit = 30_000
         if len(content) > char_limit:
             content = (
                 content[:char_limit]
                 + f"\n\n... [!] Content truncated at {char_limit} characters. "
                 f"Use start_line/end_line to read specific ranges."
-=======
-        # Character Limit Protection (Milestone 2.4 Optimization)
-        char_limit = 30000
-        if len(content) > char_limit:
-            content = (
-                content[:char_limit]
-                + f"\n\n... [!] Content truncated at {char_limit} characters. Use specific line ranges to read more."
->>>>>>> 909424b2410b637fb397ae8d3bc04253c24ddf16
             )
 
         info_header = f"--- Reading '{path}' (Lines {start} to {end} of {total_lines}) ---\n"
@@ -184,3 +175,78 @@ def diff_file(path: str, find_text: str, replace_text: str) -> str:
 
     except Exception as e:
         return f"Error generating diff for '{path}': {e}"
+
+
+def list_directory(path: str) -> str:
+    """Lists the files and directories in a given path.
+
+    Args:
+        path (str): The directory to list.
+
+    Returns:
+        str: A formatted list of contents or an error message.
+    """
+    try:
+        if not os.path.exists(path):
+            return f"Error: Path '{path}' does not exist."
+        if not os.path.isdir(path):
+            return f"Error: '{path}' is not a directory."
+
+        items = os.listdir(path)
+        if not items:
+            return f"Directory '{path}' is empty."
+
+        output = [f"Contents of '{path}':"]
+        for item in sorted(items):
+            item_path = os.path.join(path, item)
+            marker = "[DIR]" if os.path.isdir(item_path) else "     "
+            output.append(f"{marker} {item}")
+
+        return "\n".join(output)
+    except Exception as e:
+        return f"Error listing directory '{path}': {e}"
+
+
+def delete_file(path: str) -> str:
+    """Deletes a file permanently. Use with caution.
+
+    Args:
+        path (str): Path to the file to delete.
+
+    Returns:
+        str: Success or error message.
+    """
+    try:
+        if not os.path.exists(path):
+            return f"Error: File '{path}' does not exist."
+        if os.path.isdir(path):
+            return f"Error: '{path}' is a directory. delete_file only works on files."
+
+        os.remove(path)
+        return f"Success: Deleted file '{path}'."
+    except Exception as e:
+        return f"Error deleting file '{path}': {e}"
+
+
+def move_file(source: str, destination: str) -> str:
+    """Moves or renames a file.
+
+    Args:
+        source (str): Current file path.
+        destination (str): New file path.
+
+    Returns:
+        str: Success or error message.
+    """
+    try:
+        if not os.path.exists(source):
+            return f"Error: Source file '{source}' does not exist."
+
+        # Create destination directory if it doesn't exist
+        dest_dir = os.path.dirname(os.path.abspath(destination))
+        os.makedirs(dest_dir, exist_ok=True)
+
+        shutil.move(source, destination)
+        return f"Success: Moved '{source}' to '{destination}'."
+    except Exception as e:
+        return f"Error moving file: {e}"

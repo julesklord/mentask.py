@@ -67,6 +67,7 @@ def _duckduckgo_search(query: str) -> str:
         url = f"https://html.duckduckgo.com/html/?q={safe_query}"
 
         req = urllib.request.Request(url, headers={"User-Agent": user_agent})
+
         def _do_ddg_search():
             with urllib.request.urlopen(req, timeout=10) as response:
                 return response.read().decode("utf-8")

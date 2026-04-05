@@ -18,8 +18,28 @@ def mock_status():
         yield mock_status
 
 @pytest.fixture
-def dispatcher():
-    return ToolDispatcher(edit_mode="auto")
+def mock_config():
+    config = MagicMock()
+    config.settings = {
+        "google_search_api_key": "test_key",
+        "google_cx_id": "test_cx",
+        "edit_mode": "manual"
+    }
+    return config
+
+@pytest.fixture
+def mock_config_auto():
+    config = MagicMock()
+    config.settings = {
+        "google_search_api_key": "test_key",
+        "google_cx_id": "test_cx",
+        "edit_mode": "auto"
+    }
+    return config
+
+@pytest.fixture
+def dispatcher(mock_config):
+    return ToolDispatcher(config=mock_config)
 
 class TestToolDispatcher:
     def test_init_creates_tool_map(self, dispatcher):
@@ -42,7 +62,7 @@ class TestToolDispatcher:
 
         assert isinstance(result_part, types.Part)
         assert result_part.function_response.name == "unknown_tool"
-        assert "not registered" in str(result_part.function_response.response["result"])
+        assert "no está registrada" in str(result_part.function_response.response["result"]).lower() or "not registered" in str(result_part.function_response.response["result"]).lower()
 
         # Verify status usage
         mock_status.assert_called_once()
@@ -82,7 +102,8 @@ class TestToolDispatcher:
 
     @pytest.mark.asyncio
     @patch("askgem.agent.tools_registry.edit_file")
-    async def test_execute_edit_file_auto_mode(self, mock_edit_file, dispatcher, mock_console, mock_status):
+    async def test_execute_edit_file_auto_mode(self, mock_edit_file, mock_config_auto, mock_console, mock_status):
+        dispatcher = ToolDispatcher(config=mock_config_auto)
         mock_edit_file.return_value = "Success: edited file"
         dispatcher._tool_map["edit_file"] = mock_edit_file
 
@@ -103,8 +124,8 @@ class TestToolDispatcher:
     @pytest.mark.asyncio
     @patch("askgem.agent.tools_registry.edit_file")
     @patch("askgem.agent.tools_registry.Confirm.ask")
-    async def test_execute_edit_file_manual_mode_confirmed(self, mock_confirm, mock_edit_file, mock_console, mock_status):
-        dispatcher = ToolDispatcher(edit_mode="manual")
+    async def test_execute_edit_file_manual_mode_confirmed(self, mock_confirm, mock_edit_file, mock_config, mock_console, mock_status):
+        dispatcher = ToolDispatcher(config=mock_config)
         dispatcher._tool_map["edit_file"] = mock_edit_file
         mock_confirm.return_value = True
         mock_edit_file.return_value = "Success: edited file"
@@ -124,8 +145,8 @@ class TestToolDispatcher:
     @pytest.mark.asyncio
     @patch("askgem.agent.tools_registry.edit_file")
     @patch("askgem.agent.tools_registry.Confirm.ask")
-    async def test_execute_edit_file_manual_mode_denied(self, mock_confirm, mock_edit_file, mock_console, mock_status):
-        dispatcher = ToolDispatcher(edit_mode="manual")
+    async def test_execute_edit_file_manual_mode_denied(self, mock_confirm, mock_edit_file, mock_config, mock_console, mock_status):
+        dispatcher = ToolDispatcher(config=mock_config)
         dispatcher._tool_map["edit_file"] = mock_edit_file
         mock_confirm.return_value = False
 
@@ -139,14 +160,14 @@ class TestToolDispatcher:
         mock_confirm.assert_called_once()
         mock_edit_file.assert_not_called()
         assert dispatcher.modified_files_count == 0
-        assert "System Notice" in str(result_part.function_response.response["result"])
-        assert "denied permission" in str(result_part.function_response.response["result"])
+        assert "Aviso de Sistema" in str(result_part.function_response.response["result"]) or "System Notice" in str(result_part.function_response.response["result"])
+        assert "denegó" in str(result_part.function_response.response["result"]).lower() or "denied permission" in str(result_part.function_response.response["result"]).lower()
 
     @pytest.mark.asyncio
     @patch("askgem.agent.tools_registry.delete_file")
     @patch("askgem.agent.tools_registry.Confirm.ask")
-    async def test_execute_delete_file_manual_mode_denied(self, mock_confirm, mock_delete_file, mock_console, mock_status):
-        dispatcher = ToolDispatcher(edit_mode="manual")
+    async def test_execute_delete_file_manual_mode_denied(self, mock_confirm, mock_delete_file, mock_config, mock_console, mock_status):
+        dispatcher = ToolDispatcher(config=mock_config)
         dispatcher._tool_map["delete_file"] = mock_delete_file
         mock_confirm.return_value = False
 
@@ -163,8 +184,8 @@ class TestToolDispatcher:
     @pytest.mark.asyncio
     @patch("askgem.agent.tools_registry.move_file")
     @patch("askgem.agent.tools_registry.Confirm.ask")
-    async def test_execute_move_file_manual_mode_denied(self, mock_confirm, mock_move_file, mock_console, mock_status):
-        dispatcher = ToolDispatcher(edit_mode="manual")
+    async def test_execute_move_file_manual_mode_denied(self, mock_confirm, mock_move_file, mock_config, mock_console, mock_status):
+        dispatcher = ToolDispatcher(config=mock_config)
         dispatcher._tool_map["move_file"] = mock_move_file
         mock_confirm.return_value = False
 
@@ -181,8 +202,8 @@ class TestToolDispatcher:
     @pytest.mark.asyncio
     @patch("askgem.agent.tools_registry.execute_bash", new_callable=AsyncMock)
     @patch("askgem.agent.tools_registry.Confirm.ask")
-    async def test_execute_bash_manual_mode_denied(self, mock_confirm, mock_execute_bash, mock_console, mock_status):
-        dispatcher = ToolDispatcher(edit_mode="manual")
+    async def test_execute_bash_manual_mode_denied(self, mock_confirm, mock_execute_bash, mock_config, mock_console, mock_status):
+        dispatcher = ToolDispatcher(config=mock_config)
         dispatcher._tool_map["execute_bash"] = mock_execute_bash
         mock_confirm.return_value = False
 
@@ -199,8 +220,8 @@ class TestToolDispatcher:
     @pytest.mark.asyncio
     @patch("askgem.agent.tools_registry.execute_bash", new_callable=AsyncMock)
     @patch("askgem.agent.tools_registry.Confirm.ask")
-    async def test_execute_bash_auto_mode(self, mock_confirm, mock_execute_bash, mock_console, mock_status):
-        dispatcher = ToolDispatcher(edit_mode="auto")
+    async def test_execute_bash_auto_mode(self, mock_confirm, mock_execute_bash, mock_config_auto, mock_console, mock_status):
+        dispatcher = ToolDispatcher(config=mock_config_auto)
         dispatcher._tool_map["execute_bash"] = mock_execute_bash
         mock_execute_bash.return_value = "test output"
         mock_confirm.return_value = True
@@ -235,9 +256,9 @@ class TestToolDispatcher:
 
     @pytest.mark.asyncio
     @patch("askgem.agent.tools_registry.read_file")
-    async def test_logger_called(self, mock_read_file, mock_console, mock_status):
+    async def test_logger_called(self, mock_read_file, mock_config_auto, mock_console, mock_status):
         mock_logger = MagicMock()
-        dispatcher = ToolDispatcher(edit_mode="auto", logger=mock_logger)
+        dispatcher = ToolDispatcher(config=mock_config_auto, logger=mock_logger)
         mock_read_file.return_value = "file content"
         dispatcher._tool_map["read_file"] = mock_read_file
 

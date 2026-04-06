@@ -219,11 +219,12 @@ async def test_summarize_context(mock_dependencies):
     mock_response.text = "Mocked Summary"
     agent.client.models.generate_content = AsyncMock(return_value=mock_response)
 
-    agent.client.chats.create = MagicMock(return_value="new_session")
+    agent.client.aio.chats.create = AsyncMock(return_value="new_session")
 
     await agent._summarize_context()
     agent.client.models.generate_content.assert_called_once()
-    agent.client.chats.create.assert_called_once()
+    agent.client.aio.chats.create.assert_called_once()
+    assert agent.chat_session == "new_session"
     assert agent.chat_session == "new_session"
 
 
@@ -267,7 +268,7 @@ async def test_cmd_clear(mock_dependencies):
     agent.client = MagicMock()
 
     # Mocking client.aio.chats.create
-    agent.client.aio.chats.create = MagicMock(return_value="new_cleared_session")
+    agent.client.aio.chats.create = AsyncMock(return_value="new_cleared_session")
 
     await agent._cmd_clear()
 

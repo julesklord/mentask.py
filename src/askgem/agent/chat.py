@@ -390,7 +390,7 @@ class ChatAgent:
             new_history = [first_msg, summary_content] + active_context
 
             # Re-initialize the active session with the compacted history
-            self.chat_session = self.client.chats.create(
+            self.chat_session = await self.client.aio.chats.create(
                 model=self.model_name, config=self._build_config(), history=new_history
             )
 
@@ -535,7 +535,7 @@ class ChatAgent:
     async def _ensure_session(self) -> None:
         """Ensures an active chat session is correctly initialized."""
         if self.chat_session is None:
-            self.chat_session = self.client.aio.chats.create(
+            self.chat_session = await self.client.aio.chats.create(
                 model=self.model_name,
                 config=self._build_config(),
             )
@@ -543,7 +543,7 @@ class ChatAgent:
     async def _cmd_clear(self) -> None:
         """Resets the in-memory context window without ending the session (Async)."""
         try:
-            self.chat_session = self.client.aio.chats.create(
+            self.chat_session = await self.client.aio.chats.create(
                 model=self.model_name,
                 config=self._build_config(),
             )
@@ -589,7 +589,7 @@ class ChatAgent:
                 console.print(f"[error]{_('cmd.history.load.not_found', id=session_id)}[/error]")
                 return
             try:
-                self.chat_session = self.client.aio.chats.create(
+                self.chat_session = await self.client.aio.chats.create(
                     model=self.model_name,
                     config=self._build_config(),
                     history=history_data,
@@ -650,7 +650,7 @@ class ChatAgent:
         self.running = True
 
         try:
-            self.chat_session = self.client.aio.chats.create(
+            self.chat_session = await self.client.aio.chats.create(
                 model=self.model_name,
                 config=self._build_config(),
             )

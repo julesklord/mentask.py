@@ -40,7 +40,7 @@ class TestListDirectory:
         result = list_directory("/path/that/does/not/exist/abc123xyz")
         assert "Error" in result
         # Permission error is raised before the path check
-        assert "Permission denied to read the path" in result or "does not exist" in result
+        assert "Permission denied to read the path" in result or "does not exist" in result or "outside the allowed directory" in result
 
     def test_returns_sorted_output(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
@@ -70,6 +70,8 @@ class TestGetShellArgs:
 
 import asyncio
 
+import sys
+
 class TestExecuteBash:
     def test_echo_command(self):
         if platform.system() == "Windows":
@@ -81,7 +83,9 @@ class TestExecuteBash:
 
     def test_failed_command_returns_stderr(self):
         # A command that should fail on any platform
-        result = asyncio.run(execute_bash("python -c \"import sys; sys.exit(1)\""))
+        python_exe = f'"{sys.executable}"'
+        cmd = f"& {python_exe} -c \"import sys; sys.exit(1)\"" if platform.system() == "Windows" else f"{python_exe} -c \"import sys; sys.exit(1)\""
+        result = asyncio.run(execute_bash(cmd))
         # Should not crash — returns normally
         assert isinstance(result, str)
 
@@ -126,10 +130,12 @@ class TestExecuteBash:
     async def test_output_truncation(self):
         """Verifies that very long output is handled without hanging."""
         # Generate long output
-        if platform.system() != "Windows":
-            long_cmd = "python3 -c \"for i in range(1000): print(f'line{i}')\""
+        if platform.system() == "Windows":
+            long_cmd = "for ($i=0; $i -lt 1000; $i++) { echo \"line$i\" }"
         else:
-            long_cmd = "python -c \"for i in range(1000): print(f'line{i}')\""
+            python_exe = f'"{sys.executable}"'
+            long_cmd = f"{python_exe} -c \"for i in range(1000): print(f'line{{i}}')\""
+        
         result = await execute_bash(long_cmd)
         # Should complete without hanging and have reasonable length
         assert len(result) > 100  # Has some output

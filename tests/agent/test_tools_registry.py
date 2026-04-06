@@ -251,8 +251,8 @@ class TestToolDispatcher:
         assert len(result_str) < 15000
         assert len(result_str) > 10000
         # The truncation in askgem/agent/tools_registry.py exactly says:
-        # [RESULTADO TRUNCADO POR SEGURIDAD]
-        assert "TRUNCADO" in result_str
+        # ... [!] Result truncated at 10000 characters to avoid context overflow.
+        assert "Result truncated at 10000 characters to avoid context overflow." in result_str
 
     @pytest.mark.asyncio
     @patch("askgem.agent.tools_registry.read_file")

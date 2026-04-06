@@ -2,6 +2,7 @@
 Central tool registry and dispatcher for the AskGem agent.
 
 Decouples the tool execution logic from the main conversational loop.
+It does NOT manage the conversation state or UI rendering.
 """
 
 import asyncio
@@ -112,9 +113,10 @@ class ToolDispatcher:
 
             result = await self._dispatch(tool_name, args)
 
-            # Limit result size for context safety
-            if isinstance(result, str) and len(result) > 10000:
-                result = result[:10000] + "\n\n[RESULTADO TRUNCADO POR SEGURIDAD]"
+            # Truncate result if it exceeds 10,000 characters
+            MAX_CHARS = 10_000
+            if isinstance(result, str) and len(result) > MAX_CHARS:
+                result = result[:MAX_CHARS] + f"\n\n... [!] Result truncated at {MAX_CHARS} characters to avoid context overflow."
 
             if self.logger:
                 # Escape result to prevent MarkupError

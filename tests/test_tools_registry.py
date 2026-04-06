@@ -95,8 +95,8 @@ class TestToolDispatcher:
 
         result_text = result_part.function_response.response["result"]
         assert len(result_text) < 15000
-        assert len(result_text) == 10000 + len("\n\n[RESULTADO TRUNCADO POR SEGURIDAD]")
-        assert result_text.endswith("[RESULTADO TRUNCADO POR SEGURIDAD]")
+        assert len(result_text) == 10000 + len("\n\n... [!] Result truncated at 10000 characters to avoid context overflow.")
+        assert result_text.endswith("... [!] Result truncated at 10000 characters to avoid context overflow.")
 
     @pytest.mark.asyncio
     async def test_execute_with_logger(self, mock_config, mock_console, mock_status):

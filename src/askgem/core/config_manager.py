@@ -53,6 +53,10 @@ class ConfigManager:
                 self.settings["google_search_api_key"] = search_key
         except Exception as e:
             self.console.print(f"[error][!] Error accessing keyring for search key: {e}[/error]")
+            # Fallback to env var if keyring fails
+            env_search_key = os.getenv("GOOGLE_SEARCH_API_KEY")
+            if env_search_key:
+                self.settings["google_search_api_key"] = env_search_key
 
     def save_settings(self) -> None:
         """Saves current memory settings into the JSON config file.

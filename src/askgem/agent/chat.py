@@ -202,8 +202,10 @@ class ChatAgent:
     async def _stream_response(
         self, user_input: Union[str, List], callback: Optional[Callable[[str], None]] = None
     ) -> None:
-        # TODO: [refactor] this function has too many responsibilities — split into parsing, execution, and UI rendering
         """Sends a message to the model and streams the response (Async).
+
+        Orchestrates the retry logic, streaming process, tool execution,
+        and post-turn maintenance (autosave and context summarization).
 
         Args:
             user_input: The user or tool generated message payload.
@@ -213,104 +215,141 @@ class ChatAgent:
 
         max_retries = 3
         base_delay = 2.0  # seconds
-        full_text = ""
-        seen_calls: set = set()
 
         for attempt in range(1, max_retries + 1):
             try:
-                # Milestone 4.1: Ensure session exists and use it for streaming
                 await self._ensure_session()
-                response_stream = await self.chat_session.send_message_stream(message=user_input)
-                function_calls_received: List[types.FunctionCall] = []
+                full_text, function_calls_received = await self._process_stream(user_input, callback)
 
-                # Milestone 4.3/5: Interruption support
-                self.interrupted = False
+                await self._handle_tool_executions(function_calls_received, callback)
 
-                if callback:
-                    # TUI Output mode
-                    async for chunk in response_stream:
-                        if self.interrupted:
-                            callback("\n\n[bold red][INTERRUMPIDO POR EL USUARIO][/bold red]")
-                            break
-
-                        if chunk.text:
-                            callback(chunk.text)
-                            full_text += chunk.text
-
-                        new_calls = self._extract_function_calls(chunk, seen_calls)
-                        function_calls_received.extend(new_calls)
-
-                        if hasattr(chunk, "usage_metadata") and chunk.usage_metadata:
-                            self.metrics.add_usage(
-                                chunk.usage_metadata.prompt_token_count, chunk.usage_metadata.candidates_token_count
-                            )
-                else:
-                    # Legacy CLI Output mode (using rich.Live)
-                    from rich.live import Live
-
-                    with Live(Markdown("Pensando..."), console=console, auto_refresh=False) as live:
-                        async for chunk in response_stream:
-                            if self.interrupted:
-                                live.update(
-                                    Markdown(full_text + "\n\n[bold red][INTERRUMPIDO POR EL USUARIO][/bold red]")
-                                )
-                                break
-
-                            if chunk.text:
-                                full_text += chunk.text
-                                live.update(Markdown(full_text))
-                                live.refresh()
-
-                            new_calls = self._extract_function_calls(chunk, seen_calls)
-                            function_calls_received.extend(new_calls)
-
-                            if hasattr(chunk, "usage_metadata") and chunk.usage_metadata:
-                                self.metrics.add_usage(
-                                    chunk.usage_metadata.prompt_token_count, chunk.usage_metadata.candidates_token_count
-                                )
-
-                if function_calls_received:
-                    function_responses = []
-                    for fc in function_calls_received:
-                        self.session_tools += 1
-                        function_responses.append(await self.dispatcher.execute(fc))
-                    if function_responses:
-                        # Recursive loop for tool feedback
-                        await self._stream_response(function_responses, callback=callback)
-                elif not full_text:
+                if not full_text and not function_calls_received:
                     console.print(f"[dim]{_('engine.rate_limit_hint')}[/dim]")
 
-                # Autosave
-                if self.chat_session:
-                    raw_history = await self.chat_session.get_history()
-                    if raw_history:
-                        self.history.save_session(raw_history)
-
-                # Check if we need to summarize to liberate tokens for the next turn
-                await self._summarize_context()
-
+                await self._post_turn_maintenance()
                 return
 
             except Exception as e:
-                error_str = str(e).lower()
-                is_retryable = any(keyword in error_str for keyword in _RETRYABLE_KEYWORDS)
-
-                if is_retryable and attempt < max_retries:
-                    delay = base_delay * (2 ** (attempt - 1)) + random.uniform(0, 1)
-                    _logger.warning("Retryable API error (attempt %d/%d): %s", attempt, max_retries, e)
-                    console.print(
-                        f"\n[warning]{_('engine.retry', attempt=attempt, max=max_retries, delay=f'{delay:.1f}')}[/warning]"
-                    )
-                    await asyncio.sleep(delay)
-                    continue
-                else:
-                    if is_retryable:
-                        _logger.error("All %d retry attempts exhausted: %s", max_retries, e)
+                if not await self._handle_retryable_error(e, attempt, max_retries, base_delay):
                     console.print(f"[error]{_('engine.api_error')}[/error] {e}")
                     return
 
-    async def _summarize_context(self) -> None:
-        """Compresses long conversation history into a concise summary to save tokens.
+    async def _process_stream(
+        self, user_input: Union[str, List], callback: Optional[Callable[[str], None]]
+    ) -> tuple[str, List[types.FunctionCall]]:
+        """Processes the generator stream, updating UI and collecting function calls.
+        
+        Args:
+            user_input: The user or tool generated message payload.
+            callback: Optional async function to receive streamed text chunks.
+            
+        Returns:
+            A tuple containing the full accumulated text response and a list of requested tool calls.
+        """
+        full_text = ""
+        seen_calls: set = set()
+        function_calls_received: List[types.FunctionCall] = []
+        self.interrupted = False
+        
+        response_stream = await self.chat_session.send_message_stream(message=user_input)
+
+        if callback:
+            async for chunk in response_stream:
+                if self.interrupted:
+                    callback("\n\n[bold red][INTERRUMPIDO POR EL USUARIO][/bold red]")
+                    break
+
+                if chunk.text:
+                    callback(chunk.text)
+                    full_text += chunk.text
+
+                self._process_chunk_metadata(chunk, seen_calls, function_calls_received)
+        else:
+            # Legacy CLI Output mode (using rich.Live)
+            from rich.live import Live
+            from rich.markdown import Markdown
+
+            with Live(Markdown("Pensando..."), console=console, auto_refresh=False) as live:
+                async for chunk in response_stream:
+                    if self.interrupted:
+                        live.update(Markdown(full_text + "\n\n[bold red][INTERRUMPIDO POR EL USUARIO][/bold red]"))
+                        break
+
+                    if chunk.text:
+                        full_text += chunk.text
+                        live.update(Markdown(full_text))
+                        live.refresh()
+
+                    self._process_chunk_metadata(chunk, seen_calls, function_calls_received)
+                    
+        return full_text, function_calls_received
+
+    def _process_chunk_metadata(self, chunk: types.Part, seen_calls: set, function_calls_received: List[types.FunctionCall]) -> None:
+        """Extracts function calls and tracks metrics from a single chunk.
+        
+        Args:
+            chunk: The streaming part chunk received from the API.
+            seen_calls: The set of already processed function call IDs/signatures.
+            function_calls_received: List mutating reference where new calls are appended.
+        """
+        new_calls = self._extract_function_calls(chunk, seen_calls)
+        function_calls_received.extend(new_calls)
+
+        if hasattr(chunk, "usage_metadata") and chunk.usage_metadata:
+            self.metrics.add_usage(
+                chunk.usage_metadata.prompt_token_count, chunk.usage_metadata.candidates_token_count
+            )
+
+    async def _handle_tool_executions(self, function_calls: List[types.FunctionCall], callback: Optional[Callable[[str], None]]) -> None:
+        """Executes requested tools and feeds the results back into the model.
+        
+        Args:
+            function_calls: List of requested tools returned by the LLM.
+            callback: The UI streaming callback to pass down recursively.
+        """
+        if not function_calls:
+            return
+            
+        function_responses = []
+        for fc in function_calls:
+            self.session_tools += 1
+            function_responses.append(await self.dispatcher.execute(fc))
+            
+        if function_responses:
+            # Recursive loop for tool feedback
+            await self._stream_response(function_responses, callback=callback)
+
+    async def _post_turn_maintenance(self) -> None:
+        """Handles session saving and token compression after a turn."""
+        if self.chat_session:
+            raw_history = await self.chat_session.get_history()
+            if raw_history:
+                self.history.save_session(raw_history)
+
+        # Check if we need to summarize to liberate tokens for the next turn
+        await self._summarize_context()
+
+    async def _handle_retryable_error(self, e: Exception, attempt: int, max_retries: int, base_delay: float) -> bool:
+        """Evaluates if an API error is retryable and sleeps if appropriate.
+        Returns True if the error is handled (sleeping), False to raise or stop.
+        """
+        import random
+        error_str = str(e).lower()
+        is_retryable = any(keyword in error_str for keyword in _RETRYABLE_KEYWORDS)
+
+        if is_retryable and attempt < max_retries:
+            delay = base_delay * (2 ** (attempt - 1)) + random.uniform(0, 1)
+            _logger.warning("Retryable API error (attempt %d/%d): %s", attempt, max_retries, e)
+            console.print(
+                f"\n[warning]{_('engine.retry', attempt=attempt, max=max_retries, delay=f'{delay:.1f}')}[/warning]"
+            )
+            await asyncio.sleep(delay)
+            return True
+            
+        if is_retryable:
+            _logger.error("All %d retry attempts exhausted: %s", max_retries, e)
+            
+        return False
 
         Triggered when history length exceeds a safety threshold.
         """

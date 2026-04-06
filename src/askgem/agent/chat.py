@@ -351,7 +351,8 @@ class ChatAgent:
             
         return False
 
-        Triggered when history length exceeds a safety threshold.
+    async def _summarize_context(self) -> None:
+        """Triggered when history length exceeds a safety threshold.
         """
         if not self.chat_session:
             return

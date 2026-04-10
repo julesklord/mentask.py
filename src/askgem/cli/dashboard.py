@@ -214,7 +214,7 @@ class AskGemDashboard(App):
                 yield self.streaming_response
             self.output_log = RichLog(highlight=True, markup=True, id="output-pane")
             yield self.output_log
-        yield Input(placeholder=_("api.prompt"), id="prompt-input")
+        yield Input(placeholder=_("dashboard.prompt_placeholder"), id="prompt-input")
         yield Footer()
 
     @work(exclusive=True)
@@ -222,7 +222,7 @@ class AskGemDashboard(App):
         """Initializes the Gemini API in the background and restores last session."""
         prompt_input = self.query_one("#prompt-input", Input)
         prompt_input.disabled = True
-        prompt_input.placeholder = "AskGem está pensando..."
+        prompt_input.placeholder = _("dashboard.prompt_thinking")
         mascot = self.query_one(MascotWidget)
         mascot.set_state("thinking")
         self.sidebar.update_context(self.agent.model_name, "Iniciando...")
@@ -277,7 +277,7 @@ class AskGemDashboard(App):
             self.sidebar.update_context("N/A", "Error")
         finally:
             prompt_input = self.query_one("#prompt-input", Input)
-            prompt_input.placeholder = "Escribe tu mensaje..."
+            prompt_input.placeholder = _("dashboard.prompt_placeholder")
             prompt_input.disabled = False
             prompt_input.focus()
             mascot = self.query_one(MascotWidget)
@@ -385,7 +385,7 @@ class AskGemDashboard(App):
 
         prompt_input = self.query_one("#prompt-input", Input)
         prompt_input.disabled = True
-        prompt_input.placeholder = "AskGem está pensando..."
+        prompt_input.placeholder = _("dashboard.prompt_thinking")
 
         self.current_response = ""
         self.streaming_response.display = True
@@ -415,7 +415,7 @@ class AskGemDashboard(App):
             self.streaming_response.update("")
             # Revert to idle after a delay
             self.set_timer(3.0, lambda: mascot.set_state("idle") if mascot.state != "error" else None)
-            prompt_input.placeholder = "Escribe tu mensaje..."
+            prompt_input.placeholder = _("dashboard.prompt_placeholder")
             prompt_input.disabled = False
             prompt_input.focus()
 

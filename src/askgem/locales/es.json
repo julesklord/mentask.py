@@ -7,7 +7,6 @@
   "api.fatal": "La API Key es obligatoria para continuar. Apagando el sistema.",
   "api.save": "¿Te gustaría guardarla localmente para usos futuros? (Y/n)",
   "sys.context": "Eres askgem, un agente CLI. OS: {os}. CWD: {cwd}. Usa herramientas para leer/editar archivos. Llama a read_file antes de edit_file para ver sangría exacta. Responde brevemente.",
-  
   "tool.spawning": "Ejecutando herramienta autónoma:",
   "tool.action_req": "⚠️  Acción Requerida:",
   "tool.wants_run": "El modelo quiere ejecutar:",
@@ -19,7 +18,6 @@
   "tool.edit.auto": "=> Auto-aprobando la edición en '{path}'...",
   "tool.cmd.auto": "=> Ejecución autónoma (sandbox): '{command}'",
   "tool.unregistered": "Error: La herramienta '{name}' no está registrada en este entorno.",
-
   "engine.rate_limit_hint": "(No se recibió contenido — el modelo podría haber sido limitado por tasa o bloqueado.)",
   "engine.api_error": "[X] Error de la API:",
   "engine.retry": "⚠ Error de API — reintentando ({attempt}/{max}) en {delay}s...",
@@ -27,7 +25,6 @@
   "engine.retry_exhausted": "✘ Los {max} intentos de reintento fallaron. Tu mensaje NO fue consumido — intenta de nuevo.",
   "engine.shutdown": "Apagando. ¡Hasta luego!",
   "engine.you": "Tú:",
-
   "cmd.unknown": "Comando desconocido:",
   "cmd.hint_help": "— escribe [bold]/help[/bold] para ver los comandos disponibles.",
   "cmd.help.title": "Comandos askgem",
@@ -47,7 +44,6 @@
   "cmd.desc.usage": "Mostrar el uso de tokens y el costo estimado de la sesión",
   "cmd.desc.stats": "Mostrar un resumen detallado de logros en esta sesión",
   "cmd.desc.exit": "Salir de askgem",
-
   "cmd.active_model": "Modelo activo:",
   "cmd.model.fetching": "Recuperando modelos disponibles desde tu API key...",
   "cmd.model.available": "Modelos Gemini disponibles:",
@@ -55,19 +51,15 @@
   "cmd.model.usage": "Uso: /model <model_name>",
   "cmd.model.switched": "Se cambió el modelo actual a:",
   "cmd.model.failed": "Hubo un error al cambiar el modelo:",
-
   "cmd.mode.current": "Modo de edición actual:",
   "cmd.mode.usage": "Uso: /mode auto  |  /mode manual",
   "cmd.mode.set": "Modo de edición fijado en:",
-
   "cmd.sandbox.current": "Estado actual del Sandbox:",
   "cmd.sandbox.usage": "Uso: /sandbox on  |  /sandbox off",
   "cmd.sandbox.set": "Modo Sandbox fijado en:",
-
   "cmd.clear.success": "Contexto borrado exitosamente.",
   "cmd.clear.subtitle": "La memoria del modelo ha sido reiniciada. Los mensajes anteriores siguen guardados localmente.",
   "cmd.clear.failed": "Hubo un error al limpiar el contexto:",
-
   "cmd.history.none": "No se encontraron sesiones guardadas.",
   "cmd.history.title": "Sesiones Guardadas",
   "cmd.history.subtitle": "Para restaurar una escribe: /history load <session_id>",
@@ -87,5 +79,7 @@
   "cmd.stats.tools": "Herramientas invocadas: {count}",
   "cmd.stats.files": "Archivos modificados: {count}",
   "dashboard.sidebar.context": "Contexto",
-  "dashboard.sidebar.stats": "Estadísticas"
+  "dashboard.sidebar.stats": "Estadísticas",
+  "dashboard.prompt_placeholder": "Escribe tu mensaje...",
+  "dashboard.prompt_thinking": "AskGem está pensando..."
 }

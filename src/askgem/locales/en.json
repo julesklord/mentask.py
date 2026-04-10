@@ -7,7 +7,6 @@
   "api.fatal": "The API Key is required to continue. Shutting down.",
   "api.save": "Would you like to save it locally for future use? (Y/n)",
   "sys.context": "You are askgem, a CLI coding agent. OS: {os}. CWD: {cwd}. Use tools to read/edit files. Call read_file before edit_file to see exact indentation. Reply briefly.",
-  
   "tool.spawning": "Running autonomous tool:",
   "tool.action_req": "⚠️  Action Required:",
   "tool.wants_run": "The model wants to run:",
@@ -18,7 +17,6 @@
   "tool.denied.edit": "System Notice: The user denied permission to modify this file.",
   "tool.edit.auto": "=> Auto-approving file edit for '{path}'...",
   "tool.unregistered": "Error: Tool '{name}' is not registered in this environment.",
-
   "engine.rate_limit_hint": "(No response content received — the model may have been rate-limited or the request was filtered.)",
   "engine.api_error": "[X] API Error:",
   "engine.retry": "⚠ API error — retrying ({attempt}/{max}) in {delay}s...",
@@ -26,7 +24,6 @@
   "engine.retry_exhausted": "✘ All {max} retry attempts failed. Your input was NOT consumed — try again.",
   "engine.shutdown": "Shutting down. Farewell!",
   "engine.you": "You:",
-  
   "cmd.unknown": "Unknown command:",
   "cmd.hint_help": "— type [bold]/help[/bold] for available commands.",
   "cmd.help.title": "askgem Commands",
@@ -44,7 +41,6 @@
   "cmd.desc.usage": "Show current session token usage and estimated cost",
   "cmd.desc.stats": "Show a detailed summary of accomplishments in this session",
   "cmd.desc.exit": "Exit askgem",
-
   "cmd.active_model": "Active model:",
   "cmd.model.fetching": "Fetching available generation models from your API key...",
   "cmd.model.available": "Available Gemini models:",
@@ -52,15 +48,12 @@
   "cmd.model.usage": "Usage: /model <model_name>",
   "cmd.model.switched": "Switched to model:",
   "cmd.model.failed": "Failed to switch model:",
-
   "cmd.mode.current": "Current edit mode:",
   "cmd.mode.usage": "Usage: /mode auto  |  /mode manual",
   "cmd.mode.set": "Edit mode set to:",
-
   "cmd.clear.success": "Context cleared.",
   "cmd.clear.subtitle": "The model's memory has been reset. Previous messages are still saved on disk.",
   "cmd.clear.failed": "Failed to clear context:",
-
   "cmd.history.none": "No saved sessions found.",
   "cmd.history.title": "Saved Sessions",
   "cmd.history.subtitle": "To restore one: /history load <session_id>",
@@ -80,5 +73,7 @@
   "cmd.stats.tools": "Tools invoked: {count}",
   "cmd.stats.files": "Files modified: {count}",
   "dashboard.sidebar.context": "Context",
-  "dashboard.sidebar.stats": "Statistics"
+  "dashboard.sidebar.stats": "Statistics",
+  "dashboard.prompt_placeholder": "Type your message...",
+  "dashboard.prompt_thinking": "AskGem is thinking..."
 }

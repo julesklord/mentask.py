@@ -12,3 +12,7 @@
 ## 2026-04-09 - [Add Visual Loading State to Placeholder]
 **Learning:** Disabling an input field during async operations prevents interaction, but doesn't clearly communicate *why* it's disabled. Changing the input's placeholder text to a 'thinking/loading' message provides immediate, intuitive feedback.
 **Action:** Always update placeholder text to indicate a loading state alongside disabling inputs during async operations, and ensure it's reverted in the finally block.
+
+## 2026-04-10 - [Localize UI State Text]
+**Learning:** Hardcoding UI strings (like "AskGem está pensando..." or "Escribe tu mensaje...") during runtime state changes breaks internationalization (i18n) and can result in confusing UX where the application language spontaneously changes based on the state. Additionally, initializing a chat input with an incorrect default placeholder (e.g., "Please enter your API Key") creates a confusing first impression.
+**Action:** Always use the localization function (e.g., `_("dashboard.prompt_thinking")`) when updating UI text dynamically during async operations, and ensure new state strings are properly defined across the supported locale JSON files.

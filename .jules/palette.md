@@ -20,3 +20,6 @@
 ## 2026-04-11 - [Disable Input Widget During Slash Commands]
 **Learning:** During mid-conversation slash commands, if the input widget is not disabled, users can type concurrent inputs which might lead to unexpected states or race conditions while the asynchronous operation completes. Providing visual feedback (like a thinking placeholder) makes the app feel more responsive and prevents users from feeling stuck or frustrated.
 **Action:** Always disable inputs during async agent operations, including local mid-conversation slash commands, and ensure they are re-enabled and explicitily refocused in a `finally` block to restore usability once the process completes.
+## 2026-04-12 - [Localize UI State Text in Dashboard]
+**Learning:** Hardcoding UI strings (like "Cargando..." or "Misión Actual") directly in UI components breaks internationalization, particularly for non-Spanish users, resulting in a mixed-language interface.
+**Action:** Always extract text visible in the UI and use the internationalization system (`_()`) to fetch localized strings defined in the JSON locale files, ensuring consistency across languages.

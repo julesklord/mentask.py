@@ -84,5 +84,6 @@
   "dashboard.sidebar.auth_error": "Auth Error",
   "dashboard.sidebar.error": "Error",
   "dashboard.prompt_placeholder": "Type your message...",
-  "dashboard.prompt_thinking": "AskGem is thinking..."
+  "dashboard.prompt_thinking": "AskGem is thinking...",
+  "dashboard.prompt_tooltip": "Type your prompt here or start with / for commands (e.g., /help)"
 }

@@ -11,12 +11,10 @@ import inspect
 from typing import TYPE_CHECKING, Callable, List, Optional
 
 from google.genai import types
-from rich.markup import escape
-from rich.prompt import Confirm
-from rich.status import Status
 
-from ..cli.console import console
+from .ui_interface import ToolUIAdapter
 from ..core.i18n import _
+from ..core.security import analyze_command_safety, SafetyLevel
 from ..tools.file_tools import delete_file, diff_file, edit_file, list_directory, move_file, read_file
 from ..tools.memory_tools import manage_memory, manage_mission
 from ..tools.search_tools import glob_find, grep_search
@@ -34,10 +32,12 @@ class ToolDispatcher:
     def __init__(
         self,
         config: 'ConfigManager',
+        ui: ToolUIAdapter,
         logger: Optional[Callable[[str], None]] = None,
     ):
-        """Initializes the dispatcher with a logger and credentials."""
+        """Initializes the dispatcher with a UI adapter and configuration."""
         self.config = config
+        self.ui = ui
         self.logger = logger
         self.modified_files_count = 0
 
@@ -100,28 +100,24 @@ class ToolDispatcher:
 
         args = function_call.args if function_call.args else {}
 
-        console.print()
+        # Log tool call to UI/Logger
+        if self.logger:
+            self.logger(f"Tool Call: {tool_name} with args: {args}")
+        
+        # UI Status indicator (usually a spinner)
+        self.ui.log_status(f"{_('tool.spawning')} {tool_name}...", level="info")
 
-        # Tool execution UI Wrapper
-        with Status(f"[google.blue]{_('tool.spawning')} {tool_name}[/google.blue]", spinner="dots", console=console):
-            if self.logger:
-                # Escape arguments to prevent MarkupError in case of tools like cat or ping
-                arg_summary = escape(str(args))
-                self.logger(
-                    f"[bold cyan]Tool Call:[/bold cyan] [bold]{escape(tool_name)}[/bold] with args: {arg_summary}"
-                )
+        result = await self._dispatch(tool_name, args)
 
-            result = await self._dispatch(tool_name, args)
+        # Truncate result if it exceeds 10,000 characters
+        MAX_CHARS = 10_000
+        if isinstance(result, str) and len(result) > MAX_CHARS:
+            result = result[:MAX_CHARS] + f"\n\n... [!] Result truncated at {MAX_CHARS} characters to avoid context overflow."
 
-            # Truncate result if it exceeds 10,000 characters
-            MAX_CHARS = 10_000
-            if isinstance(result, str) and len(result) > MAX_CHARS:
-                result = result[:MAX_CHARS] + f"\n\n... [!] Result truncated at {MAX_CHARS} characters to avoid context overflow."
-
-            if self.logger:
-                # Escape result to prevent MarkupError
-                result_summary = escape(str(result)[:500])
-                self.logger(f"[bold green]Tool Result:[/bold green] {result_summary}...")
+        if self.logger:
+            # Note: We should probably move the result logging to the UI adapter too
+            result_summary = str(result)[:500]
+            self.logger(f"Tool Result: {result_summary}...")
 
         return types.Part.from_function_response(
             name=tool_name,
@@ -140,8 +136,7 @@ class ToolDispatcher:
         if tool_name == "delete_file":
             path = args.get("path", "")
             if self.config.settings.get("edit_mode", "manual") == "manual":
-                console.print(f"\n[warning]{_('tool.action_req')}[/warning] ¿Eliminar archivo [bold]'{path}'[/bold]?")
-                if not await asyncio.to_thread(Confirm.ask, _("tool.confirm.edit")):
+                if not await self.ui.confirm_action(f"¿Eliminar archivo [bold]'{path}'[/bold]?"):
                     return _("tool.denied.edit")
             return await asyncio.to_thread(delete_file, path)
 
@@ -149,18 +144,37 @@ class ToolDispatcher:
             source = args.get("source", "")
             destination = args.get("destination", "")
             if self.config.settings.get("edit_mode", "manual") == "manual":
-                console.print(
-                    f"\n[warning]{_('tool.action_req')}[/warning] ¿Mover [bold]'{source}'[/bold] a [bold]'{destination}'[/bold]?"
-                )
-                if not await asyncio.to_thread(Confirm.ask, _("tool.confirm.edit")):
+                message = f"¿Mover [bold]'{source}'[/bold] a [bold]'{destination}'[/bold]?"
+                if not await self.ui.confirm_action(message):
                     return _("tool.denied.edit")
             return await asyncio.to_thread(move_file, source, destination)
 
         if tool_name == "execute_bash":
             command = args.get("command", "")
-            console.print(f"\n[warning]{_('tool.action_req')}[/warning] {_('tool.wants_run')} [bold]'{command}'[/bold]")
-            if not await asyncio.to_thread(Confirm.ask, _("tool.confirm.cmd")):
+            
+            # Analyze safety report
+            report = analyze_command_safety(command)
+            
+            if report.level == SafetyLevel.SAFE:
+                self.ui.log_status(f"Auto-executing safe command: {command}", level="info")
+                return await execute_bash(command)
+
+            # Map SafetyLevel to UI severity string
+            sev_map = {
+                SafetyLevel.NOTICE: "info",
+                SafetyLevel.WARNING: "warning",
+                SafetyLevel.DANGEROUS: "error"
+            }
+            severity = sev_map.get(report.level, "info")
+
+            msg = f"{_('tool.wants_run')} [bold]'{command}'[/bold]"
+            detail = f"Safety Analysis: [bold]{report.category}[/bold]\n{report.description}"
+            if report.pattern:
+                detail += f"\nPattern matched: [dim]{report.pattern}[/dim]"
+
+            if not await self.ui.confirm_action(msg, detail=detail, severity=severity):
                 return _("tool.denied.cmd")
+            
             return await execute_bash(command)
 
         if tool_name == "edit_file":
@@ -169,18 +183,15 @@ class ToolDispatcher:
             replace_text = args.get("replace_text", "")
 
             if self.config.settings.get("edit_mode", "manual") == "manual":
-                console.print(
-                    f"\n[warning]{_('tool.action_req')}[/warning] {_('tool.wants_edit')} [bold]'{path}'[/bold]"
-                )
-                console.print(
+                detail = (
                     f"[dim]--- Replacing ---[/dim]\n{find_text}\n"
                     f"[dim]--- With ---[/dim]\n{replace_text}\n"
                     f"[dim]-----------------[/dim]"
                 )
-                if not await asyncio.to_thread(Confirm.ask, _("tool.confirm.edit")):
+                if not await self.ui.confirm_action(f"{_('tool.wants_edit')} [bold]'{path}'[/bold]", detail=detail):
                     return _("tool.denied.edit")
             else:
-                console.print(f"[italic success]{_('tool.edit.auto', path=path)}[/italic success]")
+                self.ui.log_status(_('tool.edit.auto', path=path), level="success")
 
             res = await asyncio.to_thread(edit_file, path, find_text, replace_text)
             if res.startswith("Success:"):

@@ -21,8 +21,8 @@ COMMAND_METADATA = {
     "/clear": {"desc": _("cmd.desc.clear"), "example": "/clear", "category": "Session"},
     "/usage": {"desc": _("cmd.desc.usage"), "example": "/usage", "category": "Stats"},
     "/stats": {"desc": _("cmd.desc.stats"), "example": "/stats", "category": "Stats"},
-    "/reset": {"desc": "Reinicia la sesión y contadores", "example": "/reset", "category": "Session"},
-    "/stop": {"desc": "Interrumpe la generación actual", "example": "/stop", "category": "Control"},
+    "/reset": {"desc": "Resets the session and counters", "example": "/reset", "category": "Session"},
+    "/stop": {"desc": "Interrupts the current generation", "example": "/stop", "category": "Control"},
     "/exit": {"desc": _("cmd.desc.exit"), "example": "/exit", "category": "Control"},
 }
 
@@ -66,7 +66,7 @@ class CommandHandler:
             await self.agent.session.reset_session(self.agent._build_config())
             self.agent.session_messages = 0
             self.agent.session_tools = 0
-            return "[bold red]Sesión reiniciada.[/]"
+            return "[bold red]Session reset.[/]"
         return None
 
     def _cmd_help(self) -> Table:
@@ -74,7 +74,7 @@ class CommandHandler:
         table = Table(title=_("cmd.help.title"), show_header=True, header_style="bold #6366f1", box=None)
         table.add_column(_("cmd.help.header.cmd"), style="bold cyan")
         table.add_column(_("cmd.help.header.desc"))
-        table.add_column("Ejemplo", style="dim")
+        table.add_column("Example", style="dim")
 
         for cmd, meta in COMMAND_METADATA.items():
             table.add_row(cmd, meta["desc"], meta["example"])
@@ -86,22 +86,22 @@ class CommandHandler:
             try:
                 models_response = await self.agent.session.client.aio.models.list()
                 table = Table(title=_("cmd.model.available"), box=None)
-                table.add_column("Modelo", style="#4285F4")
-                table.add_column("Estado")
+                table.add_column("Model", style="#4285F4")
+                table.add_column("Status")
                 async for m in models_response:
                     if "generateContent" in (m.supported_actions or []):
                         name = m.name.replace("models/", "")
-                        status = "[success]Actual[/success]" if name == self.agent.model_name else ""
+                        status = "[success]Active[/success]" if name == self.agent.model_name else ""
                         table.add_row(name, status)
                 return table
             except Exception as e:
-                return f"[dim]Error al listar modelos: {e}[/dim]"
+                return f"[dim]Error listing models: {e}[/dim]"
 
         new_model = args[0]
         # Basic validation to avoid common typos (like 2.5)
         valid_prefixes = ("gemini-", "learnlm-", "lyria-", "nano-")
         if not any(new_model.startswith(p) for p in valid_prefixes):
-            return f"[warning]Atención:[/] El modelo '{new_model}' podría no ser válido. Usa [bold]/model[/] sin argumentos para ver la lista."
+            return f"[warning]Warning:[/] Model '{new_model}' might not be valid. Use [bold]/model[/] without arguments to see the list."
 
         self.agent.model_name = new_model
         self.agent.session.model_name = new_model
@@ -126,8 +126,8 @@ class CommandHandler:
     def _cmd_stats(self) -> Panel:
         """Displays session stats."""
         stats = (
-            f"📩 Mensajes: [bold]{self.agent.session_messages}[/bold]\n"
-            f"🛠️ Herramientas: [bold]{self.agent.session_tools}[/bold]\n"
-            f"📝 Archivos: [bold]{self.agent.dispatcher.modified_files_count}[/bold]"
+            f"📩 Messages: [bold]{self.agent.session_messages}[/bold]\n"
+            f"🛠️ Tools: [bold]{self.agent.session_tools}[/bold]\n"
+            f"📝 Files: [bold]{self.agent.dispatcher.modified_files_count}[/bold]"
         )
         return Panel(stats, title=_("cmd.stats.title"), border_style="#6366f1", expand=False)

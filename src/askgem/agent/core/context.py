@@ -34,11 +34,11 @@ class ContextManager:
         mission_content = self.mission.read_missions()
 
         full_instruction = f"{base_context}\n\n"
-        full_instruction += "## INFORMACIÓN DE MEMORIA PERSISTENTE (memory.md)\n"
+        full_instruction += "## PERSISTENT MEMORY INFORMATION (memory.md)\n"
         full_instruction += f"{memory_content}\n\n"
-        full_instruction += "## MISIONES Y TAREAS ACTIVAS (heartbeat.md)\n"
+        full_instruction += "## ACTIVE MISSIONS AND TASKS (heartbeat.md)\n"
         full_instruction += f"{mission_content}\n\n"
-        full_instruction += "INSTRUCCIÓN CRÍTICA: Usa 'manage_memory' para guardar hechos importantes y 'manage_mission' para rastrear tu progreso."
+        full_instruction += "CRITICAL INSTRUCTION: Use 'manage_memory' to save important facts and 'manage_mission' to track your progress."
 
         return full_instruction
 
@@ -59,7 +59,7 @@ class ContextManager:
         active_context = history[-6:]
         to_summarize = history[1:-6]
 
-        summary_prompt = "Resume los puntos clave, decisiones técnicas y descubrimientos de esta conversación hasta ahora en un solo párrafo conciso en español. No pierdas detalles sobre rutas de archivos o comandos ejecutados."
+        summary_prompt = "Summarize the key points, technical decisions, and discoveries of this conversation so far in a single concise paragraph. Do not lose details about file paths or executed commands."
 
         try:
             # We use the client to summarize
@@ -73,7 +73,7 @@ class ContextManager:
             _logger.info("Context summarized successfully.")
 
             # Reconstruct history: [Original Start] + [Summary Hub] + [Recent Context]
-            summary_part = types.Part.from_text(text=f"[RESUMEN DE CONTEXTO ANTERIOR]: {summary_text}")
+            summary_part = types.Part.from_text(text=f"[PREVIOUS CONTEXT SUMMARY]: {summary_text}")
             summary_content = types.Content(role="model", parts=[summary_part])
 
             new_history = [first_msg, summary_content] + active_context

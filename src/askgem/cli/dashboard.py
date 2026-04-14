@@ -428,7 +428,7 @@ class AskGemDashboard(App):
                                 if txt:
                                     self.chat_log.write(self.render_message(role, txt))
                         except Exception as chat_err:
-                            self.log_output(f"[bold red]WARNING:[/] No se pudo reanudar la sesión: {chat_err}")
+                            self.log_output(f"[bold red]WARNING:[/] Failed to resume session: {chat_err}")
                 
                 self.sidebar.update_context(
                     self.agent.model_name, self.agent.edit_mode
@@ -442,7 +442,7 @@ class AskGemDashboard(App):
                 self.chat_log.write(f"\n[error][X] {_('error.api_setup_failed')}[/error]")
                 self.sidebar.update_context(self.agent.model_name, _("dashboard.sidebar.auth_error"))
         except Exception as e:
-            error_msg = f"Error al inicializar la API: {str(e)}"
+            error_msg = f"API initialization error: {str(e)}"
             self.chat_log.write(f"\n[error][X] {error_msg}.[/error]")
             self.log_output(f"[bold red]CRITICAL:[/] {error_msg}")
             self.sidebar.update_context("N/A", _("dashboard.sidebar.error"))
@@ -471,7 +471,7 @@ class AskGemDashboard(App):
         except FileNotFoundError:
             self.sidebar.update_mission(_("dashboard.sidebar.mission_not_found"))
         except Exception as e:
-            self.log_output(f"[bold red]ERROR:[/] Fallo al leer misiones: {str(e)}")
+            self.log_output(f"[bold red]ERROR:[/] Mission read failure: {str(e)}")
             self.sidebar.update_mission(_("dashboard.sidebar.mission_error"))
 
     def render_message(self, author: str, content: str) -> Table:

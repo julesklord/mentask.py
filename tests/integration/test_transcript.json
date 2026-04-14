@@ -1,0 +1,25 @@
+{
+  "Hola, dime la fecha": [
+    [
+      {
+        "text": "",
+        "function_calls": [
+          {
+            "name": "execute_bash",
+            "args": {"command": "date /t"}
+          }
+        ],
+        "usage": {"prompt_token_count": 50, "candidates_token_count": 20}
+      }
+    ]
+  ],
+  "['13/04/2026']": [
+    [
+      {
+        "text": "Hoy es lunes 13 de abril de 2026.",
+        "function_calls": [],
+        "usage": {"prompt_token_count": 80, "candidates_token_count": 10}
+      }
+    ]
+  ]
+}

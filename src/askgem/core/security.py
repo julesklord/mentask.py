@@ -45,6 +45,7 @@ _SAFE_COMMAND_WHITELIST: Set[str] = {
     "hostname",
     "ver",
     "systeminfo",
+    "ping",
 }
 
 DANGEROUS_PATTERNS = [

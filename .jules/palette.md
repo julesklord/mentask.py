@@ -32,3 +32,7 @@
 ## 2026-04-14 - [Use Toast Notifications for Immediate Feedback]
 **Learning:** For actions like clearing the context window which happen asynchronously but don't result in immediate visual chat changes (unlike sending a message), users need explicit confirmation that the action succeeded. Textual's `notify` function provides a non-intrusive toast notification that perfectly handles this without cluttering the chat log itself.
 **Action:** Always consider using `self.notify()` in Textual applications to provide immediate confirmation of successful asynchronous or background operations, ensuring the messages are localized appropriately.
+
+## 2026-04-14 - [Test Environment Configuration for Async Testing]
+**Learning:** Pytest doesn't natively support running `async def` test functions out of the box, throwing "async def functions are not natively supported" errors if a supporting plugin is not active. This can cause the CI to fail if the repository doesn't explicitly declare the async dependency.
+**Action:** Always ensure that `pytest-asyncio` (or a similar async test runner) is explicitly defined in `pyproject.toml` (e.g. within `[project.optional-dependencies]`) if the test suite utilizes `pytest.mark.asyncio` decorators.

@@ -23,4 +23,4 @@ askgem
 * [API Reference](API_Reference.md) — Public contracts and internal scopes.
 * [Dependencies](Dependencies.md) — Stack breakdown and justifications.
 * [Development Guide](Development_Guide.md) — Contribution conventions and testing logic.
-* [Changelog](Changelog.md) — Version history and structured tracking.
+* [Changelog](../CHANGELOG.md) — Version history and structured tracking.

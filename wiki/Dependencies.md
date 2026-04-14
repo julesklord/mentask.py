@@ -7,7 +7,9 @@
 | Package | Version Pinned | Purpose | License | Replaceable? |
 |---|---|---|---|---|
 | `google-genai` | `>=0.2.0` | Powers the fundamental API transaction protocols and generative model context. | Apache-2.0 | No. Direct platform wrapper. |
-| `rich` | `>=13.0.0` | Handles all TUI display elements including Markdown live streaming, terminal resizing calculations and spinner layouts. | MIT | Highly difficult. Replacement would demand a heavy internal Curses sublayer rewrite. |
+| `textual` | `>=0.50.0` | **[v0.10.0]** Powers the high-performance Push-Layout TUI dashboard. | MIT | No. Central to the Presentation Layer. |
+| `rich` | `>=13.0.0` | Handles low-level console formatting, Markdown rendering, and styled tables. | MIT | Highly difficult. |
+| `keyring` | `>=25.0.0` | **[v0.10.0]** Secure OS-level storage for API keys. | MIT | Recommended for security standards. |
 
 *No heavy ORMs, web frameworks, or arbitrary third-party utility loaders exist in the core footprint.*
 

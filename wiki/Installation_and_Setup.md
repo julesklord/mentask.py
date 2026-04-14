@@ -2,33 +2,41 @@
 
 ## Prerequisites
 
-* **Python:** 3.8 to 3.13 Supported.
-* **System Deps:** Access to standard OS commands (bash on UNIX, powershell on Windows) to populate agent utilities.
+* **Python:** 3.8 to 3.14 Supported.
+* **API Key:** Required from [Google AI Studio](https://aistudio.google.com/).
+* **System Deps:** Access to standard OS commands (bash on UNIX, pwsh on Windows) to populate agent utilities.
 
 ## Installation Steps
 
-Local development package link:
+Recommended local development linkage:
 
 ```bash
+git clone https://github.com/julesklord/askgem.py
+cd askgem.py
 python -m venv venv
+# On Windows: venv\Scripts\activate
 source venv/bin/activate
-pip install -e "."
+pip install -e ".[dev]"
 ```
 
 ## Configuration Reference
 
-Upon launching `askgem`, user profile folders generate under `~/.askgem/`.
+Upon launching `askgem`, user profile folders generate under `~/.askgem/` (POSIX) or `%APPDATA%/askgem/` (Windows).
 
-### Config Schema (`~/.askgem/settings.json`)
+### Config Schema (`settings.json`)
 
 | Key | Type | Default | Description | Breaks if wrong |
 |---|---|---|---|---|
-| `model_name` | `str` | `gemini-2.5-pro` | LLM bound to session. | Triggers execution error if string does not map to Gemini SDK endpoint. |
+| `model_name` | `str` | `gemini-1.5-flash` | LLM bound to session. | Triggers execution error if string does not map to Gemini SDK endpoint. |
 | `edit_mode` | `str` | `manual` | Safety execution mode. Takes `auto` or `manual`. | Reverts to string mismatches natively. |
+
+### Auth Persistence [v0.10.0]
+
+AskGem utilizes the `keyring` library to securely store credentials in the OS vault (Windows Credential Manager / macOS Keychain).
 
 ### Environment Variables
 
 | Variable | Type | Description |
 |---|---|---|
-| `GOOGLE_API_KEY` | `str` | Authorized token. Suppresses the UI request prompt at boot. |
+| `GEMINI_API_KEY` | `str` | Authorized token. Suppresses the UI request prompt at boot. |
 | `LANG` / `LC_ALL` | `str` | ISO key code like `en` or `es`. Enforces translated text modes instead of Auto-Detect. |

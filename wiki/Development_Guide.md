@@ -9,23 +9,26 @@ Thank you for contributing to AskGem.
 
 ```bash
 python -m venv venv
+# On Windows: venv\Scripts\activate
 source venv/bin/activate
 pip install -e ".[dev]"
 ```
 
 ## Testing Protocol
 
-Tests are mapped inside `tests/` leveraging `pytest`.
+Tests are mapped inside `tests/` leveraging `pytest` and the **Simulation Layer** introduced in **v0.10.0**.
 
 ```bash
 pytest tests/
 ```
 
-Coverage currently ensures isolated paths for:
+AskGem utilizes a `SimulationManager` to allow deterministic testing of agentic loops without incurring API costs. See `tests/integration/test_full_agent_loop.py` for reference.
 
-* `test_config_manager.py` (Mocked data structures)
-* `test_file_tools.py` (Isolated tmp_path logic testing block rewrites)
-* `test_system_tools.py` (Shell abstractions execution points)
+Coverage ensures logic for:
+
+* **Core Managers:** `test_session_manager.py`, `test_context_manager.py`, `test_stream_processor.py`.
+* **Security:** `test_security.py` (Risk analysis and pattern matching).
+* **Tools:** `test_file_tools.py`, `test_system_tools.py`.
 
 > [!IMPORTANT]
 > Because `askgem` is an autonomous tool interacting with hardware endpoints, any integration tools merged **must** handle timeout bounds or test mock restrictions explicitly to avoid rogue executions.
@@ -38,8 +41,8 @@ Coverage currently ensures isolated paths for:
 
 ## Modifying the Architecture
 
-When injecting new tools to `ChatAgent`:
+As of version **0.10.0**, the Cognitive Layer is decentralized. When injecting new logic:
 
-1. Build the bounded generic logic in `src/askgem/tools/`.
-2. Ensure strict `str` return output payload formatting.
-3. Only bind the tool object list references to `ChatAgent._tools`. DO NOT build the logic natively inside `chat.py`.
+1. **New Tools:** Build bounded generic logic in `src/askgem/tools/` and bind them to `ToolDispatcher`.
+2. **State Logic:** Place specialized management logic inside `src/askgem/agent/core/`.
+3. **Safety Logic:** Update `src/askgem/core/security.py` if adding tools that interact with sensitive OS resources.

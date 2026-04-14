@@ -2,20 +2,18 @@
 Unit tests for the metrics tracking system (TokenTracker).
 """
 
-from src.askgem.core.metrics import TokenTracker
+from askgem.core.metrics import TokenTracker
 
 
 def test_metrics_accumulation():
     """Verifies that tokens and costs accumulate correctly."""
     tracker = TokenTracker(model_name="gemini-1.5-flash")
-
     # 1. First turn: 100 prompt, 50 completion (Flash)
     tracker.add_usage(100, 50)
 
     assert tracker.total_prompt_tokens == 100
     assert tracker.total_candidate_tokens == 50
     assert tracker.calculate_cost() > 0
-
     # 2. Second turn: 200 prompt, 100 completion (Flash)
     tracker.add_usage(200, 100)
 

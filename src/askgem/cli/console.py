@@ -12,16 +12,16 @@ from rich.theme import Theme
 # Blue = Agent/Global, Yellow = User/Action
 askgem_theme = Theme(
     {
-        "google.blue": "bold color(33)",
-        "google.yellow": "bold color(220)",
-        "google.red": "bold color(203)",
-        "google.green": "bold color(71)",
-        "agent": "bold color(33)",
-        "user": "bold color(220)",
-        "status": "italic color(33)",
-        "warning": "bold color(220)",
-        "error": "bold color(210)",
-        "success": "bold color(71)",
+        "google.blue": "#4285F4",
+        "google.yellow": "#FBBC05",
+        "google.red": "#EA4335",
+        "google.green": "#34A853",
+        "agent": "bold #4285F4",
+        "user": "bold #FBBC05",
+        "status": "italic #4285F4",
+        "warning": "bold #FBBC05",
+        "error": "bold #EA4335",
+        "success": "bold #34A853",
     }
 )
 

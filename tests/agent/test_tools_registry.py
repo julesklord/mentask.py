@@ -11,6 +11,7 @@ def mock_console():
     with patch("askgem.agent.tools_registry.console") as mock_console:
         yield mock_console
 
+
 @pytest.fixture
 def mock_status():
     with patch("askgem.agent.tools_registry.Status") as mock_status:
@@ -18,29 +19,25 @@ def mock_status():
         mock_status.return_value.__enter__.return_value = mock_status.return_value
         yield mock_status
 
+
 @pytest.fixture
 def mock_config():
     config = MagicMock()
-    config.settings = {
-        "google_search_api_key": "test_key",
-        "google_cx_id": "test_cx",
-        "edit_mode": "manual"
-    }
+    config.settings = {"google_search_api_key": "test_key", "google_cx_id": "test_cx", "edit_mode": "manual"}
     return config
+
 
 @pytest.fixture
 def mock_config_auto():
     config = MagicMock()
-    config.settings = {
-        "google_search_api_key": "test_key",
-        "google_cx_id": "test_cx",
-        "edit_mode": "auto"
-    }
+    config.settings = {"google_search_api_key": "test_key", "google_cx_id": "test_cx", "edit_mode": "auto"}
     return config
+
 
 @pytest.fixture
 def dispatcher(mock_config):
     return ToolDispatcher(config=mock_config)
+
 
 class TestToolDispatcher:
     def test_init_creates_tool_map(self, dispatcher):
@@ -63,7 +60,10 @@ class TestToolDispatcher:
 
         assert isinstance(result_part, types.Part)
         assert result_part.function_response.name == "unknown_tool"
-        assert "no está registrada" in str(result_part.function_response.response["result"]).lower() or "not registered" in str(result_part.function_response.response["result"]).lower()
+        assert (
+            "no está registrada" in str(result_part.function_response.response["result"]).lower()
+            or "not registered" in str(result_part.function_response.response["result"]).lower()
+        )
 
         # Verify status usage
         mock_status.assert_called_once()
@@ -109,8 +109,7 @@ class TestToolDispatcher:
         dispatcher._tool_map["edit_file"] = mock_edit_file
 
         func_call = types.FunctionCall(
-            name="edit_file",
-            args={"path": "test.txt", "find_text": "old", "replace_text": "new"}
+            name="edit_file", args={"path": "test.txt", "find_text": "old", "replace_text": "new"}
         )
 
         result_part = await dispatcher.execute(func_call)
@@ -125,15 +124,16 @@ class TestToolDispatcher:
     @pytest.mark.asyncio
     @patch("askgem.agent.tools_registry.edit_file")
     @patch("askgem.agent.tools_registry.Confirm.ask")
-    async def test_execute_edit_file_manual_mode_confirmed(self, mock_confirm, mock_edit_file, mock_config, mock_console, mock_status):
+    async def test_execute_edit_file_manual_mode_confirmed(
+        self, mock_confirm, mock_edit_file, mock_config, mock_console, mock_status
+    ):
         dispatcher = ToolDispatcher(config=mock_config)
         dispatcher._tool_map["edit_file"] = mock_edit_file
         mock_confirm.return_value = True
         mock_edit_file.return_value = "Success: edited file"
 
         func_call = types.FunctionCall(
-            name="edit_file",
-            args={"path": "test.txt", "find_text": "old", "replace_text": "new"}
+            name="edit_file", args={"path": "test.txt", "find_text": "old", "replace_text": "new"}
         )
 
         result_part = await dispatcher.execute(func_call)
@@ -146,14 +146,15 @@ class TestToolDispatcher:
     @pytest.mark.asyncio
     @patch("askgem.agent.tools_registry.edit_file")
     @patch("askgem.agent.tools_registry.Confirm.ask")
-    async def test_execute_edit_file_manual_mode_denied(self, mock_confirm, mock_edit_file, mock_config, mock_console, mock_status):
+    async def test_execute_edit_file_manual_mode_denied(
+        self, mock_confirm, mock_edit_file, mock_config, mock_console, mock_status
+    ):
         dispatcher = ToolDispatcher(config=mock_config)
         dispatcher._tool_map["edit_file"] = mock_edit_file
         mock_confirm.return_value = False
 
         func_call = types.FunctionCall(
-            name="edit_file",
-            args={"path": "test.txt", "find_text": "old", "replace_text": "new"}
+            name="edit_file", args={"path": "test.txt", "find_text": "old", "replace_text": "new"}
         )
 
         result_part = await dispatcher.execute(func_call)
@@ -161,21 +162,25 @@ class TestToolDispatcher:
         mock_confirm.assert_called_once()
         mock_edit_file.assert_not_called()
         assert dispatcher.modified_files_count == 0
-        assert "Aviso de Sistema" in str(result_part.function_response.response["result"]) or "System Notice" in str(result_part.function_response.response["result"])
-        assert "denegó" in str(result_part.function_response.response["result"]).lower() or "denied permission" in str(result_part.function_response.response["result"]).lower()
+        assert "Aviso de Sistema" in str(result_part.function_response.response["result"]) or "System Notice" in str(
+            result_part.function_response.response["result"]
+        )
+        assert (
+            "denegó" in str(result_part.function_response.response["result"]).lower()
+            or "denied permission" in str(result_part.function_response.response["result"]).lower()
+        )
 
     @pytest.mark.asyncio
     @patch("askgem.agent.tools_registry.delete_file")
     @patch("askgem.agent.tools_registry.Confirm.ask")
-    async def test_execute_delete_file_manual_mode_denied(self, mock_confirm, mock_delete_file, mock_config, mock_console, mock_status):
+    async def test_execute_delete_file_manual_mode_denied(
+        self, mock_confirm, mock_delete_file, mock_config, mock_console, mock_status
+    ):
         dispatcher = ToolDispatcher(config=mock_config)
         dispatcher._tool_map["delete_file"] = mock_delete_file
         mock_confirm.return_value = False
 
-        func_call = types.FunctionCall(
-            name="delete_file",
-            args={"path": "test.txt"}
-        )
+        func_call = types.FunctionCall(name="delete_file", args={"path": "test.txt"})
 
         await dispatcher.execute(func_call)
 
@@ -185,15 +190,14 @@ class TestToolDispatcher:
     @pytest.mark.asyncio
     @patch("askgem.agent.tools_registry.move_file")
     @patch("askgem.agent.tools_registry.Confirm.ask")
-    async def test_execute_move_file_manual_mode_denied(self, mock_confirm, mock_move_file, mock_config, mock_console, mock_status):
+    async def test_execute_move_file_manual_mode_denied(
+        self, mock_confirm, mock_move_file, mock_config, mock_console, mock_status
+    ):
         dispatcher = ToolDispatcher(config=mock_config)
         dispatcher._tool_map["move_file"] = mock_move_file
         mock_confirm.return_value = False
 
-        func_call = types.FunctionCall(
-            name="move_file",
-            args={"source": "a.txt", "destination": "b.txt"}
-        )
+        func_call = types.FunctionCall(name="move_file", args={"source": "a.txt", "destination": "b.txt"})
 
         await dispatcher.execute(func_call)
 
@@ -203,15 +207,14 @@ class TestToolDispatcher:
     @pytest.mark.asyncio
     @patch("askgem.agent.tools_registry.execute_bash", new_callable=AsyncMock)
     @patch("askgem.agent.tools_registry.Confirm.ask")
-    async def test_execute_bash_manual_mode_denied(self, mock_confirm, mock_execute_bash, mock_config, mock_console, mock_status):
+    async def test_execute_bash_manual_mode_denied(
+        self, mock_confirm, mock_execute_bash, mock_config, mock_console, mock_status
+    ):
         dispatcher = ToolDispatcher(config=mock_config)
         dispatcher._tool_map["execute_bash"] = mock_execute_bash
         mock_confirm.return_value = False
 
-        func_call = types.FunctionCall(
-            name="execute_bash",
-            args={"command": "echo test"}
-        )
+        func_call = types.FunctionCall(name="execute_bash", args={"command": "echo test"})
 
         await dispatcher.execute(func_call)
 
@@ -221,16 +224,15 @@ class TestToolDispatcher:
     @pytest.mark.asyncio
     @patch("askgem.agent.tools_registry.execute_bash", new_callable=AsyncMock)
     @patch("askgem.agent.tools_registry.Confirm.ask")
-    async def test_execute_bash_auto_mode(self, mock_confirm, mock_execute_bash, mock_config_auto, mock_console, mock_status):
+    async def test_execute_bash_auto_mode(
+        self, mock_confirm, mock_execute_bash, mock_config_auto, mock_console, mock_status
+    ):
         dispatcher = ToolDispatcher(config=mock_config_auto)
         dispatcher._tool_map["execute_bash"] = mock_execute_bash
         mock_execute_bash.return_value = "test output"
         mock_confirm.return_value = True
 
-        func_call = types.FunctionCall(
-            name="execute_bash",
-            args={"command": "echo test"}
-        )
+        func_call = types.FunctionCall(name="execute_bash", args={"command": "echo test"})
 
         result_part = await dispatcher.execute(func_call)
 

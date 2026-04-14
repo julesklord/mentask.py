@@ -56,6 +56,7 @@ async def _create_process(command: str) -> asyncio.subprocess.Process:
             stderr=asyncio.subprocess.PIPE,
         )
 
+
 async def execute_bash(command: str) -> str:
     """
     Executes a shell command asynchronously, captures its standard output (stdout)

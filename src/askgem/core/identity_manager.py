@@ -35,6 +35,7 @@ DEFAULT_IDENTITY_TEMPLATE = """# AskGem Identity & Persona
 - Respect the user's 'Misiones' and 'Tareas' as high-priority goals.
 """
 
+
 class IdentityManager:
     """Manages the ~/.askgem/identity.md file."""
 

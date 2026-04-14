@@ -1,6 +1,7 @@
 """
 Tests for core/config_manager.py — ConfigManager v2.0
 """
+
 import os
 from unittest.mock import MagicMock, patch
 
@@ -15,6 +16,7 @@ class TestGetConfigDir:
     def test_returns_path_object(self):
         result = get_config_dir()
         from pathlib import Path
+
         assert isinstance(result, Path)
 
     def test_directory_name_is_askgem(self):
@@ -99,6 +101,7 @@ class TestConfigManagerApiKey:
             # Create a mock legacy unencrypted key file
             key_file = tmp_path / ".gemini_api_key_unencrypted"
             key_file.write_text("insecure-key")
+
             # When the code looks for settings.json it might use the same mock,
             # so let's use side_effect to route correctly.
             def mock_path_side_effect(filename):
@@ -124,7 +127,9 @@ class TestConfigManagerApiKey:
                 assert any("SECURITY WARNING" in str(arg) for arg in calls)
 
     def test_saves_and_loads_api_key(self, tmp_path):
-        with patch.dict(os.environ, {}, clear=True), patch("keyring.set_password") as mock_set, patch("keyring.get_password") as mock_get, patch("pathlib.Path.home", return_value=tmp_path):
+        with patch.dict(os.environ, {}, clear=True), patch("keyring.set_password") as mock_set, patch(
+            "keyring.get_password"
+        ) as mock_get, patch("pathlib.Path.home", return_value=tmp_path):
             mock_get.return_value = "my-test-key"
             cm = ConfigManager(_mock_console)
             cm.save_api_key("my-test-key")

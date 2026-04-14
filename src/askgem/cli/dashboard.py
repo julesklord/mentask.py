@@ -167,9 +167,7 @@ class Sidebar(Static):
         self.stats_info.update(summary)
 
     def update_context(self, model: str, mode: str) -> None:
-        self.context_info.update(
-            f"Modelo: [bold]{model}[/bold]\nModo: [bold]{mode}[/bold]"
-        )
+        self.context_info.update(f"Modelo: [bold]{model}[/bold]\nModo: [bold]{mode}[/bold]")
 
     def update_mission(self, summary: str) -> None:
         self.mission_info.update(summary)
@@ -270,15 +268,9 @@ class CommandPalette(Static):
         lines = []
         for i, (cmd, meta) in enumerate(self.filtered_cmds):
             if i == self.selected_index:
-                lines.append(
-                    f"[bold #e0e7ff on #312e81] ▶ {cmd}[/]"
-                    f"  [dim]{meta['desc']}[/dim]"
-                )
+                lines.append(f"[bold #e0e7ff on #312e81] ▶ {cmd}[/]  [dim]{meta['desc']}[/dim]")
             else:
-                lines.append(
-                    f"[#475569]   {cmd}[/]"
-                    f"  [dim]{meta['desc']}[/dim]"
-                )
+                lines.append(f"[#475569]   {cmd}[/]  [dim]{meta['desc']}[/dim]")
         self.update("\n".join(lines))
 
     def update_filter(self, text: str) -> None:
@@ -288,11 +280,7 @@ class CommandPalette(Static):
             return
 
         search = text.lower()
-        self.filtered_cmds = [
-            (cmd, meta)
-            for cmd, meta in self.commands_meta.items()
-            if cmd.startswith(search)
-        ]
+        self.filtered_cmds = [(cmd, meta) for cmd, meta in self.commands_meta.items() if cmd.startswith(search)]
 
         if not self.filtered_cmds:
             self.display = False
@@ -359,17 +347,13 @@ class AskGemDashboard(App):
                 yield self.sidebar
 
                 with Vertical(id="chat-area"):
-                    self.chat_log = RichLog(
-                        highlight=True, markup=True, id="chat-history"
-                    )
+                    self.chat_log = RichLog(highlight=True, markup=True, id="chat-history")
                     yield self.chat_log
                     self.streaming_response = Static("", id="streaming-response")
                     yield self.streaming_response
 
                 # Output pane: hidden by default, toggled with F12
-                self.output_log = RichLog(
-                    highlight=True, markup=True, id="output-pane"
-                )
+                self.output_log = RichLog(highlight=True, markup=True, id="output-pane")
                 yield self.output_log
 
             self.palette = CommandPalette(self.commands_meta)
@@ -389,9 +373,7 @@ class AskGemDashboard(App):
     # ------------------------------------------------------------------
     def on_mount(self) -> None:
         self.agent.set_status_logger(self.log_output)
-        self.chat_log.write(
-            f"\n[bold #FBBC05]{_('startup.welcome', version=__version__)}[/]"
-        )
+        self.chat_log.write(f"\n[bold #FBBC05]{_('startup.welcome', version=__version__)}[/]")
         self._update_metrics()
         self.set_interval(5.0, self._update_mission_display)
         self.init_api()
@@ -418,9 +400,7 @@ class AskGemDashboard(App):
                                 config=self.agent._build_config(),
                                 history=hist,
                             )
-                            self.chat_log.write(
-                                f"\n[bold #6366f1]{_('startup.resuming_session', session=last)}[/]"
-                            )
+                            self.chat_log.write(f"\n[bold #6366f1]{_('startup.resuming_session', session=last)}[/]")
                             # Populate UI with historic messages
                             for msg in hist:
                                 role = _("engine.you") if msg.role == "user" else "AskGem"
@@ -429,14 +409,10 @@ class AskGemDashboard(App):
                                     self.chat_log.write(self.render_message(role, txt))
                         except Exception as chat_err:
                             self.log_output(f"[bold red]WARNING:[/] Failed to resume session: {chat_err}")
-                
-                self.sidebar.update_context(
-                    self.agent.model_name, self.agent.edit_mode
-                )
+
+                self.sidebar.update_context(self.agent.model_name, self.agent.edit_mode)
                 self._update_mission_display()
-                self.chat_log.write(
-                    f"\n[bold #34A853][OK] {_('startup.connected')}[/]"
-                )
+                self.chat_log.write(f"\n[bold #34A853][OK] {_('startup.connected')}[/]")
             else:
                 # If setup_api fails, it means the API key is missing or invalid
                 self.chat_log.write(f"\n[error][X] {_('error.api_setup_failed')}[/error]")
@@ -481,9 +457,7 @@ class AskGemDashboard(App):
         table.add_column()  # Body column
 
         tag = (
-            f"[bold #6366f1]{author}[/bold #6366f1]"
-            if author == "AskGem"
-            else f"[bold #94a3b8]{author}[/bold #94a3b8]"
+            f"[bold #6366f1]{author}[/bold #6366f1]" if author == "AskGem" else f"[bold #94a3b8]{author}[/bold #94a3b8]"
         )
         table.add_row(tag, Markdown(content))
         return table
@@ -491,10 +465,7 @@ class AskGemDashboard(App):
     def _update_metrics(self) -> None:
         self.sidebar.update_stats(self.agent.metrics.get_summary())
         self.dashboard_footer.update_info(
-            stats=(
-                f"In: {self.agent.metrics.total_prompt_tokens}"
-                f" | Out: {self.agent.metrics.total_candidate_tokens}"
-            ),
+            stats=(f"In: {self.agent.metrics.total_prompt_tokens} | Out: {self.agent.metrics.total_candidate_tokens}"),
             model=self.agent.model_name,
             mode=self.agent.edit_mode,
         )
@@ -575,13 +546,9 @@ class AskGemDashboard(App):
         try:
             await self.agent._stream_response(val, callback=cb)
             self._update_metrics()
-            self.chat_log.write(
-                self.render_message("AskGem", self.current_response)
-            )
+            self.chat_log.write(self.render_message("AskGem", self.current_response))
         except Exception as exc:
-            self.chat_log.write(
-                f"\n[bold red]Error:[/bold red] {escape(str(exc))}"
-            )
+            self.chat_log.write(f"\n[bold red]Error:[/bold red] {escape(str(exc))}")
         finally:
             self.streaming_response.display = False
             self.streaming_response.update("")
@@ -621,6 +588,4 @@ class AskGemDashboard(App):
         detail: Optional[str] = None,
         severity: str = "info",
     ) -> bool:
-        return bool(
-            await self.push_screen_wait(ConfirmationModal(msg, detail, severity))
-        )
+        return bool(await self.push_screen_wait(ConfirmationModal(msg, detail, severity)))

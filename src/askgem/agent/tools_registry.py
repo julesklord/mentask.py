@@ -12,18 +12,17 @@ from typing import TYPE_CHECKING, Callable, List, Optional
 
 from google.genai import types
 
-from .ui_interface import ToolUIAdapter
 from ..core.i18n import _
-from ..core.security import analyze_command_safety, SafetyLevel
+from ..core.security import SafetyLevel, analyze_command_safety
 from ..tools.file_tools import delete_file, diff_file, edit_file, list_directory, move_file, read_file
 from ..tools.memory_tools import manage_memory, manage_mission
 from ..tools.search_tools import glob_find, grep_search
 from ..tools.system_tools import execute_bash
 from ..tools.web_tools import web_fetch, web_search
+from .ui_interface import ToolUIAdapter
 
 if TYPE_CHECKING:
     from ..core.config_manager import ConfigManager
-
 
 
 class ToolDispatcher:
@@ -31,7 +30,7 @@ class ToolDispatcher:
 
     def __init__(
         self,
-        config: 'ConfigManager',
+        config: "ConfigManager",
         ui: ToolUIAdapter,
         logger: Optional[Callable[[str], None]] = None,
     ):
@@ -94,8 +93,7 @@ class ToolDispatcher:
         tool_name = function_call.name
         if not tool_name:
             return types.Part.from_function_response(
-                name="unknown",
-                response={"error": "Tool name was missing from function_call"}
+                name="unknown", response={"error": "Tool name was missing from function_call"}
             )
 
         args = function_call.args if function_call.args else {}
@@ -103,7 +101,7 @@ class ToolDispatcher:
         # Log tool call to UI/Logger
         if self.logger:
             self.logger(f"Tool Call: {tool_name} with args: {args}")
-        
+
         # UI Status indicator (usually a spinner)
         self.ui.log_status(f"{_('tool.spawning')} {tool_name}...", level="info")
 
@@ -112,7 +110,10 @@ class ToolDispatcher:
         # Truncate result if it exceeds 10,000 characters
         MAX_CHARS = 10_000
         if isinstance(result, str) and len(result) > MAX_CHARS:
-            result = result[:MAX_CHARS] + f"\n\n... [!] Result truncated at {MAX_CHARS} characters to avoid context overflow."
+            result = (
+                result[:MAX_CHARS]
+                + f"\n\n... [!] Result truncated at {MAX_CHARS} characters to avoid context overflow."
+            )
 
         if self.logger:
             # Note: We should probably move the result logging to the UI adapter too
@@ -135,9 +136,10 @@ class ToolDispatcher:
         # 1. Interactive Tools (Require confirmation and thread-blocking UI)
         if tool_name == "delete_file":
             path = args.get("path", "")
-            if self.config.settings.get("edit_mode", "manual") == "manual":
-                if not await self.ui.confirm_action(f"¿Eliminar archivo [bold]'{path}'[/bold]?"):
-                    return _("tool.denied.edit")
+            if self.config.settings.get("edit_mode", "manual") == "manual" and not await self.ui.confirm_action(
+                f"¿Eliminar archivo [bold]'{path}'[/bold]?"
+            ):
+                return _("tool.denied.edit")
             return await asyncio.to_thread(delete_file, path)
 
         if tool_name == "move_file":
@@ -151,20 +153,16 @@ class ToolDispatcher:
 
         if tool_name == "execute_bash":
             command = args.get("command", "")
-            
+
             # Analyze safety report
             report = analyze_command_safety(command)
-            
+
             if report.level == SafetyLevel.SAFE:
                 self.ui.log_status(f"Auto-executing safe command: {command}", level="info")
                 return await execute_bash(command)
 
             # Map SafetyLevel to UI severity string
-            sev_map = {
-                SafetyLevel.NOTICE: "info",
-                SafetyLevel.WARNING: "warning",
-                SafetyLevel.DANGEROUS: "error"
-            }
+            sev_map = {SafetyLevel.NOTICE: "info", SafetyLevel.WARNING: "warning", SafetyLevel.DANGEROUS: "error"}
             severity = sev_map.get(report.level, "info")
 
             msg = f"{_('tool.wants_run')} [bold]'{command}'[/bold]"
@@ -174,7 +172,7 @@ class ToolDispatcher:
 
             if not await self.ui.confirm_action(msg, detail=detail, severity=severity):
                 return _("tool.denied.cmd")
-            
+
             return await execute_bash(command)
 
         if tool_name == "edit_file":
@@ -191,7 +189,7 @@ class ToolDispatcher:
                 if not await self.ui.confirm_action(f"{_('tool.wants_edit')} [bold]'{path}'[/bold]", detail=detail):
                     return _("tool.denied.edit")
             else:
-                self.ui.log_status(_('tool.edit.auto', path=path), level="success")
+                self.ui.log_status(_("tool.edit.auto", path=path), level="success")
 
             res = await asyncio.to_thread(edit_file, path, find_text, replace_text)
             if res.startswith("Success:"):

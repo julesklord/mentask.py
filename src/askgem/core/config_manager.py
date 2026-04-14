@@ -139,7 +139,9 @@ class ConfigManager:
             # If legacy file exists, warn the user
             path = get_config_path(self.UNENCRYPTED_API_KEY_FILE)
             if os.path.exists(path):
-                self.console.print(f"[error][!] SECURITY WARNING: Legacy unencrypted file still exists at: {path}[/error]")
+                self.console.print(
+                    f"[error][!] SECURITY WARNING: Legacy unencrypted file still exists at: {path}[/error]"
+                )
                 self.console.print("[error][!] You MUST delete it manually for better security.[/error]")
 
             return True

@@ -11,7 +11,7 @@ import os
 import sys
 import time
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from google import genai
 from google.genai import types
@@ -155,10 +155,9 @@ def run_single_test(client, model_name, test_case):
         exec_ok = False
         if file_exists and test_case.get("verify_cmd"):
             import subprocess
+
             try:
-                result = subprocess.run(
-                    test_case["verify_cmd"], shell=True, capture_output=True, text=True, timeout=10
-                )
+                result = subprocess.run(test_case["verify_cmd"], shell=True, capture_output=True, text=True, timeout=10)
                 exec_ok = test_case["expected_output"] in result.stdout
                 print(f"    🏃 Exec output: '{result.stdout.strip()}' (expected: '{test_case['expected_output']}')")
             except Exception as e:
@@ -220,12 +219,14 @@ def main():
             results.append({"test": test["id"], "status": "QUOTA_EXHAUSTED", "tokens": 0, "model": "N/A"})
             break
 
-        results.append({
-            "test": test["id"],
-            "status": "PASS" if success else "FAIL",
-            "tokens": tokens,
-            "model": model_used,
-        })
+        results.append(
+            {
+                "test": test["id"],
+                "status": "PASS" if success else "FAIL",
+                "tokens": tokens,
+                "model": model_used,
+            }
+        )
 
         # Token budget check
         if cumulative_tokens > 5000:

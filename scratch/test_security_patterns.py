@@ -1,4 +1,3 @@
-
 import os
 import sys
 
@@ -26,4 +25,3 @@ for cmd, expected in test_cases:
     print(f"[{status}] Cmd: {cmd} -> Found: {report.level.value} (Expected: {expected.value})")
     if status == "FAIL":
         print(f"      Details: {report.category} - {report.description}")
-

@@ -93,8 +93,9 @@ def test_add_fact_file_error(mock_memory_path):
     # The safest way is to patch builtins.open, but we should make sure it only fails for 'w'
 
     original_open = open
+
     def mock_open(*args, **kwargs):
-        if len(args) > 1 and args[1] == 'w':
+        if len(args) > 1 and args[1] == "w":
             raise OSError("Mocked error")
         return original_open(*args, **kwargs)
 

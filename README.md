@@ -35,17 +35,16 @@ with your codebase.
 
 ## How it works
 
-askgem runs an asynchronous agentic loop powered by the `google-genai` SDK and a modular manager-based core. On each turn:
+askgem runs an advanced asynchronous reasoning loop powered by the **AgentOrchestrator** and a modular manager-based core. On each turn:
 
-1. Your message is sent to the selected Gemini model with a set of dynamic system instructions assembled by the **ContextManager**.
-2. The model reasons about the request and may call one or more tools (read a file,
-   run a command, list a directory).
-3. askgem intercepts those tool calls via a **ToolDispatcher**, executes them locally (subject to **Security Layer** risk analysis), and feeds results back to the model.
-4. The **StreamProcessor** handles the generator stream, updating the UI in real-time and extracting function calls mid-flight.
-5. The model synthesizes a final response, streamed to your terminal in real-time Markdown.
-6. The full conversation is auto-saved to `~/.askgem/history/` after every turn by the **HistoryManager**.
+1. **Environmental Awareness**: At startup, the **ContextManager** performs a **Project Blueprint** scan, discovering the project type, structure, and key files to build a proactive system instruction.
+2. **Cognitive Loop**: Your message is processed by the **AgentOrchestrator**, which manages the *Thinking -> Action -> Observation* cycle.
+3. **Tool Reasoning**: The model calls specialized tools (read, edit, execute). askgem intercepts these via the **ToolDispatcher**.
+4. **Safety Guard**: Every action passes through the **Security Layer** for real-time risk analysis and path validation.
+5. **Stream Processing**: The **StreamProcessor** extracts function calls and text mid-flight, showing you the agent's "thought process" in real-time.
+6. **Persistence**: The full session, including tool results and metrics, is auto-saved to your Workspace history.
 
-This loop repeats until the model stops requesting tools or you exit the session.
+This autonomous loop repeats until the mission is accomplished or you interrupt it.
 
 ---
 
@@ -61,6 +60,14 @@ This loop repeats until the model stops requesting tools or you exit the session
 | `execute_bash` | Run shell commands with 60s timeout and full **Risk Analysis** |
 | `manage_memory` | Save important project facts to `memory.md` for long-term recall |
 | `manage_mission` | Track complex goals and sub-tasks via `heartbeat.md` mission control |
+| `manage_workspace` | **[v0.11.0]** Detects and initializes local project knowledge bases |
+
+### Workspace Isolation & Local Intelligence
+
+AskGem now distinguishes between your **Global Persona** and your **Project Context**:
+- **Local Priority**: If a `.askgem/` folder exists in your project, it takes precedence for settings, memory, and history.
+- **Project Memory**: Knowledge saved via `manage_memory` is stored within the project, preventing context leakage between repositories.
+- **Mission Persistence**: Track specific dev-missions per project without cluttering your global space.
 
 ### Human-in-the-loop safety
 
@@ -86,24 +93,21 @@ keep reloaded sessions within token budget.
 
 ---
 
-## New in v0.10.0: Modular Architecture
+## New in v0.11.0: Hyper-Context & Security Hardening
 
-The monolithic core has been refactored into specialized managers to improve stability and testability:
+The v0.11.0 release evolves AskGem from a reactive assistant into a proactive agent with hardened security:
 
-### 1. SessionManager
-Handles the entire lifecycle of the Gemini API connection. It manages client initialization, authentication via system keyring, and implements a robust **exponential backoff retry** strategy for transient errors (429, 500, 503).
+### 1. AgentOrchestrator
+The core logic has been centralized into an Orchestrator that manages the cognitive loop. It ensures that every tool execution is followed by a fresh observation and reasoning step, improving the reliability of multi-step coding tasks.
 
-### 2. ContextManager
-The "brain" of the state layer. It dynamically assembles the system prompt by combining OS metadata, Persistent Memory, and Active Missions. It also monitors history length and triggers **Proactive Summarization** when token limits are approached, compressing early turns without losing technical context.
+### 2. Project Blueprint (Hyper-Context)
+AskGem no longer starts "blind". The **ContextManager** now performs an automatic recursive scan of your working directory on startup, identifying the tech stack and project architecture before you even ask your first question.
 
-### 3. StreamProcessor
-A low-level async handler that consumes chunks from the Gemini SDK. It performs dual-path tool detection (SDK property + raw part traversal) to ensure reliable tool extraction regardless of streaming variations.
+### 3. Trust Management System
+Implemented a robust **Directory Trust** layer. AskGem will now ask for permission before accessing or modifying files outside of your workspace or explicit "Trusted Folders", preventing accidental system-wide modifications.
 
-### 4. CommandHandler
-A centralized dispatcher for slash commands. It allows AskGem to be configured mid-session (switching models, changing safety modes, or wiping context) without disrupting the conversation flow.
-
-### 5. SimulationManager
-Introduces a deterministic execution layer. It can **record** real API interactions into JSON transcripts and **playback** them during testing, allowing for 100% reliable CI/CD verification of complex agentic loops.
+### 4. Windows Cross-Drive Hardening
+Specific security guards for Windows users: prevents unauthorized operations across different drive letters (e.g., C: to D:) unless explicitly trusted.
 
 ---
 ## Installation
@@ -193,6 +197,8 @@ Type `exit`, `quit`, `q`, or press `Ctrl+C`.
 | `/stop` | **[v0.10.0]** Interrupt the current generation immediately |
 | `/reset` | **[v0.10.0]** Restart the entire session and reset all counters |
 | `/history [list/load/delete]` | Manage saved conversation sessions |
+| `/trust [path]` | **[v0.11.0]** Add a directory to the permanent whitelist |
+| `/untrust [path]` | **[v0.11.0]** Remove a directory from the whitelist |
 
 ---
 
@@ -200,15 +206,15 @@ Type `exit`, `quit`, `q`, or press `Ctrl+C`.
 
 **Always, regardless of mode (Sandboxed Environment):**
 
+- **Trust Management Layer (v0.11.0):** askgem now implements a strict whitelist for file operations. By default, it can only touch the current workspace. Use `/trust` to authorize external paths.
+- **Cross-Drive Protection:** On Windows, the agent is blocked from crossing drive letters (e.g., C: to G:) unless the target is explicitly trusted, preventing unintended system-wide access.
 - **Risk Analysis Engine:** Powered by `core/security.py`, every command is categorized:
     - `SAFE`: Informative commands (ls, git status).
     - `NOTICE`: Standard operations.
     - `WARNING`: High-risk patterns (sudo, sensitive file access).
     - `DANGEROUS`: Critical risk (rm -rf, fork bombs, world-writable chmod).
-- **Path Traversal Protection:** All file operations are strictly confined to the current working directory.
 - **Atomic Writing:** `edit_file` uses a temporary file + rename strategy to prevent corruption.
 - **Automatic Backups:** Every file modification creates a `.bkp` backup at `<path>.bkp`.
-- **Context Limit Protection:** Tool results are automatically truncated to prevent context window explosion.
 - **Hard Timeouts:** Shell commands have a strict 60-second execution limit.
 
 ---
@@ -217,25 +223,22 @@ Type `exit`, `quit`, `q`, or press `Ctrl+C`.
 ```
 askgem.py/
 ├── src/askgem/
-│   ├── __init__.py              # Single source of truth for version (0.10.0)
+│   ├── __init__.py              # Single source of truth for version (0.11.0)
 │   ├── agent/
-│   │   ├── chat.py              # ChatAgent — The central orchestrator
-│   │   └── core/                # Cognitive Managers (v0.10.0)
-│   │       ├── session.py       # API lifecycle and Exponential Backoff
-│   │       ├── context.py       # Prompt assembly and Proactive Summarization
-│   │       ├── stream.py        # Async generator handling and Tool extraction
-│   │       ├── commands.py      # Slash command dispatcher
-│   │       └── simulation.py    # Deterministic recording/playback engine
+│   │   ├── orchestrator.py      # The Reasoning Brain — Thinking/Action/Observation
+│   │   ├── schema.py            # Unified message and tool schemas
+│   │   └── core/                # Cognitive Managers
+│   │       ├── session.py       # API lifecycle, Retries and Error handling
+│   │       ├── context.py       # Blueprint, Memory and Mission management
+│   │       ├── commands.py      # Slash command handler
+│   │       └── simulation.py    # Deterministic loop recording
 │   ├── cli/
-│   │   ├── dashboard.py         # Textual TUI Dashboard (Push-Layout)
-│   │   └── ui_adapters.py       # TUI/Rich compatibility layer
+│   │   ├── main.py              # Entry point and session initialization
+│   │   ├── renderer.py          # TUI interface and interactive prompts
 │   ├── core/
 │   │   ├── security.py          # Hardened safety engine
-│   │   ├── config_manager.py    # Keyring integration and settings persistence
-│   │   ├── history_manager.py   # Context serialization and rolling windows
-│   │   ├── i18n.py              # Locale auto-detection engine
-│   │   ├── metrics.py           # Real-time Token tracking and costing
-│   │   └── paths.py             # OS-agnostic path resolution
+│   │   ├── trust_manager.py     # Directory trust whitelist control
+│   │   ├── paths.py             # OS-agnostic path resolution (Workspace aware)
 │   ├── tools/                   # Atomic agentic tools
 │   └── locales/                 # i18n JSON data (8 languages supported)
 ├── tests/                       # 39+ reliable unit and integration tests
@@ -293,9 +296,8 @@ AskGem is **English-First** at the SDK/System level for maximum model reliabilit
 
 | Version | Theme | Status |
 |---|---|---|
-| `v0.8.0` | Autonomous agent, i18n, TUI, retry logic | ✅ Done |
-| `v0.9.0` | Security hardening, context overflow guard | ✅ Done |
-| `v0.10.0`| **Modular core, Stable TUI, Simulation, CD** | ✅ Current |
+| `v0.10.0`| Modular core, Stable TUI, Simulation, CD | ✅ Done |
+| `v0.11.0`| **Workspaces, High-Security, Híper-Contexto** | ✅ Current |
 | `v1.0.0` | Stable Release — Full docs, PyPI publication | 📋 Planned |
 | `v1.1.0` | Web tools — Google Search integration | 📋 Planned |
 | `v2.0.0` | LSP diagnostics and plugin ecosystem | 🔵 Future |

@@ -1,110 +1,65 @@
 """
 Command Line Interface entry point.
 
-It initializes the interactive dashboard and starts the chat agent event loop.
-It does NOT contain the model interaction logic or UI configuration.
+Single entry point: the Rich streaming renderer (cli/renderer.py).
+The Textual TUI has been removed — see cli/dashboard.py for the deprecation notice.
 """
 
-import argparse
 import asyncio
 import os
 import sys
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from ..agent.chat import ChatAgent
-
-# The Diamond Gem Mascot (Google Brand Identity colors)
-ASCII_MASCOT = (
-    r"[google.blue]         .         [/google.blue]" + "\n"
-    r"[google.blue]        / \        [/google.blue]" + "\n"
-    r"[google.blue]       /   \       [/google.blue]" + "\n"
-    r"[google.blue]      <  [google.yellow]·[google.blue]  >      [/google.blue]" + "\n"
-    r"[google.blue]       \   /       [/google.blue]" + "\n"
-    r"[google.blue]        \ /        [/google.blue]" + "\n"
-    r"[google.blue]         '         [/google.blue]"
-)
 
 
-def _parse_args() -> argparse.Namespace:
-    """Parse command line arguments."""
-    parser = argparse.ArgumentParser(description="AskGem: Autonomous AI Coding Agent")
-    parser.add_argument("--legacy", action="store_true", help="Run the classic scrolling CLI instead of the Dashboard")
+def _parse_args():
+    import argparse
     from .. import __version__
 
+    parser = argparse.ArgumentParser(
+        prog="askgem",
+        description="AskGem: Autonomous AI Coding Agent",
+    )
     parser.add_argument("--version", action="version", version=f"askgem {__version__}")
+    parser.add_argument(
+        "--list", 
+        choices=["db", "home", "sessions", "changelog", "spend", "all"], 
+        help="Display agent internal information and stats."
+    )
     return parser.parse_args()
 
 
-def _run_legacy_cli(agent: "ChatAgent") -> None:
-    """Run the classic scrolling CLI."""
-    from rich.panel import Panel
-    from rich.text import Text
-
-    from .. import __version__
-    from ..core.i18n import _, get_current_language
-    from .console import console
-
-    welcome_text = (
-        f"{ASCII_MASCOT}\n\n"
-        f"[google.yellow][bold]{_('startup.welcome', version=__version__)}[/bold][/google.yellow]\n\n"
-        f"[italic]{_('startup.init')}[/italic]\n\n"
-        f"[google.blue]Modelo:[/google.blue] {agent.model_name} | [google.blue]Modo:[/google.blue] {agent.edit_mode}\n"
-        f"[google.blue]Idioma:[/google.blue] {get_current_language()}\n\n"
-        f"— [dim]{_('cmd.hint_help')}[/dim]"
-    )
-
-    console.print()
-    console.print(
-        Panel(
-            Text.from_markup(welcome_text, justify="center"),
-            border_style="google.blue",
-            padding=(1, 2),
-            title="[google.yellow] AskGem Identity [/google.yellow]",
-            subtitle="[dim] Powered by Google Gemini [/dim]",
-        )
-    )
-    console.print()
-
-    # Launch Classic CLI in async loop
-    asyncio.run(agent.start())
-
-
-def _run_dashboard(agent: "ChatAgent") -> None:
-    """Run the TUI Dashboard."""
-    from .console import console
-
-    try:
-        from .dashboard import AskGemDashboard
-
-        app = AskGemDashboard(agent=agent)
-        app.run()
-    except ImportError:
-        console.print("[warning]Dashboard not implemented yet. Falling back to --legacy...[/warning]")
-        asyncio.run(agent.start())
-
-
 def run_chatbot() -> None:
-    """Main entry point for askgem CLI.
-
-    Handles argument parsing for legacy mode and initializes the
-    appropriate UI (Classic CLI or TUI Dashboard).
-    """
+    """Main entry point for the askgem CLI."""
     args = _parse_args()
+
+    # Si se pide listado, no arrancamos el chatbot
+    if args.list:
+        from ..core.audit_manager import AuditManager
+        from ..cli.console import console
+        
+        audit = AuditManager()
+        console.print()
+        
+        if args.list in ("db", "all"):
+            console.print(audit.list_db())
+        if args.list in ("home", "all"):
+            console.print(audit.list_home())
+        if args.list in ("sessions", "all"):
+            console.print(audit.list_sessions())
+        if args.list in ("spend", "all"):
+            console.print(audit.list_spend())
+        if args.list in ("changelog", "all"):
+            console.print(audit.list_changelog())
+            
+        console.print()
+        return
 
     from ..agent.chat import ChatAgent
 
-    # Initialize the agent
     agent = ChatAgent()
-
-    if args.legacy:
-        _run_legacy_cli(agent)
-    else:
-        _run_dashboard(agent)
+    asyncio.run(agent.start())
 
 
 if __name__ == "__main__":
-    # Adjust python path for direct file execution execution
     if __package__ is None:
         sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     run_chatbot()

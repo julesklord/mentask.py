@@ -93,8 +93,13 @@ def ensure_safe_path(path: str) -> str:
     """Ensures that the provided path is within the current working directory."""
     abs_path = os.path.abspath(path)
     cwd = os.getcwd()
-    if os.path.commonpath([cwd, abs_path]) != cwd:
-        raise PermissionError(f"Access denied: Path '{path}' is outside the allowed directory.")
+    try:
+        # Check if they share a common path that is exactly the CWD
+        if os.path.commonpath([cwd, abs_path]) != cwd:
+            raise PermissionError(f"Access denied: Path '{path}' is outside the allowed directory.")
+    except ValueError:
+        # Occurs on Windows if paths are on different drives
+        raise PermissionError(f"Access denied: Path '{path}' is on a different drive or outside context.")
     return abs_path
 
 

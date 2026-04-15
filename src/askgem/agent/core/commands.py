@@ -20,8 +20,14 @@ COMMAND_METADATA = {
     "/mode": {"desc": _("cmd.desc.mode_manual"), "example": "/mode auto/manual", "category": "Config"},
     "/clear": {"desc": _("cmd.desc.clear"), "example": "/clear", "category": "Session"},
     "/usage": {"desc": _("cmd.desc.usage"), "example": "/usage", "category": "Stats"},
+    "/theme": {"desc": "Change UI theme", "example": "/theme emerald", "category": "Config"},
     "/stats": {"desc": _("cmd.desc.stats"), "example": "/stats", "category": "Stats"},
+    "/sessions": {"desc": "List previous chat sessions", "example": "/sessions", "category": "Session"},
+    "/load": {"desc": "Load a specific session", "example": "/load [id]", "category": "Session"},
     "/reset": {"desc": "Resets the session and counters", "example": "/reset", "category": "Session"},
+    "/auth": {"desc": "Sets the Gemini API Key securely", "example": "/auth [your_key]", "category": "Security"},
+    "/trust": {"desc": "Authorizes the current directory for auto-execution", "example": "/trust", "category": "Security"},
+    "/untrust": {"desc": "Removes authorization from the current directory.", "example": "/untrust", "category": "Security"},
     "/stop": {"desc": "Interrupts the current generation", "example": "/stop", "category": "Control"},
     "/exit": {"desc": _("cmd.desc.exit"), "example": "/exit", "category": "Control"},
 }
@@ -56,6 +62,24 @@ class CommandHandler:
             return self._cmd_usage()
         elif command == "/stats":
             return self._cmd_stats()
+        elif command == "/theme":
+            return self._cmd_theme(args)
+        elif command == "/sessions":
+            return self._cmd_sessions()
+        elif command == "/load":
+            return await self._cmd_load(args)
+        elif command == "/auth":
+            return self._cmd_auth(args)
+        elif command == "/trust":
+            import os
+            cwd = os.getcwd()
+            self.agent.orchestrator.trust.add_trust(cwd)
+            return f"[success]✓ Directory added to trusted list:[/success] [dim]{cwd}[/dim]\n[dim]Tools will now execute automatically in this folder.[/dim]"
+        elif command == "/untrust":
+            import os
+            cwd = os.getcwd()
+            self.agent.orchestrator.trust.remove_trust(cwd)
+            return f"[warning]! Directory removed from trusted list:[/warning] [dim]{cwd}[/dim]\n[dim]Confirmation will be required for all tools.[/dim]"
         elif command in ("/exit", "/quit", "/q"):
             self.agent.running = False
             return True
@@ -105,6 +129,11 @@ class CommandHandler:
 
         self.agent.model_name = new_model
         self.agent.session.model_name = new_model
+
+        # Persist the change
+        self.agent.config.settings["model_name"] = new_model
+        self.agent.config.save_settings()
+
         await self.agent.session.reset_session(self.agent._build_config())
         return f"[success]{_('cmd.model.switched')}[/success] [bold]{new_model}[/bold]"
 
@@ -131,3 +160,94 @@ class CommandHandler:
             f"📝 Files: [bold]{self.agent.dispatcher.modified_files_count}[/bold]"
         )
         return Panel(stats, title=_("cmd.stats.title"), border_style="#6366f1", expand=False)
+
+    def _cmd_theme(self, args: List[str]) -> Union[str, Table]:
+        """Lists or switches UI themes."""
+        if not args:
+            table = Table(title="Available Themes", box=None)
+            table.add_column("Theme", style="bold cyan")
+            table.add_column("Status")
+            current = self.agent.config.settings.get("theme", "indigo")
+
+            from ...cli.renderer import CliRenderer
+
+            for t_name in CliRenderer.THEMES:
+                status = "[success]Active[/success]" if t_name == current else ""
+                table.add_row(t_name, status)
+            return table
+
+        new_theme = args[0].lower()
+        from ...cli.renderer import CliRenderer
+
+        if new_theme not in CliRenderer.THEMES:
+            return f"[error]Theme '{new_theme}' not found.[/error]"
+
+        # Apply and persist
+        self.agent.config.settings["theme"] = new_theme
+        self.agent.config.save_settings()
+
+        # We need to tell the renderer to update (it's held in the agent's start loop, but here we don't have its direct ref easily unless we pass it)
+        # However, for the NEXT turn it will be loaded. To apply it NOW we'd need the renderer ref.
+        # But ChatAgent.start holds the renderer in a local variable.
+        # I'll add a 'renderer' attribute to ChatAgent.
+        if hasattr(self.agent, "active_renderer"):
+            self.agent.active_renderer.apply_theme(new_theme)
+
+        return f"[success]Theme switched to:[/success] [bold]{new_theme}[/bold]"
+
+    def _cmd_sessions(self) -> Table:
+        """Lists all stored session IDs."""
+        sessions = self.agent.history.list_sessions()
+        if not sessions:
+            return "[warning]No sessions found.[/warning]"
+
+        table = Table(title="Conversation History", box=None)
+        table.add_column("#", style="dim")
+        table.add_column("Session ID", style="bold cyan")
+
+        # Newest first
+        for i, s_id in enumerate(reversed(sessions)):
+            # Mark the current one
+            prefix = "[success]→[/success] " if s_id == self.agent.history.current_session_id else "  "
+            table.add_row(str(len(sessions) - i), f"{prefix}{s_id}")
+
+        return table
+
+    async def _cmd_load(self, args: List[str]) -> str:
+        """Loads a session by ID or index."""
+        if not args:
+            return "[warning]Usage: /load [session_id or index][/warning]"
+
+        sessions = self.agent.history.list_sessions()
+        target_id = args[0]
+
+        # Handle index
+        if target_id.isdigit():
+            idx = int(target_id)
+            if 1 <= idx <= len(sessions):
+                target_id = sessions[idx - 1]
+            else:
+                return f"[error]Index {idx} out of range (1-{len(sessions)}).[/error]"
+
+        history = self.agent.history.load_session(target_id)
+        if history is None:
+            return f"[error]Could not load session '{target_id}'.[/error]"
+
+        # Switch session
+        self.agent.history.current_session_id = target_id
+        await self.agent.session.reset_session(self.agent._build_config())
+        await self.agent.session.ensure_session(self.agent._build_config(), history=history)
+
+        return f"[success]Loaded session:[/success] [bold]{target_id}[/bold] ({len(history)} turns restored)"
+
+    def _cmd_auth(self, args: List[str]) -> str:
+        """Sets the API Key securely in the OS Keyring."""
+        if not args:
+            return "[warning]Usage: /auth [your_api_key][/warning]\n[dim]The key will be stored securely in your OS Keyring, NOT in this project.[/dim]"
+        
+        new_key = args[0].strip()
+        success = self.agent.config.save_api_key(new_key)
+        
+        if success:
+            return f"[success]API Key saved securely![/success]\n[dim]The change will take effect on the next turn or after /reset.[/dim]"
+        return "[error]Failed to save API Key to OS Keyring. Check system permissions.[/error]"

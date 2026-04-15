@@ -6,7 +6,9 @@ It does NOT manage filesystem paths or raw terminal rendering.
 """
 
 import logging
+import os
 import sys
+from pathlib import Path
 from typing import Any, Callable, List, Optional, Union
 
 from google.genai import types
@@ -16,12 +18,18 @@ from ..cli.ui_adapters import RichToolUIAdapter
 from ..core.config_manager import ConfigManager
 from ..core.history_manager import HistoryManager
 from ..core.i18n import _
+from ..core.identity_manager import IdentityManager
 from ..core.metrics import TokenTracker
 from .core.commands import CommandHandler
 from .core.context import ContextManager
 from .core.session import SessionManager
 from .core.stream import StreamProcessor
-from .tools_registry import ToolDispatcher
+from .orchestrator import AgentOrchestrator
+from .schema import AgentTurnStatus, Message, Role
+from .tools.base import ToolRegistry
+from .tools.file_tools import EditFileTool, ListDirTool, ReadFileTool, WriteFileTool
+from .tools.memory_tool import MemoryTool
+from .tools.shell_tools import ShellTool
 
 _logger = logging.getLogger("askgem")
 
@@ -36,23 +44,55 @@ class ChatAgent:
         self.running = False
         self.config = ConfigManager(console)
         self.history = HistoryManager(console)
+        self.identity = IdentityManager()
         # Settings
-        self.model_name = self.config.settings.get("model_name", "gemini-1.5-flash")
+        self.model_name = self.config.settings.get("model_name", "gemini-2.5-flash-lite")
         self.edit_mode = self.config.settings.get("edit_mode", "manual")
         # Managers
         self.session = SessionManager(self.config, self.model_name)
+        self.session.metrics = TokenTracker(model_name=self.model_name)
+        self.metrics = self.session.metrics
         self.context = ContextManager()
-        self.metrics = TokenTracker(model_name=self.model_name)
         self.stream_processor = StreamProcessor(self.metrics)
         self.commands = CommandHandler(self)
 
         # UI & Tools
         self.ui_adapter = ui_adapter or RichToolUIAdapter()
-        self.dispatcher = ToolDispatcher(
-            config=self.config,
-            ui=self.ui_adapter,
-            logger=None,
+
+        # New Agentic System
+        self.tools = ToolRegistry()
+        self.tools.register(ListDirTool())
+        self.tools.register(ReadFileTool())
+        self.tools.register(WriteFileTool())
+        self.tools.register(EditFileTool())
+        self.tools.register(ShellTool())
+        self.tools.register(MemoryTool())
+
+        self.orchestrator = AgentOrchestrator(self.session, self.tools, self.config)
+
+        # Persistent messages for the session
+        self.messages: List[Message] = []
+        self._setup_system_prompt()
+
+    def _setup_system_prompt(self):
+        """Injects the core identity, project context, and behavioral rules."""
+        # 1. Identity (from identity.md)
+        base_identity = self.identity.read_identity()
+        
+        # 2. Project context (structure, memory, missions — from ContextManager)
+        project_context = self.context.build_system_instruction()
+        
+        system_text = (
+            f"{base_identity}\n\n"
+            f"{project_context}\n\n"
+            "## CORE DIRECTIVES:\n"
+            "1. **Autonomy**: Take initiative. Don't just answer questions; solve problems. If you see an error or a possible improvement in the code you are reading, point it out and offer to fix it.\n"
+            "2. **Planning**: For complex tasks, create and maintain a `.askgem_plan.md` file using your tools. Use it to track sub-tasks and state across multiple turns.\n"
+            "3. **Context Awareness**: A high-performance summarization system is active. Your conversation history will be compressed semi-automatically. Important technical details will be preserved in summaries, but you should use the Plan file for critical long-term state.\n"
+            "4. **Tools-First / Proactive Verification**: ALWAYS prefer using tools (`read_file`, `execute_command`, `list_dir`) to verify facts before speaking. NEVER ask the user 'where is the code?' or 'what is the project structure?' — you already have the project blueprint in your context and you can use `list_dir` to explore further. Never guess if you can verify.\n"
+            "5. **Progressive Learning**: You have a long-term memory. Use `manage_memory(action='add', scope='local', ...)` to save project-specific patterns, build commands, or fixed bugs. Use `scope='global'` for user-specific preferences. Do this silently and proactively.\n"
         )
+        self.messages.append(Message(role=Role.SYSTEM, content=system_text))
 
         # Stats
         self.session_messages = 0
@@ -60,18 +100,30 @@ class ChatAgent:
         self.interrupted = False
 
     def set_status_logger(self, logger_func: Callable[[str], None]):
-        """Sets the callback for real-time status/debug logging.
-
-        Args:
-            logger_func: A callable that accepts a string to log status updates.
-        """
-        self.dispatcher.logger = logger_func
+        """Sets the callback for real-time status/debug logging."""
+        # TODO: Implement logging in the new AgentOrchestrator if needed
+        pass
 
     def _build_config(self) -> types.GenerateContentConfig:
         """Helper to build consistent generation config."""
+        tools_list = []
+        schemas = self.tools.get_all_schemas()
+
+        if schemas:
+            tools_list = [
+                types.Tool(
+                    function_declarations=[
+                        types.FunctionDeclaration(
+                            name=s["name"], description=s["description"], parameters=s["parameters"]
+                        )
+                        for s in schemas
+                    ]
+                )
+            ]
+
         return types.GenerateContentConfig(
             temperature=0.7,
-            tools=self.dispatcher.get_tools_list(),
+            tools=tools_list,
             system_instruction=self.context.build_system_instruction(),
         )
 
@@ -79,68 +131,129 @@ class ChatAgent:
         """Proxy for SessionManager setup."""
         return await self.session.setup_api(interactive)
 
-    async def _stream_response(
-        self, user_input: Union[str, List], callback: Optional[Callable[[str], None]] = None
-    ) -> None:
-        """High-level streaming loop with tool iteration."""
-        max_retries = 3
-        base_delay = 2.0
+    async def _stream_response(self, user_input: str, renderer: "CliRenderer") -> None:
+        """Core logic: feeds input to orchestrator and updates UI."""
+        config = self._build_config()
 
-        for attempt in range(1, max_retries + 1):
-            try:
-                chat_session = await self.session.ensure_session(self._build_config())
-                # Turn loop
-                current_input = user_input
-                while True:
-                    full_text, function_calls = await self.stream_processor.process_async_stream(
-                        chat_session, current_input, callback
-                    )
-                    if not function_calls:
-                        break
-                    # Execute tools
-                    results = []
-                    for fc in function_calls:
-                        results.append(await self.dispatcher.execute(fc))
-                    current_input = results
-                    self.session_tools += len(function_calls)
+        async for event in self.orchestrator.run_query(
+            user_input, self.messages, config=config, confirmation_callback=renderer.ask_confirmation
+        ):
+            event_type = event.get("type")
+            status = event.get("status")
 
-                # Maintenance
-                if chat_session:
-                    self.history.save_session(chat_session.get_history())
-                await self.context.summarize_if_needed(self.session, self.model_name, self._build_config)
-                return
-
-            except Exception as e:
-                if not await self.session.handle_retryable_error(e, attempt, max_retries, base_delay):
-                    _logger.error("API Error: %s", e)
-                    raise e
+            if status == AgentTurnStatus.THINKING:
+                # Handled via thought event
+                pass
+            elif status == AgentTurnStatus.EXECUTING:
+                for tc in event.get("tool_calls", []):
+                    renderer.print_tool_call(tc.name, tc.arguments)
+            elif event_type == "thought":
+                renderer.print_thought(event["content"])
+            elif event_type == "text":
+                # For now, print text directly.
+                # Later we can add partial streaming back.
+                renderer.update_stream(event["content"])
+            elif event_type == "tool_result":
+                renderer.print_tool_result(not event["is_error"], event["content"])
+            elif event_type == "metrics":
+                u = event["usage"]
+                self.metrics.add_usage(u.input_tokens, u.output_tokens)
 
     async def start(self) -> None:
-        """Classic CLI Entry Point."""
+        """Rich CLI entry point — streaming renderer with code blocks and think panels."""
+        from .. import __version__
+        from ..cli.renderer import CliRenderer
+        from rich.prompt import Confirm
+
+        # Workspace Initialization Check
+        local_ws = Path.cwd() / ".askgem"
+        global_config_dir = Path.home() / ".askgem"
+        
+        # Only ask if we are NOT in the global config dir itself 
+        # and no local workspace exists.
+        if not local_ws.exists() and Path.cwd() != global_config_dir:
+            console.print("\n[bold indigo]📁 PROJECT WORKSPACE[/bold indigo]")
+            should_init = Confirm.ask(
+                "No local workspace [dim](.askgem/)[/] detected. "
+                "Initialize one for this project to isolate history and knowledge?",
+                default=False
+            )
+            if should_init:
+                local_ws.mkdir(parents=True, exist_ok=True)
+                console.print(f"[success][✓] Workspace initialized at {local_ws}[/success]")
+
+        # Load theme from settings
+        current_theme = self.config.settings.get("theme", "indigo")
+        renderer = CliRenderer(console, theme_name=current_theme)
+        self.active_renderer = renderer  # Store ref for dynamic commands
+
         if not await self.setup_api():
             sys.exit(1)
 
         self.running = True
-        await self.session.ensure_session(self._build_config())
 
-        from rich.prompt import Prompt
+        # ── Restore Context ───────────────────────────────────────────
+        history_data = None
+        sessions = self.history.list_sessions()
+        if sessions:
+            history_data = self.history.load_session(sessions[-1])
+
+        await self.session.ensure_session(self._build_config(), history=history_data)
+
+        renderer.print_welcome(__version__, self.model_name, self.edit_mode)
+        if history_data:
+            renderer.print_warning(f"Resumed session: [bold]{sessions[-1]}[/bold] ({len(history_data)} turns)")
 
         while self.running:
             try:
-                user_input = Prompt.ask(f"\n[user]{_('engine.you')}[/user]").strip()
+                # ── Prompt ────────────────────────────────────────────
+                try:
+                    user_input = console.input("[bold #94a3b8]  ❯  [/]").strip()
+                except EOFError:
+                    break
                 if not user_input:
                     continue
 
+                # ── Slash commands ─────────────────────────────────────
                 if user_input.startswith("/"):
-                    await self.commands.execute(user_input)
+                    if user_input.lower() in ("/exit", "/quit", "/q"):
+                        self.running = False
+                        break
+                    result = await self.commands.execute(user_input)
+                    renderer.print_command_output(result)
                     continue
 
+                # ── Agent turn ─────────────────────────────────────────
                 self.session_messages += 1
-                console.print(f"[{_('engine.agent_tag')}]AskGem:[/{_('engine.agent_tag')}]")
-                await self._stream_response(user_input)
+                renderer.start_stream()
 
-            except (KeyboardInterrupt, EOFError):
+                try:
+                    await self._stream_response(user_input, renderer)
+                    renderer.end_stream()  # Finalize any active stream
+                    renderer.print_metrics(self.metrics.get_summary())
+                except KeyboardInterrupt:
+                    renderer.end_stream()
+                    renderer.print_warning("Generation interrupted.")
+                except Exception as exc:
+                    renderer.print_error(str(exc))
+                finally:
+                    renderer.print_turn_divider()
+
+            except KeyboardInterrupt:
                 self.running = False
                 break
 
-        console.print(f"\n[warning]{_('engine.shutdown')}[/warning]")
+        renderer.print_goodbye(_("engine.shutdown"))
+
+    def _save_history(self, chat_session: Any) -> None:
+        """Safely extracts history from various session types and persists it."""
+        try:
+            if hasattr(chat_session, "get_history"):
+                history = chat_session.get_history()
+            else:
+                history = getattr(chat_session, "history", [])
+
+            if history:
+                self.history.save_session(history)
+        except Exception as e:
+            _logger.error("Failed to extract history for saving: %s", e)

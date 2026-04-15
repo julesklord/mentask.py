@@ -15,15 +15,26 @@ This module does NOT handle the creation or parsing of files within these direct
 from pathlib import Path
 
 
-def get_config_dir() -> Path:
-    """Gets the base configuration directory for the application.
-
-    Returns:
-        Path: A Path object pointing to the ~/.askgem directory.
-    """
+def get_global_config_dir() -> Path:
+    """Always returns the global ~/.askgem directory."""
     config_dir = Path.home() / ".askgem"
     config_dir.mkdir(parents=True, exist_ok=True)
     return config_dir
+
+
+def get_config_dir() -> Path:
+    """Gets the active configuration directory.
+    Prioritizes a local .askgem/ directory in the CWD if it exists.
+    Otherwise, falls back to the global ~/.askgem directory.
+
+    Returns:
+        Path: A Path object pointing to the active .askgem directory.
+    """
+    local_dir = Path.cwd() / ".askgem"
+    if local_dir.is_dir():
+        return local_dir
+        
+    return get_global_config_dir()
 
 
 def get_config_path(filename: str) -> str:
@@ -48,12 +59,14 @@ def get_history_dir() -> str:
     history_dir.mkdir(parents=True, exist_ok=True)
     return str(history_dir)
 def get_memory_path() -> str:
-    """Gets the path to the general persistent memory file.
-
-    Returns:
-        str: Absolute path to memory.md
-    """
+    """Gets the path to the general persistent memory file (Global)."""
     return str(get_config_dir() / "memory.md")
+
+
+def get_local_knowledge_path() -> str:
+    """Gets the path to the project-specific knowledge file (Local)."""
+    from pathlib import Path
+    return str(Path.cwd() / ".askgem_knowledge.md")
 
 
 def get_heartbeat_path() -> str:

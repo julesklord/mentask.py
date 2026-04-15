@@ -2,25 +2,29 @@
 
 ![AskGem Banner](https://raw.githubusercontent.com/julesklord/askgem.py/main/docs/assets/banner.png)
 
-**askgem** is a professional, autonomous command-line AI coding agent powered by Google Gemini. Reborn with the **Friendly Prism** identity, it features a premium Google Blue/Yellow interface designed for 2000s-style technical clarity.
+**askgem** is a professional, autonomous command-line AI coding agent powered by Google Gemini. Reborn with the **v0.11.0** core, it features **Workspace Isolation**, proactive **Project Blueprints**, and a **Hardened Trust System** designed for high-stakes technical environments.
 
 ## Quick Start
 
-Get running in 3 commands:
+Get running in your current project in 3 commands:
 
 ```bash
-git clone https://github.com/julesklord/askgem.git
-cd askgem
-pip install -e ".[dev]"
+# 1. Install or update to the latest version
+pip install -e "."
+
+# 2. Launch in your repo (AskGem will detect or offer to create a Workspace)
 askgem
+
+# 3. Grant trust if you need to touch files outside the CWD
+/trust G:/SHARED_LIBS
 ```
 
 ## Wiki Index
 
-* [Architecture](Architecture.md) — System diagram and module breakdown.
-* [Installation & Setup](Installation_and_Setup.md) — Full configuration and deployment guide.
-* [Usage](Usage.md) — Workflows, examples, and edge cases.
-* [API Reference](API_Reference.md) — Public contracts and internal scopes.
+* [Architecture](Architecture.md) — System diagram and the **AgentOrchestrator** loop.
+* [Installation & Setup](Installation_and_Setup.md) — Keyring integration and security configuration.
+* [Usage](Usage.md) — Workflows, **Trust System**, and Workspace management.
+* [API Reference](API_Reference.md) — Public contracts, Managers, and Schemas.
 * [Dependencies](Dependencies.md) — Stack breakdown and justifications.
-* [Development Guide](Development_Guide.md) — Contribution conventions and testing logic.
+* [Development Guide](Development_Guide.md) — **Simulation Layer** and Testing protocol.
 * [Changelog](../CHANGELOG.md) — Version history and structured tracking.

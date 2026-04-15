@@ -1,78 +1,70 @@
 # Architecture
 
-The system operates across three tightly decoupled layers enforcing strong logical boundaries. As of version **0.10.0**, the Cognitive Layer has been further modularized into specialized manager components.
+The system operate across three tightly decoupled layers enforcing strong logical boundaries. As of version **0.11.0**, the system has evolved into an **Orchestrated Architecture**, where a central engine manages cognitive managers and security centinels.
 
 ## High-Level System Diagram
 
 ```mermaid
 flowchart TD
-    CLI(["user execution (askgem)"]) --> Dashboard(cli/dashboard.py)
-    Dashboard <--> Agent(agent/chat.py : ChatAgent)
+    CLI(["User execution (askgem)"]) --> Main(cli/main.py)
+    Main --> Renderer(cli/renderer.py)
+    Renderer <--> Orchestrator(agent/orchestrator.py: AgentOrchestrator)
     
-    subgraph Cognitive Layer [Cognitive Layer - Manager-Based]
-        Agent --> Session[agent/core/session.py]
-        Agent --> Context[agent/core/context.py]
-        Agent --> Stream[agent/core/stream.py]
-        Agent --> Commands[agent/core/commands.py]
+    subgraph Cognitive_Layer [Cognitive Managers]
+        Orchestrator --> Session[agent/core/session.py]
+        Orchestrator --> Context[agent/core/context.py]
+        Orchestrator --> Stream[agent/core/stream.py]
+        Orchestrator --> Commands[agent/core/commands.py]
+        Orchestrator --> Simulation[agent/core/simulation.py]
     end
 
-    Agent --> History(core/history_manager.py)
-    Agent --> Config(core/config_manager.py)
-    Config --> Paths(core/paths.py)
-    History --> Paths
-    Agent <--> GenAI[google-genai Client]
-    GenAI -. function calls .-> Tools(tools/)
+    Orchestrator <--> GenAI[Google Gemini API]
     
-    subgraph Security [Security Layer]
-        Tools --> SecurityCheck[core/security.py]
+    subgraph Security_Layer [Security & Trust Centinel]
+        GenAI -. function calls .-> Trust[core/trust_manager.py]
+        Trust --> SecurityCheck[core/security.py]
+        SecurityCheck --> Tools(tools/)
     end
 
-    SecurityCheck --> FileAccess[file_tools.py]
-    SecurityCheck --> BashAccess[system_tools.py]
-    FileAccess --> localDisk[(Local Drive)]
-    BashAccess --> Subprocess[(Shell OS)]
+    Tools --> localDisk[(Local Workspace)]
+    Context -. Blueprint .-> localDisk
+    Orchestrator --> History(core/history_manager.py)
+    History --> Paths(core/paths.py)
+    Paths --> localDisk
 ```
 
 ## Module Breakdown
 
 1. **`src/askgem/cli/` (Presentation Layer)**
-    * `dashboard.py`: **[v0.10.0]** Stable "Push-Layout" Textual interface optimized for Windows high-performance rendering.
-    * `console.py`: Re-usable Rich console formatter singleton.
-    * `ui_adapters.py`: Bridges TUI components with agent-level tool loggers.
+    * `main.py`: Entry point for session orchestration and environment boot.
+    * `renderer.py`: **[v0.11.0]** Advanced TUI renderer handling interactive prompts and streaming Markdown.
 
-2. **`src/askgem/agent/` (Cognitive Layer)**
-    * `chat.py`: The central orchestrator coordinating manager logic.
-    * **`agent/core/` [New in v0.10.0]**
-        * `session.py`: Handles API initialization, exponential backoff, and simulation modes.
-        * `context.py`: Dynamic assembly of system instructions and proactive history summarization.
-        * `stream.py`: High-speed SDK generator parsing and tool extraction.
-        * `commands.py`: Extensible slash-command dispatcher.
-        * `simulation.py`: Deterministic playback/recording engine for core logic verification.
+2. **`src/askgem/agent/` (Orchestration Layer)**
+    * `orchestrator.py`: **[The Heart]** Central loop managing the *Thinking -> Action -> Observation* cycle.
+    * **`agent/core/` (Cognitive Managers)**
+        * `session.py`: Handles API lifecycle, retries, and key management.
+        * `context.py`: **[Blueprint Aware]** Performs project scans and assembles system prompts.
+        * `stream.py`: Low-level tool extraction from the GRPC stream.
+        * `commands.py`: Dispatcher for slash commands (e.g., `/trust`).
 
-3. **`src/askgem/core/` (State Management & Safety)**
-    * `security.py`: **[v0.10.0]** Hardened risk analysis engine categorizing command safety levels.
-    * `paths.py`: Root level mapping resolving circular imports for disk storage endpoints (`~/.askgem`).
-    * `config_manager.py`: Extracts and persists API keys and configurations (`settings.json`).
-    * `history_manager.py`: Caches, truncates, and serializes contexts per chat session.
-    * `metrics.py`: Real-time token tracking and cost estimation.
-    * `i18n.py`: Locale autodetection.
+3. **`src/askgem/core/` (State & Safety Layer)**
+    * `trust_manager.py`: **[v0.11.0]** Whitelist management for authorized directories.
+    * `security.py`: Real-time risk analysis and path resolution guards.
+    * `paths.py`: **[Workspace Aware]** Maps dynamic local `.askgem/` vs global configuration.
+    * `metrics.py`: Token consumption and cost tracking.
 
-4. **`src/askgem/tools/` (Agentic Tools)**
-    * Isolated stateless execution tools the model mounts dynamically (file edits, OS bash reads).
+## Execution Flow (v0.11.0 Orchestrated)
 
-## Execution Flow (v0.10.0 Hardened)
-
-1. User enters `askgem`.
-2. `cli/dashboard.py` initializes the TUI environment and triggers `ChatAgent`.
-3. `SessionManager` boots configs, validating keys via system keyring or env vars.
-4. `ContextManager` injects English-standardized instructions containing OS context, Persistent Memory, and Active Missions.
-5. User inputs prompt. `StreamProcessor` consumes async chunks.
-6. Detected `function_calls` pass through `core/security.py` for risk categorization (`SAFE` to `DANGEROUS`).
-7. Results append to model loop context recursively. `TokenTracker` updates cost metrics.
-8. Session history is proactively summarized by `ContextManager` if window limits are approached.
+1. **Environmental Boot**: `cli/main.py` detects if the CWD is a Workspace.
+2. **Project Blueprint**: `ContextManager` performs a recursive scan of the project tree.
+3. **Orchestrator Initialization**: `AgentOrchestrator` takes the Blueprint and starts the cognitive loop.
+4. **Thinking Phase**: Gemini reasons about the request using the injected project context.
+5. **Action Request**: If a tool is requested, `TrustManager` verifies the target path.
+6. **Observation Loop**: Tool output is fed back to the Orchestrator to confirm the result before replying.
+7. **Persistence**: History and Memory are saved within the local `.askgem/` directory.
 
 ## Key Design Decisions
 
-* **Decoupled Paths:** `core/paths.py` was separated explicitly to allow logging, history, and config components to query the host OS environment without engaging in circular imports.
-* **Modular Cognitive Core:** Decentralizing `ChatAgent` into specialized managers in v0.10.0 was driven by the need for deterministic testing via `SimulationManager` and improved async lifecycle stability.
-* **Security Middleware:** All tool invocations are now gated by a centralized security layer to prevent path traversal and accidental execution of high-risk shell patterns.
+* **Orchestration vs Interaction**: In v0.11.0, reasoning logic was separated from the UI. The `AgentOrchestrator` can run headless, while `renderer.py` only handles the display.
+* **Proactive Context**: Instead of waiting for the user to describe files, the **Blueprint** system provides the agent with an initial mental map of the repository.
+* **Trusted Containment**: All file operations are now gated by a dual-check: **Trust** (directory authorization) and **Security** (pattern risk analysis).

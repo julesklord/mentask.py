@@ -1,79 +1,60 @@
 # API / Module Reference
 
-This section details the primary software contracts within AskGem, including the core managers introduced in **v0.10.0**.
+This section details the primary software contracts within AskGem, including the core managers and the new Orchestration Layer introduced in **v0.11.0**.
 
 ## `src/askgem/agent/`
 
+### **Class `AgentOrchestrator`** (`orchestrator.py`) [v0.11.0]
+
+The central reasoning engine. It coordinates managers to execute the cognitive loop autonomously.
+* **Method `run_thought_loop(prompt)`**: Executes the main *Thinking -> Action -> Observation* cycle.
+* **Method `process_tool_calls(calls)`**: Dispatches tools while enforcing security and trust checks.
+* **Method `setup()`**: Initializes all cognitive managers (Session, Context, Simulation).
+
 ### **Class `ChatAgent`** (`chat.py`)
 
-The primary orchestrator coordinating manager logic and high-level conversational state.
+Now serves as the high-level TUI adapter and entry point.
+* **Method `start()`**: Initializes the TUI and launches the Orchestrator loop.
 
-* **Method `setup_api`**: Determines active API mapping paths. Proxy for `SessionManager`.
-* **Method `_stream_response`**: Manages recursive tool-calling loops using the `StreamProcessor`.
-* **Method `start`**: Classic CLI prompt loop entry point.
-
-### **Cognitive Managers** (`agent/core/`) [v0.10.0]
+### **Cognitive Managers** (`agent/core/`)
 
 #### **Class `SessionManager`** (`session.py`)
+* **`ensure_session(config)`**: Lazy-loads the chat session with retry-resilient generative configurations.
 
-Handles GenAI client lifecycle and auth persistence.
-* **`ensure_session(config)`**: Lazy-loads the chat session with specific generative configurations.
-* **`handle_retryable_error(e, attempt, ...)`**: Standardized exponential backoff implementation.
-
-#### **Class `ContextManager`** (`context.py`)
-
-Semantic state assembly.
-* **`build_system_instruction()`**: Combines OS, Persistent Memory, and Mission metadata.
-* **`summarize_if_needed(...)`**: Triggers proactive context compression logic.
+#### **Class `ContextManager`** (`context.py`) [v0.11.0 Enhanced]
+* **`_get_project_blueprint()`**: Performs the recursive project scan on startup.
+* **`build_system_instruction()`**: Injects the Blueprint, Memory, and Active Missions into the prompt.
 
 #### **Class `StreamProcessor`** (`stream.py`)
-
-Low-level SDK parsing.
-* **`process_async_stream(...)`**: Consumes generators, extracts tool calls, and updates metrics.
+* **`process_async_stream(...)`**: Consumes generators and extracts tool calls mid-flight.
 
 #### **Class `CommandHandler`** (`commands.py`)
+* **`handle_command(cmd_text)`**: Dispatcher for slash commands including the new `/trust` system.
 
-Interface for mid-conversation slash commands (`/model`, `/mode`, `/usage`).
-
-#### **Class `SimulationManager`** (`simulation.py`)
-
-Deterministic engine for replaying (`playback`) or capturing (`record`) API turns.
+---
 
 ## `src/askgem/core/`
 
-### **Module `security.py`** [v0.10.0 Hardened]
+### **Class `TrustManager`** (`trust_manager.py`) [New in v0.11.0]
 
-* **`analyze_command_safety(command)`**: Runs risk analysis returning a `SafetyReport` with categorized levels (`SAFE`, `NOTICE`, `WARNING`, `DANGEROUS`).
-* **`ensure_safe_path(path)`**: Validates path boundaries against the current working directory.
+The security centinel for directory-level authorization.
+* **`is_trusted(path)`**: Validates if a path is within the workspace or the whitelist.
+* **`add_trust(path)`**, **`remove_trust(path)`**: Manage the permanent trust whitelist.
 
-### **Module `paths.py`**
+### **Module `security.py`** [v0.11.0 Hardened]
+* **`analyze_command_safety(command)`**: Runs risk analysis returning a categorized `SafetyReport`.
+* **`ensure_safe_path(path)`**: Standardizes and validates paths, protecting against drive-letter escapes on Windows.
 
-* **`get_config_dir`**: Computes `~/.askgem` root resolution reliably tracking OS environments.
-* **`get_config_path(filename)`**: Safe join paths.
-* **`get_history_dir`**: History routing target paths.
+### **Module `paths.py`** [v0.11.0 Workspace Aware]
+* **`get_working_dir()`**: Automatically detects if a `.askgem/` folder exists in the project root.
+* **`get_config_dir()`**: Returns the local workspace directory if available, or falls back to global `~/.askgem`.
 
-### **Class `ConfigManager`**
-
-* **Method `save_settings`**, **`load_settings`**: Manage dynamic state blocks serialized to `settings.json`.
-* **Method `save_api_key`**: Disk flush logic using system keyring integrations.
-
-### **Class `HistoryManager`**
-
-* **Method `save_session(history_list)`**: Serializes SDK content parts to persistent JSON storage.
-* **Method `load_session(session_id)`**: Loads and truncates windows against `MAX_CONTEXT_WINDOW`.
-
-### **Class `TokenTracker`** (`metrics.py`) [v0.10.0]
-
-* **`add_usage(prompt, completion)`**: Real-time counter updates.
-* **`calculate_cost()`**: Model-specific USD estimation logic.
+---
 
 ## `src/askgem/tools/`
 
-**Function `read_file(path, start_line, end_line)`**
-Extracts context data locally. Bound dynamically. Capped at 30k characters.
+**Function `manage_workspace(action)`** [New in v0.11.0]
+Handles local project initialization and workspace metadata synchronization.
 
-**Function `edit_file(path, find_text, replace_text)`**
-Targets explicit blocks with atomic write guarantees and `.bkp` references.
-
-**Function `execute_bash(command)`**
-Asynchronous terminal execution gated by `security.py` risk analysis. 60s timeout.
+**Function `read_file(path, ...)`**, **`edit_file(path, ...)`**, **`execute_bash(command)`**
+Core agentic tools, now strictly gated by `TrustManager` before execution.

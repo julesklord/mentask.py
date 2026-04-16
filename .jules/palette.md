@@ -36,3 +36,6 @@
 ## 2026-04-14 - [Test Environment Configuration for Async Testing]
 **Learning:** Pytest doesn't natively support running `async def` test functions out of the box, throwing "async def functions are not natively supported" errors if a supporting plugin is not active. This can cause the CI to fail if the repository doesn't explicitly declare the async dependency.
 **Action:** Always ensure that `pytest-asyncio` (or a similar async test runner) is explicitly defined in `pyproject.toml` (e.g. within `[project.optional-dependencies]`) if the test suite utilizes `pytest.mark.asyncio` decorators.
+## 2026-04-16 - [Add Loading Spinner during Async Generation in CLI]
+**Learning:** When using `rich.status.Status` to provide visual feedback during asynchronous generation states, it is critical to explicitly manage the lifecycle of the spinner. If the spinner isn't stopped before transitioning to streaming text output via `rich.live.Live`, it can cause visual bugs or layout conflicts in the terminal. The spinner must also be wrapped in a `finally` block to prevent dangling UI elements in case of exceptions.
+**Action:** Always provide explicit `start_thinking` and `stop_thinking` methods, call `stop_thinking` on every state transition (e.g., error, thought, executing), and guarantee cleanup within the main turn loop's `finally` block.

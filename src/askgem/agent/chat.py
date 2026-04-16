@@ -93,15 +93,12 @@ class ChatAgent:
 
         # 3. Temporal Awareness
         import datetime
+
         now = datetime.datetime.now()
         timestamp = now.strftime("%Y-%m-%d %H:%M:%S")
         day_name = now.strftime("%A")
 
-        system_text = (
-            f"{base_identity}\n\n"
-            f"CURRENT_TIME: {timestamp} ({day_name})\n\n"
-            f"{project_context}\n"
-        )
+        system_text = f"{base_identity}\n\nCURRENT_TIME: {timestamp} ({day_name})\n\n{project_context}\n"
         self.messages.append(Message(role=Role.SYSTEM, content=system_text))
 
         # Stats
@@ -154,13 +151,18 @@ class ChatAgent:
             status = event.get("status")
 
             if status == AgentTurnStatus.THINKING:
-                pass
+                renderer.start_thinking()
             elif status == AgentTurnStatus.EXECUTING:
+                renderer.stop_thinking()
                 for tc in event.get("tool_calls", []):
                     renderer.print_tool_call(tc.name, tc.arguments)
             elif event_type == "thought":
+                renderer.stop_thinking()
                 # Thoughts arrive before text — no Live active yet, safe to print directly
                 renderer.print_thought(event["content"])
+            elif event_type == "error":
+                renderer.stop_thinking()
+                renderer.print_error(event["content"])
             elif event_type == "text":
                 # Start Live on first text chunk, not before
                 if not renderer._streaming:
@@ -178,6 +180,7 @@ class ChatAgent:
 
         from .. import __version__
         from ..cli.renderer import CliRenderer
+
         # Workspace Initialization Check
         local_ws = Path.cwd() / ".askgem"
         global_config_dir = Path.home() / ".askgem"
@@ -188,7 +191,7 @@ class ChatAgent:
             should_init = Confirm.ask(
                 "No local workspace [dim](.askgem/)[/] detected. "
                 "Initialize one for this project to isolate history and knowledge?",
-                default=False
+                default=False,
             )
             if should_init:
                 local_ws.mkdir(parents=True, exist_ok=True)
@@ -249,6 +252,7 @@ class ChatAgent:
                 except Exception as exc:
                     renderer.print_error(str(exc))
                 finally:
+                    renderer.stop_thinking()
                     renderer.print_turn_divider()
 
             except KeyboardInterrupt:

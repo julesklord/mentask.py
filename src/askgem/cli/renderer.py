@@ -24,8 +24,11 @@ from rich.markup import escape
 from rich.panel import Panel
 from rich.prompt import Confirm
 from rich.rule import Rule
+from rich.status import Status
 from rich.syntax import Syntax
 from rich.text import Text
+
+from ..core.i18n import _
 
 # ---------------------------------------------------------------------------
 # Segment parser
@@ -149,6 +152,7 @@ class CliRenderer:
     def __init__(self, console: Console, theme_name: str = "indigo") -> None:
         self.console = console
         self._live: Live | None = None
+        self._status: Status | None = None
         self._streaming = False
         self._last_text = ""
         self.username = getpass.getuser()
@@ -201,6 +205,23 @@ class CliRenderer:
         )
 
     # ------------------------------------------------------------------
+    # Thinking indicator
+    # ------------------------------------------------------------------
+    def start_thinking(self) -> None:
+        """Starts a visual loading spinner for the 'thinking' state."""
+        if self._status is None:
+            # We add a bit of padding and style the text subtly
+            text = f" [bold {self.C_BRAND}]{_('dashboard.prompt_thinking')}[/]"
+            self._status = Status(text, console=self.console, spinner="dots", speed=1.5)
+            self._status.start()
+
+    def stop_thinking(self) -> None:
+        """Stops the thinking spinner if it is active."""
+        if self._status is not None:
+            self._status.stop()
+            self._status = None
+
+    # ------------------------------------------------------------------
     # Agent label (printed once before streaming starts)
     # ------------------------------------------------------------------
     def _print_agent_label(self) -> None:
@@ -224,6 +245,7 @@ class CliRenderer:
     # Live streaming (raw text, no parsing — fast, zero flicker)
     # ------------------------------------------------------------------
     def start_stream(self) -> None:
+        self.stop_thinking()
         self._print_agent_label()
         self._live = Live(
             Text("▌", style=f"bold {self.C_BRAND}"),
@@ -377,11 +399,13 @@ class CliRenderer:
             self._live = None
 
         if warning:
-            self.console.print(Panel(
-                f"[bold white]{warning}[/bold white]",
-                title="[bold yellow]⚠️ SECURITY WARNING[/bold yellow]",
-                border_style="red"
-            ))
+            self.console.print(
+                Panel(
+                    f"[bold white]{warning}[/bold white]",
+                    title="[bold yellow]⚠️ SECURITY WARNING[/bold yellow]",
+                    border_style="red",
+                )
+            )
         else:
             self.console.print(f"\n[bold {self.C_TOOL}]🛡  SECURITY CHECK[/]")
 

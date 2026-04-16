@@ -1,9 +1,11 @@
 import os
-from unittest.mock import patch, MagicMock
 from pathlib import Path
+from unittest.mock import MagicMock, patch
+
 import pytest
 
 from askgem.core.identity_manager import KnowledgeManager
+
 
 class TestKnowledgeManager:
     @pytest.fixture
@@ -12,14 +14,16 @@ class TestKnowledgeManager:
         standard = tmp_path / "standard"
         global_dir = tmp_path / "global"
         local_dir = tmp_path / "local"
-        
+
         standard.mkdir()
         global_dir.mkdir()
         local_dir.mkdir()
-        
-        with patch("askgem.core.identity_manager.get_standard_knowledge_dir", return_value=standard), \
-             patch("askgem.core.identity_manager.get_global_config_dir", return_value=global_dir), \
-             patch("askgem.core.identity_manager.get_config_dir", return_value=local_dir):
+
+        with (
+            patch("askgem.core.identity_manager.get_standard_knowledge_dir", return_value=standard),
+            patch("askgem.core.identity_manager.get_global_config_dir", return_value=global_dir),
+            patch("askgem.core.identity_manager.get_config_dir", return_value=local_dir),
+        ):
             yield {
                 "standard": standard,
                 "global": global_dir,
@@ -30,10 +34,10 @@ class TestKnowledgeManager:
         # Setup files at different levels
         with open(mock_paths["standard"] / "core.md", "w", encoding="utf-8") as f:
             f.write("Standard Wisdom")
-        
+
         with open(mock_paths["global"] / "user.md", "w", encoding="utf-8") as f:
             f.write("Global Preferences")
-            
+
         with open(mock_paths["local"] / "project.md", "w", encoding="utf-8") as f:
             f.write("Local Logic")
 
@@ -50,16 +54,15 @@ class TestKnowledgeManager:
     def test_read_knowledge_hub_local_file_only(self, mock_paths):
         # Test the legacy/shortcut .askgem_knowledge.md in the current working directory
         manager = KnowledgeManager()
-        
-        local_md_path = Path.cwd() / ".askgem_knowledge.md"
+
         # We patch Path.cwd() to point to our local mock dir
         with patch("pathlib.Path.cwd", return_value=mock_paths["local"]):
             # Create the special hidden file
             with open(mock_paths["local"] / ".askgem_knowledge.md", "w", encoding="utf-8") as f:
                 f.write("Secret Project Knowledge")
-            
+
             result = manager.read_knowledge_hub()
-            
+
         assert "LOCAL PROJECT KNOWLEDGE" in result
         assert "Secret Project Knowledge" in result
 
@@ -76,5 +79,5 @@ class TestKnowledgeManager:
         manager = KnowledgeManager()
         with open(mock_paths["standard"] / "identity.md", "w", encoding="utf-8") as f:
             f.write("I am AskGem")
-            
+
         assert "I am AskGem" in manager.read_identity()

@@ -59,25 +59,32 @@ class AgentOrchestrator:
                     instr = turn_config.system_instruction or ""
                     turn_config.system_instruction = f"{instr}{plan_context}"
 
-                model_response = await self.client.generate_response(history, self.tools.get_all_schemas(), config=turn_config)
+                # Pre-calculate full message structure to populate as stream arrives
+                assistant_msg = AssistantMessage(
+                    content="", thought=None, tool_calls=[], model=self.client.model_name
+                )
+                history.append(assistant_msg)
+
+                async for chunk in self.client.generate_stream(history[:-1], self.tools.get_all_schemas(), config=turn_config):
+                    c_type = chunk["type"]
+                    c_val = chunk["content"]
+
+                    if c_type == "text":
+                        assistant_msg.content += c_val
+                        yield {"type": "text", "content": c_val}
+                    elif c_type == "thought":
+                        assistant_msg.thought = c_val
+                        yield {"type": "thought", "content": c_val}
+                    elif c_type == "tool_call":
+                        assistant_msg.tool_calls.append(c_val)
+                    elif c_type == "metrics":
+                        assistant_msg.usage = c_val
+                        yield {"type": "metrics", "usage": c_val}
             except Exception as e:
                 yield {"type": "error", "content": f"Critical model failure: {e}"}
                 break
 
-            # 3. Procesar Respuesta (Texto, Pensamiento y Tool Calls)
-            assistant_msg = model_response["message"]
-            history.append(assistant_msg)
-
-            if assistant_msg.thought:
-                yield {"type": "thought", "content": assistant_msg.thought}
-
-            if assistant_msg.content:
-                yield {"type": "text", "content": assistant_msg.content}
-
-            if assistant_msg.usage:
-                yield {"type": "metrics", "usage": assistant_msg.usage}
-
-            # 4. ¿Hay herramientas que ejecutar?
+            # 3. ¿Hay herramientas que ejecutar?
             if not assistant_msg.tool_calls:
                 self.active_status = AgentTurnStatus.COMPLETED
                 yield {"status": AgentTurnStatus.COMPLETED}
@@ -114,20 +121,21 @@ class AgentOrchestrator:
 
                 # Solicitar confirmación con advertencia si existe
                 is_dir_trusted = self.trust.is_trusted(os.getcwd())
+                
+                # CRITICAL SECURITY FIX: Trusted directory ONLY bypasses confirmation for regular tools.
+                # If there's a SECURITY WARNING (like PATH ESCAPE), we MUST ask or block.
+                force_confirmation = bool(security_warning)
 
-                if tool and tool.requires_confirmation and confirmation_callback and not is_dir_trusted:
-                    try:
-                        allowed = await confirmation_callback(tc.name, tc.arguments, warning=security_warning)
-                        if not allowed:
-                            immediate_results.append(ToolResult(tool_call_id=tc.id, content=f"Error: User denied execution of {tc.name}.", is_error=True))
+                if tool and tool.requires_confirmation and confirmation_callback:
+                    if not is_dir_trusted or force_confirmation:
+                        try:
+                            allowed = await confirmation_callback(tc.name, tc.arguments, warning=security_warning)
+                            if not allowed:
+                                immediate_results.append(ToolResult(tool_call_id=tc.id, content=f"Error: User denied execution of {tc.name}.", is_error=True))
+                                continue
+                        except Exception as e:
+                            immediate_results.append(ToolResult(tool_call_id=tc.id, content=f"Error during confirmation: {e}", is_error=True))
                             continue
-                    except Exception as e:
-                        immediate_results.append(ToolResult(tool_call_id=tc.id, content=f"Error during confirmation: {e}", is_error=True))
-                        continue
-
-                # If trusted but had a security warning, just log it to the user
-                if is_dir_trusted and security_warning:
-                    yield {"type": "warning", "content": f"TRUSTED EXECUTION WITH WARNING: {security_warning}"}
 
                 # Preparar tarea con captura de errores individual
                 async def safe_call(t_name, t_id, t_args):

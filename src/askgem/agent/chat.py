@@ -209,8 +209,11 @@ class ChatAgent:
         sessions = self.history.list_sessions()
         if sessions:
             history_data = self.history.load_session(sessions[-1])
+            if history_data:
+                # Filter out system and virtual messages, then append to our buffer
+                self.messages.extend([m for m in history_data if m.role != Role.SYSTEM])
 
-        await self.session.ensure_session(self._build_config(), history=history_data)
+        await self.session.ensure_session(self._build_config(), history=None)
 
         renderer.print_welcome(__version__, self.model_name, self.edit_mode)
         if history_data:
@@ -243,6 +246,7 @@ class ChatAgent:
                     await self._stream_response(user_input, renderer)
                     renderer.end_stream()  # Finalize any active stream + structured render
                     renderer.print_metrics(self.metrics.get_summary())
+                    self._save_history() # AUTO SAVE
                 except KeyboardInterrupt:
                     renderer.end_stream()
                     renderer.print_warning("Generation interrupted.")
@@ -257,15 +261,10 @@ class ChatAgent:
 
         renderer.print_goodbye(_("engine.shutdown"))
 
-    def _save_history(self, chat_session: Any) -> None:
-        """Safely extracts history from various session types and persists it."""
+    def _save_history(self) -> None:
+        """Persists the current Orchestrator messages to disk."""
         try:
-            if hasattr(chat_session, "get_history"):
-                history = chat_session.get_history()
-            else:
-                history = getattr(chat_session, "history", [])
-
-            if history:
-                self.history.save_session(history)
+            if self.messages:
+                self.history.save_session(self.messages)
         except Exception as e:
-            _logger.error("Failed to extract history for saving: %s", e)
+            _logger.error("Failed to save history: %s", e)

@@ -8,6 +8,7 @@ import asyncio
 import logging
 import os
 import random
+from collections.abc import AsyncGenerator
 from typing import Any, cast  # noqa: UP035
 
 from google import genai
@@ -114,7 +115,10 @@ class SessionManager:
             config=model_config,
             history=history,
         )
-        return self.chat_session
+    async def reset_session(self, model_config: Any) -> Any:
+        """Resets the current session, forcing a clean re-initialization."""
+        self.chat_session = None
+        return await self.ensure_session(model_config)
 
     def update_recent_files(self, file_path: str):
         """Adds a file to the recent_files buffer, keeping only the last 5 unique ones."""
@@ -205,53 +209,52 @@ class SessionManager:
         tools_schema: list[dict[str, Any]],
         config: types.GenerateContentConfig | None = None,
     ) -> dict[str, Any]:
-        """Bridge between our internal Message objects and the Gemini API."""
-        # 0. Simulation Playback Logic (v0.12.3 sync)
-        if self.simulation and self.simulation.mode == "playback":
-            user_input = history[-1].content if history else ""
-            chunks = []
-            async for chunk in self.simulation.get_playback_stream(user_input):
-                chunks.append(chunk)
+        """Stateless bridge that collects all chunks from generate_stream."""
+        # This keeps existing code (like Summarizer) working without changes
+        full_text = ""
+        thought = None
+        tool_calls = []
+        usage = UsageMetrics()
 
-            if chunks:
-                # Consolidate simulated chunks into a single message
-                text_content = "".join(c.text for c in chunks if hasattr(c, "text") and c.text)
-                tool_calls = []
-                thought = None
-                for c in chunks:
-                    if hasattr(c, "function_calls") and c.function_calls:
-                        import uuid
-                        for fc in c.function_calls:
-                            tool_calls.append(ToolCall(
-                                id=getattr(fc, "id", None) or str(uuid.uuid4()),
-                                name=fc.name,
-                                arguments=getattr(fc, "arguments", getattr(fc, "args", {}))
-                            ))
-                    if hasattr(c, "thought") and c.thought:
-                        thought = c.thought
+        async for chunk in self.generate_stream(history, tools_schema, config):
+            if chunk["type"] == "text":
+                full_text += chunk["content"]
+            elif chunk["type"] == "thought":
+                thought = chunk["content"]
+            elif chunk["type"] == "tool_call":
+                tool_calls.append(chunk["content"])
+            elif chunk["type"] == "metrics":
+                usage = chunk["content"]
 
-                return {
-                    "message": AssistantMessage(
-                        content=text_content,
-                        thought=thought,
-                        tool_calls=tool_calls,
-                        model=self.model_name
-                    )
-                }
+        return {
+            "message": AssistantMessage(
+                content=full_text,
+                thought=thought,
+                tool_calls=tool_calls,
+                model=self.model_name,
+                usage=usage
+            )
+        }
 
+    async def generate_stream(
+        self,
+        history: list[Message],
+        tools_schema: list[dict[str, Any]],
+        config: types.GenerateContentConfig | None = None,
+    ) -> AsyncGenerator[dict[str, Any], None]:
+        """Provides a real-time stream of parts (text, thought, tool_calls, metrics)."""
         if not self.client:
             raise RuntimeError("API not setup.")
 
-        # 1. Extraer System Instruction y preparar historial
+        # 1. Prepare system instruction and history
         system_instruction = "You are AskGem, an autonomous coding agent."
-
         non_system_history = [msg for msg in history if msg.role != Role.SYSTEM]
         system_msgs = [msg for msg in history if msg.role == Role.SYSTEM]
         if system_msgs:
             system_instruction = str(system_msgs[-1].content)
 
-        # Auto-compaction check
-        last_usage = history[-1].metadata.get("usage") if history else None
+        # Auto-compaction check (0.8 of threshold)
+        last_usage = history[-1].usage if history else None
         if not self._is_compacting and last_usage and last_usage.input_tokens > (self.compaction_threshold * 0.8):
             try:
                 self._is_compacting = True
@@ -260,115 +263,71 @@ class SessionManager:
             finally:
                 self._is_compacting = False
 
-        effective_history = non_system_history
         gemini_history = []
-
-        for msg in effective_history:
-            # Map role
+        for msg in non_system_history:
             role = "user" if msg.role in (Role.USER, Role.TOOL) else "model"
-
             parts = []
             if msg.role == Role.TOOL:
-                content = msg.content
-                if isinstance(content, str):
-                    content = ContextCompressor.smart_compress(content)
-
                 parts.append(types.Part(function_response=types.FunctionResponse(
                     name=msg.metadata.get("tool_name", "unknown"),
                     id=msg.metadata.get("tool_call_id", ""),
-                    response={"result": content}
+                    response={"result": ContextCompressor.smart_compress(msg.content)}
                 )))
             elif msg.role == Role.ASSISTANT:
                 content = msg.content
-                if isinstance(content, str) and content:
-                    content = ContextCompressor.smart_compress(content)
-                    parts.append(types.Part(text=content))
-
+                if content:
+                    parts.append(types.Part(text=ContextCompressor.smart_compress(content)))
                 assistant_msg = cast("AssistantMessage", msg)
-                if assistant_msg.tool_calls:
-                    for tc in assistant_msg.tool_calls:
-                        parts.append(types.Part(function_call=types.FunctionCall(
-                            name=tc.name,
-                            args=tc.arguments,
-                        )))
+                for tc in assistant_msg.tool_calls:
+                    parts.append(types.Part(function_call=types.FunctionCall(name=tc.name, args=tc.arguments)))
             else:
-                text = msg.content if isinstance(msg.content, str) else str(msg.content)
-                text = ContextCompressor.smart_compress(text)
-                parts.append(types.Part(text=text))
-
+                parts.append(types.Part(text=ContextCompressor.smart_compress(str(msg.content))))
             if parts:
                 gemini_history.append(types.Content(role=role, parts=parts))
 
-        # 2. Configuración
         if not config:
             config = types.GenerateContentConfig(
                 system_instruction=system_instruction,
-                tools=[
-                    types.Tool(
-                        function_declarations=[
-                            types.FunctionDeclaration(
-                                name=t["name"], description=t["description"], parameters=t["parameters"]
-                            )
-                            for t in tools_schema
-                        ]
-                    )
-                ]
-                if tools_schema
-                else None,
+                tools=[types.Tool(function_declarations=[
+                    types.FunctionDeclaration(name=t["name"], description=t["description"], parameters=t["parameters"])
+                    for t in tools_schema
+                ])] if tools_schema else None,
             )
 
-        # 3. La llamada final con gestión de reintentos (Exponential Backoff)
-        max_retries = 5
+        # 2. Main Stream Loop with Exponential Backoff
         attempt = 1
-        response = None
+        max_retries = 5
+        import uuid
 
         while attempt <= max_retries:
             try:
-                response = await self.client.aio.models.generate_content(
+                # Actual streaming call to Gemini SDK
+                async for chunk in await self.client.aio.models.generate_content_stream(
                     model=self.model_name, contents=gemini_history, config=config
-                )
-                break  # Éxito, salimos del bucle
+                ):
+                    if hasattr(chunk, "usage_metadata") and chunk.usage_metadata:
+                        yield {"type": "metrics", "content": UsageMetrics(
+                            input_tokens=chunk.usage_metadata.prompt_token_count or 0,
+                            output_tokens=chunk.usage_metadata.candidates_token_count or 0,
+                        )}
+
+                    if chunk.candidates:
+                        cand = chunk.candidates[0]
+                        if cand.content and cand.content.parts:
+                            for part in cand.content.parts:
+                                if hasattr(part, "text") and part.text:
+                                    yield {"type": "text", "content": part.text}
+                                if hasattr(part, "thought") and part.thought:
+                                    yield {"type": "thought", "content": part.thought}
+                                if hasattr(part, "function_call") and part.function_call:
+                                    fc = part.function_call
+                                    yield {"type": "tool_call", "content": ToolCall(
+                                        id=getattr(fc, "id", None) or str(uuid.uuid4()),
+                                        name=fc.name, arguments=fc.args or {}
+                                    )}
+                break
             except Exception as e:
-                # 503, 429, etc. se gestionan aquí
                 should_retry = await self.handle_retryable_error(e, attempt, max_retries, base_delay=2.0)
                 if not should_retry:
                     raise e
                 attempt += 1
-
-        # Parse output to our AssistantMessage
-        text_content = ""
-        tool_calls = []
-        thought = None
-
-        usage = UsageMetrics()
-        if hasattr(response, "usage_metadata") and response.usage_metadata:
-            usage = UsageMetrics(
-                input_tokens=response.usage_metadata.prompt_token_count or 0,
-                output_tokens=response.usage_metadata.candidates_token_count or 0,
-            )
-
-        if response.candidates:
-            cand = response.candidates[0]
-            if cand.content and cand.content.parts:
-                for part in cand.content.parts:
-                    if hasattr(part, "text") and part.text:
-                        text_content += part.text
-                    if hasattr(part, "thought") and part.thought:
-                        thought = part.thought
-                    if hasattr(part, "function_call") and part.function_call:
-                        fc = part.function_call
-                        tool_calls.append(
-                            ToolCall(
-                                id=getattr(fc, "id", None) or str(uuid.uuid4()), name=fc.name, arguments=fc.args or {}
-                            )
-                        )
-
-        # Fallback if model returned absolutely nothing but didn't error
-        if not text_content and not tool_calls and not thought:
-            text_content = "..."  # Minimal indicator that something was received
-
-        return {
-            "message": AssistantMessage(
-                content=text_content, thought=thought, tool_calls=tool_calls, model=self.model_name, usage=usage
-            )
-        }

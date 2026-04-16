@@ -155,9 +155,9 @@ class CommandHandler:
     def _cmd_stats(self) -> Panel:
         """Displays session stats."""
         stats = (
-            f"📩 Messages: [bold]{self.agent.session_messages}[/bold]\n"
-            f"🛠️ Tools: [bold]{self.agent.session_tools}[/bold]\n"
-            f"📝 Files: [bold]{self.agent.dispatcher.modified_files_count}[/bold]"
+            f"🤖 Model: [bold yellow]{self.agent.model_name}[/bold yellow]\n"
+            f"🛠️ Tools Registered: [bold]{len(self.agent.tools.get_all_schemas())}[/bold]\n"
+            f"📂 Recent Files: [bold]{len(self.agent.session.recent_files)}[/bold]"
         )
         return Panel(stats, title=_("cmd.stats.title"), border_style="#6366f1", expand=False)
 

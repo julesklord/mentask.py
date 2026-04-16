@@ -11,7 +11,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from google.genai import types
+from ..agent.schema import Message, AssistantMessage, Role, UsageMetrics, ToolCall
 
 from .paths import get_history_dir
 
@@ -69,70 +69,17 @@ class HistoryManager:
     # Serialization helpers (google-genai v0.2.0 Content <-> JSON)        #
     # ------------------------------------------------------------------ #
 
-    def _content_to_dict(self, content: types.Content) -> dict[str, Any]:
-        """Converts a SDK Content object into a JSON-serializable dictionary.
+    def _message_to_dict(self, msg: Message) -> dict[str, Any]:
+        """Converts a Message Pydantic model into a JSON-serializable dictionary."""
+        return msg.model_dump(mode="json")
 
-        Args:
-            content (types.Content): The generative AI SDK content struct.
-
-        Returns:
-            Dict[str, Any]: A serializable dictionary equivalent.
-        """
-        parts_list = []
-        for part in content.parts:
-            if part.text:
-                parts_list.append({"text": part.text})
-            elif part.function_call:
-                parts_list.append(
-                    {
-                        "function_call": {
-                            "name": part.function_call.name,
-                            "args": _safe_dict_cast(part.function_call.args),
-                        }
-                    }
-                )
-            elif part.function_response:
-                parts_list.append(
-                    {
-                        "function_response": {
-                            "name": part.function_response.name,
-                            "response": _safe_dict_cast(part.function_response.response),
-                        }
-                    }
-                )
-        return {"role": content.role, "parts": parts_list}
-
-    def _dict_to_content(self, data: dict[str, Any]) -> types.Content | None:
-        """Rebuilds a SDK Content object from a stored dictionary.
-
-        Args:
-            data (Dict[str, Any]): The loaded dictionary data block.
-
-        Returns:
-            Optional[types.Content]: Formatted content, or None on failure.
-        """
+    def _dict_to_message(self, data: dict[str, Any]) -> Message | None:
+        """Rebuilds a Message object from a stored dictionary."""
         try:
-            parts = []
-            for p in data.get("parts", []):
-                if "text" in p:
-                    parts.append(types.Part.from_text(text=p["text"]))
-                elif "function_call" in p:
-                    parts.append(
-                        types.Part.from_function_call(
-                            name=p["function_call"]["name"],
-                            args=p["function_call"]["args"],
-                        )
-                    )
-                elif "function_response" in p:
-                    parts.append(
-                        types.Part.from_function_response(
-                            name=p["function_response"]["name"],
-                            response=p["function_response"]["response"],
-                        )
-                    )
-            if not parts:
-                return None
-            return types.Content(role=data.get("role", "user"), parts=parts)
+            role = data.get("role")
+            if role == Role.ASSISTANT:
+                return AssistantMessage.model_validate(data)
+            return Message.model_validate(data)
         except Exception as e:
             self.console.print(f"[dim red]Warning: Could not deserialize a history entry: {e}[/dim red]")
             return None
@@ -141,33 +88,33 @@ class HistoryManager:
     # Public API                                                           #
     # ------------------------------------------------------------------ #
 
-    def save_session(self, history: list[types.Content]) -> None:
+    def save_session(self, history: list[Message]) -> None:
         """Serializes the current chat history to disk under the active session ID.
 
         Safe to call repeatedly — it overwrites the same file each time.
 
         Args:
-            history (List[types.Content]): Current conversation list from SDK.
+            history (List[Message]): Current conversation list (Pydantic).
         """
         if not history:
             return
 
         filepath = os.path.join(self.history_dir, f"{self.current_session_id}.json")
         try:
-            serialized = [self._content_to_dict(h) for h in history]
+            serialized = [self._message_to_dict(h) for h in history if not h.is_virtual]
             with open(filepath, "w", encoding="utf-8") as f:
                 json.dump(serialized, f, indent=2, ensure_ascii=False)
         except Exception as e:
             self.console.print(f"[dim red]Error saving session history: {e}[/dim red]")
 
-    def load_session(self, session_id: str) -> list[types.Content] | None:
+    def load_session(self, session_id: str) -> list[Message] | None:
         """Loads a previously saved session from disk and applies context windows.
 
         Args:
             session_id (str): Formatted ID reference pointing to a `.json` disk record.
 
         Returns:
-            Optional[List[types.Content]]: The filtered message list, or None if invalid.
+            Optional[List[Message]]: The filtered message list, or None if invalid.
         """
         filepath = os.path.abspath(os.path.join(self.history_dir, f"{session_id}.json"))
         base_dir = os.path.abspath(self.history_dir)
@@ -206,9 +153,9 @@ class HistoryManager:
             while data and data[0].get("role") != "user":
                 data = data[1:]
 
-            contents = [self._dict_to_content(d) for d in data]
+            messages = [self._dict_to_message(d) for d in data]
             # Filter out any entries that failed deserialization
-            return [c for c in contents if c is not None]
+            return [m for m in messages if m is not None]
 
         except Exception as e:
             self.console.print(f"[dim red]Error loading session '{session_id}': {e}[/dim red]")

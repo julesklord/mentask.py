@@ -25,7 +25,6 @@ from ..core.metrics import TokenTracker
 from .core.commands import CommandHandler
 from .core.context import ContextManager
 from .core.session import SessionManager
-from .core.stream import StreamProcessor
 from .orchestrator import AgentOrchestrator
 from .schema import AgentTurnStatus, Message, Role
 from .tools.base import ToolRegistry
@@ -57,7 +56,6 @@ class ChatAgent:
         self.session.metrics = TokenTracker(model_name=self.model_name)
         self.metrics = self.session.metrics
         self.context = ContextManager()
-        self.stream_processor = StreamProcessor(self.metrics)
         self.commands = CommandHandler(self)
 
         # New Agentic System with Dynamic Config
@@ -93,14 +91,12 @@ class ChatAgent:
 
         # 3. Temporal Awareness
         import datetime
+
         now = datetime.datetime.now()
         timestamp = now.strftime("%Y-%m-%d %H:%M:%S")
         day_name = now.strftime("%A")
 
-        self.system_prompt = (
-            f"{base_identity}\n\n"
-            f"CURRENT_TIME: {timestamp} ({day_name})\n"
-        )
+        self.system_prompt = f"{base_identity}\n\nCURRENT_TIME: {timestamp} ({day_name})\n"
         # Note: We no longer append to self.messages here to avoid redundancy
         # in the SDK's system_instruction field.
 
@@ -132,7 +128,7 @@ class ChatAgent:
             ]
 
         temp = self.config.settings.get("temperature", 0.7)
-        
+
         # Combine Identity + Context for the internal SDK parameter
         full_instruction = f"{self.system_prompt}\n\n{self.context.build_system_instruction()}"
 
@@ -153,21 +149,30 @@ class ChatAgent:
             ext = path.suffix.lower()
             # Media extensions supported by Gemini 2.0+
             media_exts = {
-                ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
-                ".webp": "image/webp", ".heic": "image/heic", ".heif": "image/heif",
-                ".mp3": "audio/mpeg", ".wav": "audio/wav", ".ogg": "audio/ogg",
-                ".mp4": "video/mp4", ".mov": "video/mov", ".avi": "video/avi"
+                ".png": "image/png",
+                ".jpg": "image/jpeg",
+                ".jpeg": "image/jpeg",
+                ".webp": "image/webp",
+                ".heic": "image/heic",
+                ".heif": "image/heif",
+                ".mp3": "audio/mpeg",
+                ".wav": "audio/wav",
+                ".ogg": "audio/ogg",
+                ".mp4": "video/mp4",
+                ".mov": "video/mov",
+                ".avi": "video/avi",
             }
             if ext in media_exts:
                 mime = media_exts[ext]
                 # Read as bytes and wrap in inline_data Part
                 import base64
+
                 with open(path, "rb") as f:
                     b64_data = base64.b64encode(f.read()).decode("utf-8")
-                
+
                 return [
                     {"text": f"Analyzing file: {path.name}"},
-                    {"inline_data": {"mime_type": mime, "data": b64_data}}
+                    {"inline_data": {"mime_type": mime, "data": b64_data}},
                 ]
         return user_input
 
@@ -207,6 +212,7 @@ class ChatAgent:
 
         from .. import __version__
         from ..cli.renderer import CliRenderer
+
         # Workspace Initialization Check
         local_ws = Path.cwd() / ".askgem"
         global_config_dir = Path.home() / ".askgem"
@@ -217,7 +223,7 @@ class ChatAgent:
             should_init = Confirm.ask(
                 "No local workspace [dim](.askgem/)[/] detected. "
                 "Initialize one for this project to isolate history and knowledge?",
-                default=False
+                default=False,
             )
             if should_init:
                 local_ws.mkdir(parents=True, exist_ok=True)
@@ -275,7 +281,7 @@ class ChatAgent:
                     await self._stream_response(user_input, renderer)
                     renderer.end_stream()  # Finalize any active stream + structured render
                     renderer.print_metrics(self.metrics.get_summary())
-                    self._save_history() # AUTO SAVE
+                    self._save_history()  # AUTO SAVE
                 except KeyboardInterrupt:
                     renderer.end_stream()
                     renderer.print_warning("Generation interrupted.")

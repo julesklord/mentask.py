@@ -89,7 +89,9 @@ class TestConfigManagerApiKey:
             assert cm.load_api_key() == "env-key-123"
 
     def test_returns_none_when_no_key(self, tmp_path):
-        with patch.dict(os.environ, {}, clear=True), patch("askgem.core.config_manager.get_config_path") as mock_path:
+        with patch.dict(os.environ, {}, clear=True), \
+             patch("askgem.core.config_manager.get_config_path") as mock_path, \
+             patch("keyring.get_password", return_value=None):
             mock_path.return_value = str(tmp_path / "nonexistent.key")
             cm = ConfigManager(_mock_console)
             assert cm.load_api_key() is None

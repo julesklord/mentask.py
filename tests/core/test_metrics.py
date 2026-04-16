@@ -1,51 +1,59 @@
-"""
-Unit tests for the metrics tracking system (TokenTracker).
-"""
+from unittest.mock import patch
+
+import pytest
 
 from askgem.core.metrics import TokenTracker
 
 
-def test_metrics_accumulation():
+@pytest.fixture
+def clean_tracker(tmp_path):
+    # Mock the log path to use a temp file
+    log_file = tmp_path / "test_usage.json"
+    with patch("askgem.core.metrics.get_config_path", return_value=str(log_file)):
+        yield TokenTracker(model_name="gemini-2.0-flash")
+
+
+def test_metrics_accumulation(clean_tracker):
     """Verifies that tokens and costs accumulate correctly."""
-    tracker = TokenTracker(model_name="gemini-1.5-flash")
-    # 1. First turn: 100 prompt, 50 completion (Flash)
+    tracker = clean_tracker
     tracker.add_usage(100, 50)
 
     assert tracker.total_prompt_tokens == 100
     assert tracker.total_candidate_tokens == 50
-    assert tracker.calculate_cost() > 0
-    # 2. Second turn: 200 prompt, 100 completion (Flash)
-    tracker.add_usage(200, 100)
+    # calculate_cost now requires arguments
+    assert tracker.calculate_cost(100, 50) > 0
 
+    tracker.add_usage(200, 100)
     assert tracker.total_prompt_tokens == 300
     assert tracker.total_candidate_tokens == 150
 
 
-def test_metrics_pricing_difference():
+def test_metrics_pricing_difference(tmp_path):
     """Verifies that different models result in different costs."""
-    tracker_flash = TokenTracker(model_name="gemini-1.5-flash")
-    tracker_pro = TokenTracker(model_name="gemini-1.5-pro")
+    log_file = tmp_path / "test_usage_pricing.json"
+    with patch("askgem.core.metrics.get_config_path", return_value=str(log_file)):
+        tracker_flash = TokenTracker(model_name="gemini-1.5-flash")
+        tracker_pro = TokenTracker(model_name="gemini-1.5-pro")
 
-    tracker_flash.add_usage(1000, 1000)
-    tracker_pro.add_usage(1000, 1000)
+        # Pro should be more expensive than Flash for the same usage
+        cost_flash = tracker_flash.calculate_cost(1000, 1000)
+        cost_pro = tracker_pro.calculate_cost(1000, 1000)
+        assert cost_pro > cost_flash
 
-    # Pro should be more expensive than Flash
-    assert tracker_pro.calculate_cost() > tracker_flash.calculate_cost()
 
-
-def test_metrics_reset():
+def test_metrics_reset(clean_tracker):
     """Verifies that metrics can be reset to zero."""
-    tracker = TokenTracker()
+    tracker = clean_tracker
     tracker.add_usage(100, 50)
     tracker.reset()
 
     assert tracker.total_prompt_tokens == 0
-    assert tracker.calculate_cost() == 0.0
+    assert tracker.calculate_cost(tracker.total_prompt_tokens, tracker.total_candidate_tokens) == 0.0
 
 
-def test_metrics_summary():
+def test_metrics_summary(clean_tracker):
     """Verifies the formatted summary string."""
-    tracker = TokenTracker()
+    tracker = clean_tracker
     tracker.add_usage(1000, 500)
     summary = tracker.get_summary()
 

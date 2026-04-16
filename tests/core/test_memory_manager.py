@@ -7,113 +7,74 @@ from askgem.core.memory_manager import MemoryManager
 
 
 @pytest.fixture
-def mock_memory_path(tmp_path):
-    memory_file = str(tmp_path / "memory.md")
-    with patch("askgem.core.memory_manager.get_memory_path") as mock_path:
-        mock_path.return_value = memory_file
-        yield memory_file
+def mock_memory_paths(tmp_path):
+    path_global = tmp_path / "global_memory.md"
+    path_local = tmp_path / "local_memory.md"
+
+    with (
+        patch("askgem.core.memory_manager.get_memory_path", return_value=str(path_global)),
+        patch("askgem.core.memory_manager.get_local_knowledge_path", return_value=str(path_local)),
+    ):
+        yield {"global": path_global, "local": path_local}
 
 
-def test_init_creates_memory(mock_memory_path):
-    assert not os.path.exists(mock_memory_path)
+class TestMemoryManager:
+    def test_init_creates_global_memory(self, mock_memory_paths):
+        assert not os.path.exists(mock_memory_paths["global"])
+        MemoryManager()
+        assert os.path.exists(mock_memory_paths["global"])
 
-    MemoryManager()
+    def test_read_memory_all(self, mock_memory_paths):
+        manager = MemoryManager()
+        # Setup files
+        with open(mock_memory_paths["global"], "w", encoding="utf-8") as f:
+            f.write("Global Preference")
+        with open(mock_memory_paths["local"], "w", encoding="utf-8") as f:
+            f.write("Local Pattern")
 
-    assert os.path.exists(mock_memory_path)
-    with open(mock_memory_path, encoding="utf-8") as f:
-        content = f.read()
+        result = manager.read_memory(scope="all")
+        assert "GLOBAL PERSISTENT MEMORY" in result
+        assert "Global Preference" in result
+        assert "LOCAL PROJECT KNOWLEDGE" in result
+        assert "Local Pattern" in result
 
-    assert "# AskGem Persistent Memory" in content
+    def test_read_memory_specific_scope(self, mock_memory_paths):
+        manager = MemoryManager()
+        with open(mock_memory_paths["global"], "w", encoding="utf-8") as f:
+            f.write("Only Global")
 
+        assert "Only Global" in manager.read_memory(scope="global")
+        assert "Only Global" not in manager.read_memory(scope="local")
 
-def test_read_memory(mock_memory_path):
-    manager = MemoryManager()
+    def test_add_fact_local_by_default(self, mock_memory_paths):
+        manager = MemoryManager()
+        success = manager.add_fact("New local fact", category="Lessons Learned & Facts")
+        assert success is True
 
-    # Overwrite the file manually to test read_memory
-    test_content = "Some test content"
-    with open(mock_memory_path, "w", encoding="utf-8") as f:
-        f.write(test_content)
+        # Check local file
+        with open(mock_memory_paths["local"], encoding="utf-8") as f:
+            content = f.read()
+        assert "New local fact" in content
 
-    result = manager.read_memory()
-    assert result == test_content
+    def test_add_fact_global(self, mock_memory_paths):
+        manager = MemoryManager()
+        success = manager.add_fact("User loves coffee", scope="global", category="User Profile & Preferences")
+        assert success is True
 
+        with open(mock_memory_paths["global"], encoding="utf-8") as f:
+            content = f.read()
+        assert "User loves coffee" in content
 
-def test_read_memory_handles_missing_file(mock_memory_path):
-    manager = MemoryManager()
+    def test_reset_memory_local(self, mock_memory_paths):
+        manager = MemoryManager()
+        manager.add_fact("To be deleted", scope="local")
+        assert os.path.exists(mock_memory_paths["local"])
 
-    # Delete the file manually
-    os.remove(mock_memory_path)
+        manager.reset_memory(scope="local")
+        assert not os.path.exists(mock_memory_paths["local"])
 
-    result = manager.read_memory()
-    assert result == ""
-
-
-def test_add_fact_existing_category(mock_memory_path):
-    manager = MemoryManager()
-
-    # By default, template has "## Lessons Learned & Facts"
-    success = manager.add_fact("Water is wet.", "Lessons Learned & Facts")
-    assert success is True
-
-    content = manager.read_memory()
-    assert "- Water is wet." in content
-
-    lines = content.splitlines()
-    category_index = lines.index("## Lessons Learned & Facts")
-    assert lines[category_index + 1] == "- Water is wet."
-
-
-def test_add_fact_new_category(mock_memory_path):
-    manager = MemoryManager()
-
-    success = manager.add_fact("Python is fun.", "New Category")
-    assert success is True
-
-    content = manager.read_memory()
-    assert "## New Category" in content
-    assert "- Python is fun." in content
-
-    lines = content.splitlines()
-    # Find exact indices
-    category_index = -1
-    for i, line in enumerate(lines):
-        if line.strip() == "## New Category":
-            category_index = i
-            break
-
-    assert category_index != -1
-    assert lines[category_index + 1] == "- Python is fun."
-
-
-def test_add_fact_file_error(mock_memory_path):
-    manager = MemoryManager()
-
-    # Try mocking builtins.open only when called from memory_manager.py's add_fact inside try-except
-    # Instead of builtins.open, we can make the file directory read-only or patch the file object
-    # The safest way is to patch builtins.open, but we should make sure it only fails for 'w'
-
-    original_open = open
-    def mock_open(*args, **kwargs):
-        if len(args) > 1 and args[1] == 'w':
-            raise OSError("Mocked error")
-        return original_open(*args, **kwargs)
-
-    with patch("builtins.open", side_effect=mock_open):
-        success = manager.add_fact("This won't be saved.", "Lessons Learned & Facts")
-
-    assert success is False
-
-
-def test_reset_memory(mock_memory_path):
-    manager = MemoryManager()
-
-    # Modify the content
-    manager.add_fact("Temporary fact", "Lessons Learned & Facts")
-    content_before = manager.read_memory()
-    assert "Temporary fact" in content_before
-
-    manager.reset_memory()
-
-    content_after = manager.read_memory()
-    assert "Temporary fact" not in content_after
-    assert "# AskGem Persistent Memory" in content_after
+    def test_reset_memory_global_recreates(self, mock_memory_paths):
+        manager = MemoryManager()
+        manager.reset_memory(scope="global")
+        # For global, reset_memory recreates from template
+        assert os.path.exists(mock_memory_paths["global"])

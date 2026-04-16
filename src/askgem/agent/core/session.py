@@ -254,7 +254,7 @@ class SessionManager:
             system_instruction = str(system_msgs[-1].content)
 
         # Auto-compaction check (0.8 of threshold)
-        last_usage = history[-1].usage if history else None
+        last_usage = getattr(history[-1], "usage", None) if history else None
         if not self._is_compacting and last_usage and last_usage.input_tokens > (self.compaction_threshold * 0.8):
             try:
                 self._is_compacting = True

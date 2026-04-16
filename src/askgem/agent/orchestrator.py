@@ -3,7 +3,7 @@ from collections.abc import AsyncGenerator, Callable
 from typing import Any
 
 from ..core.trust_manager import TrustManager
-from .schema import AgentTurnStatus, Message, Role, ToolResult
+from .schema import AgentTurnStatus, AssistantMessage, Message, Role, ToolResult
 from .tools.base import ToolRegistry
 
 
@@ -126,16 +126,15 @@ class AgentOrchestrator:
                 # If there's a SECURITY WARNING (like PATH ESCAPE), we MUST ask or block.
                 force_confirmation = bool(security_warning)
 
-                if tool and tool.requires_confirmation and confirmation_callback:
-                    if not is_dir_trusted or force_confirmation:
-                        try:
-                            allowed = await confirmation_callback(tc.name, tc.arguments, warning=security_warning)
-                            if not allowed:
-                                immediate_results.append(ToolResult(tool_call_id=tc.id, content=f"Error: User denied execution of {tc.name}.", is_error=True))
-                                continue
-                        except Exception as e:
-                            immediate_results.append(ToolResult(tool_call_id=tc.id, content=f"Error during confirmation: {e}", is_error=True))
+                if tool and tool.requires_confirmation and confirmation_callback and (not is_dir_trusted or force_confirmation):
+                    try:
+                        allowed = await confirmation_callback(tc.name, tc.arguments, warning=security_warning)
+                        if not allowed:
+                            immediate_results.append(ToolResult(tool_call_id=tc.id, content=f"Error: User denied execution of {tc.name}.", is_error=True))
                             continue
+                    except Exception as e:
+                        immediate_results.append(ToolResult(tool_call_id=tc.id, content=f"Error during confirmation: {e}", is_error=True))
+                        continue
 
                 # Preparar tarea con captura de errores individual
                 async def safe_call(t_name, t_id, t_args):

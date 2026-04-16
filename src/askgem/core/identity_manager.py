@@ -1,4 +1,5 @@
 from pathlib import Path
+
 from .paths import get_config_dir, get_global_config_dir, get_standard_knowledge_dir
 
 
@@ -37,7 +38,7 @@ class KnowledgeManager:
     def read_knowledge_hub(self) -> str:
         """
         Aggregates the entire Knowledge Hub hierarchy.
-        
+
         Returns:
             str: Full concatenated markdown instructions.
         """

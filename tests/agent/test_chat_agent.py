@@ -1,16 +1,19 @@
-from unittest.mock import MagicMock, AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
 
 from src.askgem.agent.chat import ChatAgent
 
+
 @pytest.fixture
 def mock_dependencies():
-    with patch("src.askgem.agent.chat.ConfigManager") as mock_config_manager, \
-         patch("src.askgem.agent.chat.HistoryManager") as mock_history_manager, \
-         patch("src.askgem.agent.chat.ContextManager") as mock_context_manager, \
-         patch("src.askgem.agent.chat.KnowledgeManager") as mock_knowledge_manager, \
-         patch("src.askgem.agent.chat.console") as mock_console:
-
+    with (
+        patch("src.askgem.agent.chat.ConfigManager") as mock_config_manager,
+        patch("src.askgem.agent.chat.HistoryManager") as mock_history_manager,
+        patch("src.askgem.agent.chat.ContextManager") as mock_context_manager,
+        patch("src.askgem.agent.chat.KnowledgeManager") as mock_knowledge_manager,
+        patch("src.askgem.agent.chat.console") as mock_console,
+    ):
         # Setup ConfigManager mock
         mock_config_instance = MagicMock()
         mock_config_instance.settings = MagicMock()
@@ -40,6 +43,7 @@ def mock_dependencies():
             "console": mock_console,
         }
 
+
 @pytest.mark.asyncio
 async def test_agent_initializes_correctly(mock_dependencies):
     """Verifies that ChatAgent initializes without errors."""
@@ -47,6 +51,7 @@ async def test_agent_initializes_correctly(mock_dependencies):
     assert agent.model_name == "test-model"
     assert agent.edit_mode == "manual"
     assert len(agent.messages) == 0
+
 
 @pytest.mark.asyncio
 async def test_setup_api(mock_dependencies):

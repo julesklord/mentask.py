@@ -1,7 +1,7 @@
 # askgem — Development Roadmap
 
 > **Last Updated:** April 16, 2026
-> **Current Version:** `0.13.3` ("Purity")
+> **Current Version:** `0.13.3` ("hotfix")
 > **Maintainer:** [@julesklord](https://github.com/julesklord)
 > **Status:** Full Stability Reached
 
@@ -95,7 +95,7 @@ graph TD
 ```text
 2026-04-14  v0.10.0  ████      The Modular Jump
 2026-04-15  v0.13.0  ████████  Muad'Dib: Pydantic Core
-2026-04-16  v0.13.3  ████████  Purity: 100% Stability (CURRENT)
+2026-04-16  v0.13.3  ████████  hotfix (CURRENT)
 2026-05     v0.14.0  ░░░       Bene Gesserit: Optimization & LSP
 ```
 

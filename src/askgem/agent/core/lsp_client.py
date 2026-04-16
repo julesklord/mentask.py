@@ -65,7 +65,6 @@ class LSPClient:
             except asyncio.IncompleteReadError:
                 break
             except Exception as e:
-                print(f"LSP Reader Error: {e}")
                 break
 
     def _handle_message(self, msg: Dict[str, Any]):

@@ -50,6 +50,8 @@ async def test_orchestrator_streaming_loop():
     
     registry = MockToolRegistry()
     orchestrator = AgentOrchestrator(mock_client, registry)
+    orchestrator._ensure_lsp_started = AsyncMock()
+    orchestrator.lsp = AsyncMock()
 
     history = []
     events = []

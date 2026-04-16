@@ -1,9 +1,10 @@
 import asyncio
+import contextlib
 import json
 import os
 import subprocess
 import sys
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 class LSPClient:
@@ -14,21 +15,25 @@ class LSPClient:
 
     def __init__(self, workspace_path: str):
         self.workspace_path = os.path.abspath(workspace_path)
-        self.process: Optional[asyncio.subprocess.Process] = None
+        self.process: asyncio.subprocess.Process | None = None
         self._request_id = 1
-        self._pending_requests: Dict[int, asyncio.Future] = {}
-        self._diagnostics: Dict[str, List[Dict[str, Any]]] = {}
-        self._reader_task: Optional[asyncio.Task] = None
+        self._pending_requests: dict[int, asyncio.Future] = {}
+        self._diagnostics: dict[str, list[dict[str, Any]]] = {}
+        self._reader_task: asyncio.Task | None = None
         self._initialized = False
 
     async def start(self) -> bool:
         """Starts the server and initiates the handshake."""
         try:
             self.process = await asyncio.create_subprocess_exec(
-                sys.executable, "-m", "ruff", "server", "--preview",
+                sys.executable,
+                "-m",
+                "ruff",
+                "server",
+                "--preview",
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE
+                stderr=subprocess.PIPE,
             )
             # Start background reader
             self._reader_task = asyncio.create_task(self._reader_loop())
@@ -60,14 +65,14 @@ class LSPClient:
 
                 # 2. Read body
                 body = await self.process.stdout.readexactly(content_length)
-                msg = json.loads(body.decode("utf-8"))
+                msg = json.loads(body.decode())
                 self._handle_message(msg)
             except asyncio.IncompleteReadError:
                 break
-            except Exception as e:
+            except Exception:
                 break
 
-    def _handle_message(self, msg: Dict[str, Any]):
+    def _handle_message(self, msg: dict[str, Any]):
         """Dispatches incoming messages to pending requests or notification handlers."""
         if "id" in msg:
             # It's a response to a request
@@ -84,37 +89,28 @@ class LSPClient:
                 uri = params.get("uri")
                 self._diagnostics[uri] = params.get("diagnostics", [])
 
-    async def send_request(self, method: str, params: Dict[str, Any]) -> Any:
+    async def send_request(self, method: str, params: dict[str, Any]) -> Any:
         """Sends a request and waits for the response."""
         req_id = self._request_id
         self._request_id += 1
-        
+
         future = asyncio.get_running_loop().create_future()
         self._pending_requests[req_id] = future
-        
-        payload = {
-            "jsonrpc": "2.0",
-            "id": req_id,
-            "method": method,
-            "params": params
-        }
+
+        payload = {"jsonrpc": "2.0", "id": req_id, "method": method, "params": params}
         await self._send_payload(payload)
         return await future
 
-    async def send_notification(self, method: str, params: Dict[str, Any]):
+    async def send_notification(self, method: str, params: dict[str, Any]):
         """Sends a one-way notification."""
-        payload = {
-            "jsonrpc": "2.0",
-            "method": method,
-            "params": params
-        }
+        payload = {"jsonrpc": "2.0", "method": method, "params": params}
         await self._send_payload(payload)
 
-    async def _send_payload(self, payload: Dict[str, Any]):
+    async def _send_payload(self, payload: dict[str, Any]):
         if not self.process or not self.process.stdin:
             return
-        body = json.dumps(payload).encode("utf-8")
-        header = f"Content-Length: {len(body)}\r\n\r\n".encode("utf-8")
+        body = json.dumps(payload).encode()
+        header = f"Content-Length: {len(body)}\r\n\r\n".encode()
         self.process.stdin.write(header + body)
         await self.process.stdin.drain()
 
@@ -123,44 +119,86 @@ class LSPClient:
         init_params = {
             "processId": os.getpid(),
             "rootUri": f"file:///{self.workspace_path.replace(os.sep, '/')}",
-            "capabilities": {
-                "textDocument": {
-                    "publishDiagnostics": {}
-                }
-            }
+            "capabilities": {"textDocument": {"publishDiagnostics": {}}},
         }
         response = await self.send_request("initialize", init_params)
         if "result" not in response:
             return False
-            
+
         await self.send_notification("initialized", {})
         self._initialized = True
         return True
 
-    async def check_file(self, file_path: str, content: str) -> List[Dict[str, Any]]:
+    async def check_file(self, file_path: str, content: str) -> list[dict[str, Any]]:
         """Updates the server version of the file and returns current diagnostics."""
-        abs_path = os.path.abspath(file_path).replace(os.sep, '/')
+        abs_path = os.path.abspath(file_path).replace(os.sep, "/")
         uri = f"file:///{abs_path}"
-        
+
         # Clear old diagnostics for this specific check session
         self._diagnostics[uri] = []
 
-        await self.send_notification("textDocument/didOpen", {
-            "textDocument": {
-                "uri": uri,
-                "languageId": "python",
-                "version": 1,
-                "text": content
-            }
-        })
-        
+        await self.send_notification(
+            "textDocument/didOpen",
+            {
+                "textDocument": {
+                    "uri": uri,
+                    "languageId": "python",
+                    "version": 1,
+                    "text": content,
+                }
+            },
+        )
+
         # Give Ruff a moment to push diagnostics
         await asyncio.sleep(0.5)
         return self._diagnostics.get(uri, [])
 
+    @staticmethod
+    def _close_stream_transport(stream: Any) -> None:
+        transport = getattr(stream, "_transport", None)
+        if transport is not None:
+            with contextlib.suppress(Exception):
+                transport.close()
+
     async def stop(self):
-        if self._reader_task:
-            self._reader_task.cancel()
-        if self.process:
-            self.process.terminate()
-            await self.process.wait()
+        """Cleanly (or forcibly) terminates the LSP server process."""
+        process = self.process
+        reader_task = self._reader_task
+
+        for future in self._pending_requests.values():
+            if not future.done():
+                future.cancel()
+        self._pending_requests.clear()
+        if process:
+            try:
+                if process.stdin and not process.stdin.is_closing():
+                    payload = {"jsonrpc": "2.0", "id": self._request_id, "method": "shutdown", "params": {}}
+                    self._request_id += 1
+                    with contextlib.suppress(Exception):
+                        await self._send_payload(payload)
+                    with contextlib.suppress(Exception):
+                        await self._send_payload({"jsonrpc": "2.0", "method": "exit", "params": {}})
+                    process.stdin.close()
+                    with contextlib.suppress(Exception):
+                        await process.stdin.wait_closed()
+
+                with contextlib.suppress(ProcessLookupError):
+                    process.terminate()
+                await asyncio.wait_for(process.wait(), timeout=2.0)
+            except (asyncio.TimeoutError, Exception):
+                with contextlib.suppress(BaseException):
+                    process.kill()
+                with contextlib.suppress(BaseException):
+                    await process.wait()
+            finally:
+                self._close_stream_transport(process.stdout)
+                self._close_stream_transport(process.stderr)
+
+        if reader_task:
+            reader_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await reader_task
+
+        self._initialized = False
+        self.process = None
+        self._reader_task = None

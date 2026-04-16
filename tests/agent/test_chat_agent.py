@@ -2,7 +2,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.askgem.agent.chat import ChatAgent
+from src.askgem.agent.chat import ChatAgent, ChatAgentDependencies
 
 
 @pytest.fixture
@@ -66,3 +66,28 @@ async def test_setup_api(mock_dependencies):
     # SUCCESS: session.setup_api must be an AsyncMock
     agent.session.setup_api = AsyncMock(return_value=True)
     assert await agent.setup_api(interactive=True) is True
+
+
+@pytest.mark.asyncio
+async def test_agent_accepts_injected_dependencies(mock_dependencies):
+    injected_session = MagicMock()
+    injected_session.metrics = MagicMock()
+    injected_tools = MagicMock()
+
+    deps = ChatAgentDependencies(
+        config=mock_dependencies["config"],
+        history=mock_dependencies["history"],
+        identity=mock_dependencies["knowledge"],
+        context=mock_dependencies["context"],
+        session=injected_session,
+        tools=injected_tools,
+    )
+
+    agent = ChatAgent(dependencies=deps)
+
+    assert agent.config is mock_dependencies["config"]
+    assert agent.history is mock_dependencies["history"]
+    assert agent.identity is mock_dependencies["knowledge"]
+    assert agent.context is mock_dependencies["context"]
+    assert agent.session is injected_session
+    assert agent.tools is injected_tools

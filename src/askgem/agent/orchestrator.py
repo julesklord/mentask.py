@@ -1,11 +1,13 @@
 import asyncio
+import os
 from collections.abc import AsyncGenerator, Callable
+from copy import copy
 from typing import Any
 
 from ..core.trust_manager import TrustManager
+from .core.lsp_client import LSPClient
 from .schema import AgentTurnStatus, AssistantMessage, Message, Role, ToolResult
 from .tools.base import ToolRegistry
-from .core.lsp_client import LSPClient
 
 
 class AgentOrchestrator:
@@ -20,9 +22,193 @@ class AgentOrchestrator:
         self.config = config
         self.active_status = AgentTurnStatus.IDLE
         self.trust = TrustManager()
-        self.lsp: Optional[LSPClient] = None
+        self.lsp: LSPClient | None = None
 
-    async def run_query(self, user_prompt: str | Any, history: list[Message], config: Any | None = None, confirmation_callback: Callable | None = None) -> AsyncGenerator[Any, None]:
+    async def _ensure_lsp_started(self) -> None:
+        if self.lsp is None:
+            self.lsp = LSPClient(workspace_path=".")
+            await self.lsp.start()
+
+    def _build_plan_context(self, plan_file: str = ".askgem_plan.md") -> str:
+        if not os.path.exists(plan_file):
+            return ""
+
+        try:
+            with open(plan_file, encoding="utf-8") as handle:
+                raw_plan = handle.read().strip()
+        except Exception:
+            return ""
+
+        if not raw_plan:
+            return ""
+
+        return (
+            f"\n\n## ACTIVE EXECUTION PLAN (from {plan_file}):\n"
+            "You are currently executing the following multi-turn plan. "
+            "Reference this to maintain state and know your next steps:\n"
+            f"```markdown\n{raw_plan}\n```"
+        )
+
+    def _build_turn_config(self, config: Any | None) -> Any | None:
+        plan_context = self._build_plan_context()
+        if not plan_context or not config or not hasattr(config, "system_instruction"):
+            return config
+
+        turn_config = copy(config)
+        instruction = turn_config.system_instruction or ""
+        turn_config.system_instruction = f"{instruction}{plan_context}"
+        return turn_config
+
+    async def _stream_assistant_turn(
+        self, history: list[Message], config: Any | None
+    ) -> AsyncGenerator[dict[str, Any], None]:
+        assistant_msg = AssistantMessage(content="", thought=None, tool_calls=[], model=self.client.model_name)
+        history.append(assistant_msg)
+
+        async for chunk in self.client.generate_stream(history[:-1], self.tools.get_all_schemas(), config=config):
+            chunk_type = chunk["type"]
+            chunk_content = chunk["content"]
+
+            if chunk_type == "text":
+                assistant_msg.content += chunk_content
+                yield {"type": "text", "content": chunk_content}
+            elif chunk_type == "thought":
+                assistant_msg.thought = chunk_content
+                yield {"type": "thought", "content": chunk_content}
+            elif chunk_type == "tool_call":
+                assistant_msg.tool_calls.append(chunk_content)
+            elif chunk_type == "metrics":
+                assistant_msg.usage = chunk_content
+                yield {"type": "metrics", "usage": chunk_content}
+
+    def _build_tool_security_warning(self, tool_call) -> str:
+        if tool_call.name == "execute_command":
+            from ..core.security import SafetyLevel, analyze_command_safety
+
+            report = analyze_command_safety(tool_call.arguments.get("command", ""))
+            if report.level != SafetyLevel.SAFE:
+                return f"DANGEROUS COMMAND DETECTED ({report.category}): {report.description}"
+
+        if tool_call.name in ("read_file", "write_file", "edit_file", "list_dir"):
+            from ..core.security import ensure_safe_path
+
+            try:
+                ensure_safe_path(tool_call.arguments.get("path", "."))
+            except PermissionError as exc:
+                return f"PATH ESCAPE ATTEMPT: {exc}"
+
+        return ""
+
+    async def _confirm_tool_call(
+        self,
+        tool,
+        tool_call,
+        confirmation_callback: Callable | None,
+        security_warning: str,
+    ) -> ToolResult | None:
+        is_dir_trusted = self.trust.is_trusted(os.getcwd())
+        force_confirmation = bool(security_warning)
+
+        if not (
+            tool
+            and tool.requires_confirmation
+            and confirmation_callback
+            and (not is_dir_trusted or force_confirmation)
+        ):
+            return None
+
+        try:
+            allowed = await confirmation_callback(tool_call.name, tool_call.arguments, warning=security_warning)
+        except Exception as exc:
+            return ToolResult(tool_call_id=tool_call.id, content=f"Error during confirmation: {exc}", is_error=True)
+
+        if allowed:
+            return None
+
+        return ToolResult(
+            tool_call_id=tool_call.id,
+            content=f"Error: User denied execution of {tool_call.name}.",
+            is_error=True,
+        )
+
+    async def _call_tool_safely(self, tool_call) -> ToolResult:
+        try:
+            return await self.tools.call_tool(tool_call.name, tool_call.id, tool_call.arguments)
+        except Exception as exc:
+            return ToolResult(tool_call_id=tool_call.id, content=f"Tool execution failed: {exc}", is_error=True)
+
+    async def _execute_tool_calls(
+        self, tool_calls: list[Any], confirmation_callback: Callable | None
+    ) -> list[ToolResult]:
+        tool_tasks = []
+        immediate_results = []
+
+        for tool_call in tool_calls:
+            tool = self.tools.get_tool(tool_call.name)
+
+            if tool_call.arguments and "path" in tool_call.arguments and hasattr(self.client, "update_recent_files"):
+                self.client.update_recent_files(tool_call.arguments["path"])
+
+            security_warning = self._build_tool_security_warning(tool_call)
+            confirmation_result = await self._confirm_tool_call(
+                tool, tool_call, confirmation_callback, security_warning
+            )
+            if confirmation_result is not None:
+                immediate_results.append(confirmation_result)
+                continue
+
+            tool_tasks.append(self._call_tool_safely(tool_call))
+
+        results = []
+        if tool_tasks:
+            results = await asyncio.gather(*tool_tasks)
+
+        return immediate_results + list(results)
+
+    async def _append_lsp_diagnostics(self, tool_call, result: ToolResult) -> ToolResult:
+        if result.is_error or not result.content.startswith("Success"):
+            return result
+
+        if tool_call.name not in ("edit_file", "write_file"):
+            return result
+
+        path = tool_call.arguments.get("path", "")
+        if not path.endswith(".py") or not self.lsp:
+            return result
+
+        try:
+            with open(path, "r", encoding="utf-8") as handle:
+                code = handle.read()
+            diagnostics = await self.lsp.check_file(path, code)
+        except Exception:
+            return result
+
+        if not diagnostics:
+            return result
+
+        diag_msg = "\n\n[LSP DIAGNOSTICS - Syntax/Lint Errors Detected]:\n"
+        for diagnostic in diagnostics:
+            severity = "ERROR" if diagnostic.get("severity") == 1 else "WARNING"
+            message = diagnostic.get("message")
+            line = diagnostic.get("range", {}).get("start", {}).get("line", 0) + 1
+            diag_msg += f"- [{severity}] line {line}: {message}\n"
+        diag_msg += "\n[!] Please fix these errors in your next turn."
+        result.content += diag_msg
+        return result
+
+    def _find_tool_call_name(self, tool_calls: list[Any], tool_call_id: str) -> str:
+        for tool_call in tool_calls:
+            if tool_call.id == tool_call_id:
+                return tool_call.name
+        return "unknown"
+
+    async def run_query(
+        self,
+        user_prompt: str | Any,
+        history: list[Message],
+        config: Any | None = None,
+        confirmation_callback: Callable | None = None,
+    ) -> AsyncGenerator[Any, None]:
         """
         Runs the agentic loop. Yields events for the UI.
         """
@@ -31,167 +217,41 @@ class AgentOrchestrator:
         self.active_status = AgentTurnStatus.THINKING
 
         while True:
-            # Iniciar LSP si no está activo
-            if self.lsp is None:
-                self.lsp = LSPClient(workspace_path=".")
-                await self.lsp.start()
+            await self._ensure_lsp_started()
 
             yield {"status": AgentTurnStatus.THINKING}
 
-            # 2. Llamada al LLM
             try:
-                # [Plan Injection Logic - Keeping it clean]
-                import os
-                plan_file = ".askgem_plan.md"
-                plan_context = ""
-                if os.path.exists(plan_file):
-                    try:
-                        with open(plan_file, encoding="utf-8") as f:
-                            raw_plan = f.read().strip()
-                            if raw_plan:
-                                plan_context = (
-                                    f"\n\n## ACTIVE EXECUTION PLAN (from {plan_file}):\n"
-                                    "You are currently executing the following multi-turn plan. "
-                                    "Reference this to maintain state and know your next steps:\n"
-                                    f"```markdown\n{raw_plan}\n```"
-                                )
-                    except Exception:
-                        pass
-
-                turn_config = config
-                if plan_context and hasattr(turn_config, "system_instruction"):
-                    from copy import copy
-                    turn_config = copy(config)
-                    # Support both string and dynamic system_instruction
-                    instr = turn_config.system_instruction or ""
-                    turn_config.system_instruction = f"{instr}{plan_context}"
-
-                # Pre-calculate full message structure to populate as stream arrives
-                assistant_msg = AssistantMessage(
-                    content="", thought=None, tool_calls=[], model=self.client.model_name
-                )
-                history.append(assistant_msg)
-
-                async for chunk in self.client.generate_stream(history[:-1], self.tools.get_all_schemas(), config=turn_config):
-                    c_type = chunk["type"]
-                    c_val = chunk["content"]
-
-                    if c_type == "text":
-                        assistant_msg.content += c_val
-                        yield {"type": "text", "content": c_val}
-                    elif c_type == "thought":
-                        assistant_msg.thought = c_val
-                        yield {"type": "thought", "content": c_val}
-                    elif c_type == "tool_call":
-                        assistant_msg.tool_calls.append(c_val)
-                    elif c_type == "metrics":
-                        assistant_msg.usage = c_val
-                        yield {"type": "metrics", "usage": c_val}
-            except Exception as e:
-                yield {"type": "error", "content": f"Critical model failure: {e}"}
+                turn_config = self._build_turn_config(config)
+                async for event in self._stream_assistant_turn(history, turn_config):
+                    yield event
+                assistant_msg = history[-1]
+            except Exception as exc:
+                yield {"type": "error", "content": f"Critical model failure: {exc}"}
                 break
 
-            # 3. ¿Hay herramientas que ejecutar?
             if not assistant_msg.tool_calls:
                 self.active_status = AgentTurnStatus.COMPLETED
                 yield {"status": AgentTurnStatus.COMPLETED}
                 break
 
-            # 5. Ejecución asíncrona de herramientas con chequeo de permisos
             self.active_status = AgentTurnStatus.EXECUTING
             yield {"status": AgentTurnStatus.EXECUTING, "tool_calls": assistant_msg.tool_calls}
 
-            tool_tasks = []
-            immediate_results = []
+            all_results = await self._execute_tool_calls(assistant_msg.tool_calls, confirmation_callback)
 
-            for tc in assistant_msg.tool_calls:
-                tool = self.tools.get_tool(tc.name)
+            tool_call_map = {tool_call.id: tool_call for tool_call in assistant_msg.tool_calls}
+            for result in all_results:
+                tool_call = tool_call_map.get(result.tool_call_id)
+                if tool_call is not None:
+                    result = await self._append_lsp_diagnostics(tool_call, result)
+                tool_name = self._find_tool_call_name(assistant_msg.tool_calls, result.tool_call_id)
 
-                # Rastreo de archivos recientes
-                if tc.arguments and "path" in tc.arguments and hasattr(self.client, "update_recent_files"):
-                    self.client.update_recent_files(tc.arguments["path"])
-
-                # Seguridad y Auditoría Proactiva
-                security_warning = ""
-                if tc.name == "execute_command":
-                    from ..core.security import SafetyLevel, analyze_command_safety
-                    report = analyze_command_safety(tc.arguments.get("command", ""))
-                    if report.level != SafetyLevel.SAFE:
-                        security_warning = f"DANGEROUS COMMAND DETECTED ({report.category}): {report.description}"
-
-                elif tc.name in ("read_file", "write_file", "edit_file", "list_dir"):
-                    from ..core.security import ensure_safe_path
-                    try:
-                        ensure_safe_path(tc.arguments.get("path", "."))
-                    except PermissionError as e:
-                        security_warning = f"PATH ESCAPE ATTEMPT: {str(e)}"
-
-                # Solicitar confirmación con advertencia si existe
-                is_dir_trusted = self.trust.is_trusted(os.getcwd())
-                
-                # CRITICAL SECURITY FIX: Trusted directory ONLY bypasses confirmation for regular tools.
-                # If there's a SECURITY WARNING (like PATH ESCAPE), we MUST ask or block.
-                force_confirmation = bool(security_warning)
-
-                if tool and tool.requires_confirmation and confirmation_callback and (not is_dir_trusted or force_confirmation):
-                    try:
-                        allowed = await confirmation_callback(tc.name, tc.arguments, warning=security_warning)
-                        if not allowed:
-                            immediate_results.append(ToolResult(tool_call_id=tc.id, content=f"Error: User denied execution of {tc.name}.", is_error=True))
-                            continue
-                    except Exception as e:
-                        immediate_results.append(ToolResult(tool_call_id=tc.id, content=f"Error during confirmation: {e}", is_error=True))
-                        continue
-
-                # Preparar tarea con captura de errores individual
-                async def safe_call(t_name, t_id, t_args):
-                    try:
-                        return await self.tools.call_tool(t_name, t_id, t_args)
-                    except Exception as exc:
-                        return ToolResult(tool_call_id=t_id, content=f"Tool execution failed: {exc}", is_error=True)
-
-                tool_tasks.append(safe_call(tc.name, tc.id, tc.arguments))
-
-            # Ejecutar y procesar resultados
-            results = []
-            if tool_tasks:
-                results = await asyncio.gather(*tool_tasks)
-
-            all_results = immediate_results + list(results)
-
-            for res in all_results:
-                tc_name = "unknown"
-                for tc in assistant_msg.tool_calls:
-                    if tc.id == res.tool_call_id:
-                        tc_name = tc.name
-                        break
-
-                # Validación LSP para archivos Python
-                if res.content.startswith("Success") and tc_name in ("edit_file", "write_file"):
-                    path = tc.arguments.get("path", "")
-                    if path.endswith(".py") and self.lsp:
-                        try:
-                            with open(path, "r", encoding="utf-8") as f:
-                                code = f.read()
-                            diagnostics = await self.lsp.check_file(path, code)
-                            if diagnostics:
-                                diag_msg = "\n\n[LSP DIAGNOSTICS - Syntax/Lint Errors Detected]:\n"
-                                for d in diagnostics:
-                                    severity = "ERROR" if d.get("severity") == 1 else "WARNING"
-                                    msg = d.get("message")
-                                    line = d.get("range", {}).get("start", {}).get("line", 0) + 1
-                                    diag_msg += f"- [{severity}] line {line}: {msg}\n"
-                                diag_msg += "\n[!] Please fix these errors in your next turn."
-                                res.content += diag_msg
-                        except Exception as lsp_err:
-                            # Silently fail or log LSP errors to not break core loop
-                            pass
-
-                history.append(Message(
-                    role=Role.TOOL,
-                    content=res.content,
-                    metadata={"tool_call_id": res.tool_call_id, "tool_name": tc_name}
-                ))
-                yield {"type": "tool_result", "content": res.content, "is_error": res.is_error}
-
-            # Volver al inicio del bucle para que el modelo vea los resultados de las herramientas
+                history.append(
+                    Message(
+                        role=Role.TOOL,
+                        content=result.content,
+                        metadata={"tool_call_id": result.tool_call_id, "tool_name": tool_name},
+                    )
+                )
+                yield {"type": "tool_result", "content": result.content, "is_error": result.is_error}

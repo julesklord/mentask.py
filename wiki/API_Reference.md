@@ -14,9 +14,9 @@ The central reasoning engine. It coordinates managers to execute the cognitive l
 
 ### **Class `ChatAgent`** (`chat.py`)
 
-Now serves as the high-level TUI adapter and entry point.
+Serves as the high-level CLI agent entry point.
 
-* **Method `start()`**: Initializes the TUI and launches the Orchestrator loop.
+* **Method `start()`**: Initializes the interactive terminal session and launches the Orchestrator loop.
 
 ### **Cognitive Managers** (`agent/core/`)
 

@@ -3,6 +3,7 @@
 This document contains the 100% complete commit history of the AskGem project, providing a transparent and non-truncated record for architectural audits. This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 **Versioning Rules:**
+
 - `X.Y.0`: Core/Minor releases with legendary names.
 - `X.Y.Z (Z > 0)`: Strictly labeled as **"hotfix"**.
 
@@ -11,11 +12,13 @@ Total Recorded Commits: 326+
 ---
 
 ## [0.13.4] — 2026-04-16 ("hotfix")
+
 - `/` | 2026-04-16 | release: v0.13.4 - Audit Purge & Historical Reconstruction
 - `/` | 2026-04-16 | chore: close pending PRs #84, #85, #86, #87 and create clean tracking issues #88, #89
 - `a3f89cf` | 2026-04-16 | release: v0.13.3 - Purity Finalized (Linguistic Parity & Legendary History)
 
 ## [0.13.3] — 2026-04-16 ("hotfix")
+
 - `97ac8e4` | 2026-04-15 | refactor: remove unused project_context in ChatAgent identity setup
 - `730b435` | 2026-04-15 | test: fix package import paths in test_session.py by removing src prefix
 - `88a925b` | 2026-04-15 | test: remove unused local_md_path in identity manager test
@@ -24,6 +27,7 @@ Total Recorded Commits: 326+
 - `393c265` | 2026-04-15 | v0.13.1: Muad'Dib Hotfixes - Fixes persistence, security, streaming and basic crashes
 
 ## [0.13.0] — 2026-04-15 ("Muad'Dib")
+
 - `0ec362c` | 2026-04-15 | chore: prepare v0.13.0 Muad'Dib release (Roadmap & Version)
 - `0d13613` | 2026-04-15 | feat: implement Core Knowledge Hub hierarchy (v0.13.0) and synchronize stable v0.12.3
 - `b8ccfec` | 2026-04-15 | v0.12.3: UI Polish, Temporal Awareness, and Search/Web tools Arsenal (Sync & Cleanup)
@@ -33,12 +37,14 @@ Total Recorded Commits: 326+
 - `83bc165` | 2026-04-15 | upd:doc
 
 ## [0.12.0] — 2026-04-15 ("Bene Gesserit")
+
 - `1c4b5cb` | 2026-04-15 | docs: upgrade wiki to v0.11.0 (Orchestra, Trust, Workspaces & Blueprint)
 - `055ab07` | 2026-04-15 | docs: overhaul README with v0.11.0 features (Workspaces, Security, Hyper-Context)
 - `507aae9` | 2026-04-15 | chore: sync project metadata, knowledge base and finalize cleanup for v0.11.0
 - `63a55d2` | 2026-04-15 | feat: implement core agent tools and infrastructure with supporting configuration and audit utilities
 
 ## [0.11.0] — 2026-04-15 ("Orchestra")
+
 - `117f6d8` | 2026-04-15 | release: v0.11.0 - Workspaces, Security & Hyper-Context
 - `a7808b9` | 2026-04-15 | merge: integrate remote changes with local priority
 - `e487dda` | 2026-04-15 | test: implement comprehensive integrity suite for workspaces and security
@@ -48,6 +54,7 @@ Total Recorded Commits: 326+
 - `7bd4b2a` | 2026-04-15 | feat: refactor core architecture with AgentOrchestrator and hyper-context awareness
 
 ## [0.10.x] — 2026-04-14 ("hotfix")
+
 - `1aba075` | 2026-04-14 | Merge pull request #81 from julesklord/security-fix-config-keyring
 - `e19cbbd` | 2026-04-14 | Merge branch 'main' into security-fix-config-keyring
 - `859eb9f` | 2026-04-14 | 🔒 Prevent plaintext API key leak on keyring failure
@@ -67,6 +74,7 @@ Total Recorded Commits: 326+
 - `0f9d20b` | 2026-04-14 | docs: consolidate changelog and update wiki for v0.10.0
 
 ## [0.10.0] — 2026-04-14 ("The Modular Jump")
+
 - `d109407` | 2026-04-14 | 🧪 test: implement reliable unit test suite for agent core and security
 - `68a7b43` | 2026-04-14 | 🌍 chore: translate system instructions and UI strings to English
 - `9ab8fbb` | 2026-04-14 | 🚀 release: v0.10.0 - modular refactor and CD automation
@@ -94,6 +102,7 @@ Total Recorded Commits: 326+
 - `9cb03e7` | 2026-04-13 | 🎨 Palette: Add localized tooltip to main prompt input
 
 ## [0.5.0 - 0.9.x] — 2026-04 ("Era de Expansión")
+
 - `040389d` | 2026-04-12 | ci: enhance security with gitleaks, dependabot and professional audit
 - `103e992` | 2026-04-12 | feat: add SECURITY.md and Python CI workflow
 - `264ac9a` | 2026-04-12 | 🎨 Palette: [Localize Dashboard UI Strings]
@@ -239,6 +248,7 @@ Total Recorded Commits: 326+
 - `a95681b` | 2026-04-04 | a
 
 ## [v0.1.0 - 0.4.x] — 2025 - 2026 ("Era Genesis / PyGemAi")
+
 - `e10db00` | 2026-04-03 | chore: align CHANGELOG to 0.8.0 release
 - `cc9a6a8` | 2026-04-03 | feat: implement core agent architecture and richer TUI
 - `75c7413` | 2026-04-03 | docs: rewrite README and update CHANGELOG

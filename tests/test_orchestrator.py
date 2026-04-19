@@ -1,9 +1,10 @@
-import pytest
 from unittest.mock import AsyncMock, MagicMock
-from collections.abc import AsyncGenerator
+
+import pytest
 
 from src.askgem.agent.orchestrator import AgentOrchestrator
-from src.askgem.agent.schema import AgentTurnStatus, Message, Role, AssistantMessage, ToolCall, UsageMetrics
+from src.askgem.agent.schema import AgentTurnStatus, Role, ToolCall, UsageMetrics
+
 
 class MockToolRegistry:
     def __init__(self):
@@ -29,7 +30,7 @@ async def test_orchestrator_streaming_loop():
         yield {"type": "thought", "content": "Checking files..."}
         yield {"type": "tool_call", "content": ToolCall(id="c1", name="list_dir", arguments={})}
         yield {"type": "metrics", "content": UsageMetrics(input_tokens=10, output_tokens=5)}
-        
+
         # In the orchestrator, it will wait for tool execution, then call generate_stream AGAIN
         # So we need a side_effect or a way to distinguish turns.
         # But for a simple unit test, let's satisfy one turn logic or mock based on call count.
@@ -47,7 +48,7 @@ async def test_orchestrator_streaming_loop():
             yield {"type": "metrics", "content": UsageMetrics(input_tokens=20, output_tokens=10)}
 
     mock_client.generate_stream.side_effect = stateful_stream
-    
+
     registry = MockToolRegistry()
     orchestrator = AgentOrchestrator(mock_client, registry)
     orchestrator._ensure_lsp_started = AsyncMock()

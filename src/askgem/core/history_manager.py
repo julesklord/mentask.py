@@ -11,7 +11,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from ..agent.schema import AssistantMessage, Message, Role, ToolCall, UsageMetrics
+from ..agent.schema import AssistantMessage, Message, Role
 from .paths import get_history_dir
 
 # Maximum number of messages to inject back into context.

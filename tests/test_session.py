@@ -1,9 +1,10 @@
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
-from unittest.mock import MagicMock, AsyncMock
-from collections.abc import AsyncGenerator
 
 from askgem.agent.core.session import SessionManager
 from askgem.agent.schema import Message, Role
+
 
 @pytest.mark.asyncio
 async def test_generate_stream_parsing():
@@ -14,7 +15,7 @@ async def test_generate_stream_parsing():
 
     # The SDK requires: async for chunk in await client.aio.models.generate_content_stream(...)
     # So the mock must be a regular function (or coro) that returns an AsyncGenerator.
-    
+
     async def internal_gen():
         # Chunk 1: Thought
         chunk1 = MagicMock()

@@ -1,14 +1,15 @@
 import os
 import sys
-import pytest
 from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 
 # Ensure we can import from src
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from src.askgem.agent.orchestrator import AgentOrchestrator
+from src.askgem.agent.schema import ToolResult
 from src.askgem.agent.tools.base import ToolRegistry
-from src.askgem.agent.schema import Message, Role, ToolResult
 
 
 @pytest.mark.asyncio

@@ -7,9 +7,9 @@ It does NOT manage filesystem paths or raw terminal rendering.
 
 import logging
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
-from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 

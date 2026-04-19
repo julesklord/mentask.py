@@ -177,7 +177,7 @@ class AgentOrchestrator:
             return result
 
         try:
-            with open(path, "r", encoding="utf-8") as handle:
+            with open(path, encoding="utf-8") as handle:
                 code = handle.read()
             diagnostics = await self.lsp.check_file(path, code)
         except Exception:

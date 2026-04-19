@@ -7,6 +7,8 @@ It does NOT manage filesystem paths or raw terminal rendering.
 
 import logging
 import sys
+from dataclasses import dataclass
+from datetime import datetime
 from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -37,43 +39,48 @@ from .tools.web_tool import WebFetchTool, WebSearchTool
 _logger = logging.getLogger("askgem")
 
 
+@dataclass(slots=True)
+class ChatAgentDependencies:
+    config: ConfigManager
+    history: HistoryManager
+    identity: KnowledgeManager
+    context: ContextManager
+    session: SessionManager | None = None
+    tools: ToolRegistry | None = None
+
+    @classmethod
+    def create_default(cls) -> "ChatAgentDependencies":
+        config = ConfigManager(console)
+        return cls(
+            config=config,
+            history=HistoryManager(console),
+            identity=KnowledgeManager(),
+            context=ContextManager(),
+        )
+
+
 class ChatAgent:
     """The central agent orchestrator.
     Coordinates session, context, streaming and commands.
     """
 
-    def __init__(self, ui_adapter: Any | None = None):
+    def __init__(self, ui_adapter: Any | None = None, dependencies: ChatAgentDependencies | None = None):
         """Initializes the chat agent and its specialized managers."""
         self.running = False
-        self.config = ConfigManager(console)
-        self.history = HistoryManager(console)
-        self.identity = KnowledgeManager()
-        # Settings
+        deps = dependencies or ChatAgentDependencies.create_default()
+        self.config = deps.config
+        self.history = deps.history
+        self.identity = deps.identity
+
         self.model_name = self.config.settings.get("model_name", "gemini-2.5-flash-lite")
         self.edit_mode = self.config.settings.get("edit_mode", "manual")
-        # Managers
-        self.session = SessionManager(self.config, self.model_name)
-        self.session.metrics = TokenTracker(model_name=self.model_name)
+        self.session = deps.session or SessionManager(self.config, self.model_name)
+        self.session.metrics = getattr(self.session, "metrics", None) or TokenTracker(model_name=self.model_name)
         self.metrics = self.session.metrics
-        self.context = ContextManager()
+        self.context = deps.context
         self.commands = CommandHandler(self)
 
-        # New Agentic System with Dynamic Config
-        self.tools = ToolRegistry()
-        self.tools.register(ListDirTool())
-        self.tools.register(ReadFileTool(self.config))
-        self.tools.register(WriteFileTool())
-        self.tools.register(EditFileTool())
-        self.tools.register(ShellTool(self.config))
-        self.tools.register(MemoryTool())
-
-        # New Search & Web Arsenal (v0.12.0)
-        self.tools.register(GrepSearchTool())
-        self.tools.register(GlobFindTool())
-
-        if self.config.settings.get("web_search_enabled", True):
-            self.tools.register(WebSearchTool(self.config))
-            self.tools.register(WebFetchTool())
+        self.tools = deps.tools or self._build_tool_registry()
 
         self.orchestrator = AgentOrchestrator(self.session, self.tools, self.config)
 
@@ -83,24 +90,33 @@ class ChatAgent:
 
     def _setup_system_prompt(self):
         """Injects the core identity, project context, and behavioral rules."""
-        # 1. Identity (from identity.md)
         base_identity = self.identity.read_identity()
-
-        # 2. Temporal Awareness
-        import datetime
-
-        now = datetime.datetime.now()
+        now = datetime.now()
         timestamp = now.strftime("%Y-%m-%d %H:%M:%S")
         day_name = now.strftime("%A")
 
         self.system_prompt = f"{base_identity}\n\nCURRENT_TIME: {timestamp} ({day_name})\n"
-        # Note: We no longer append to self.messages here to avoid redundancy
-        # in the SDK's system_instruction field.
 
-        # Stats
         self.session_messages = 0
         self.session_tools = 0
         self.interrupted = False
+
+    def _build_tool_registry(self) -> ToolRegistry:
+        registry = ToolRegistry()
+        registry.register(ListDirTool())
+        registry.register(ReadFileTool(self.config))
+        registry.register(WriteFileTool())
+        registry.register(EditFileTool())
+        registry.register(ShellTool(self.config))
+        registry.register(MemoryTool())
+        registry.register(GrepSearchTool())
+        registry.register(GlobFindTool())
+
+        if self.config.settings.get("web_search_enabled", True):
+            registry.register(WebSearchTool(self.config))
+            registry.register(WebFetchTool())
+
+        return registry
 
     def set_status_logger(self, logger_func: Callable[[str], None]):
         """Sets the callback for real-time status/debug logging."""
@@ -125,8 +141,6 @@ class ChatAgent:
             ]
 
         temp = self.config.settings.get("temperature", 0.7)
-
-        # Combine Identity + Context for the internal SDK parameter
         full_instruction = f"{self.system_prompt}\n\n{self.context.build_system_instruction()}"
 
         return types.GenerateContentConfig(
@@ -183,25 +197,90 @@ class ChatAgent:
         ):
             event_type = event.get("type")
             status = event.get("status")
+            self._handle_stream_event(renderer, status, event_type, event)
 
-            if status == AgentTurnStatus.THINKING:
-                pass
-            elif status == AgentTurnStatus.EXECUTING:
-                for tc in event.get("tool_calls", []):
-                    renderer.print_tool_call(tc.name, tc.arguments)
-            elif event_type == "thought":
-                # Thoughts arrive before text — no Live active yet, safe to print directly
-                renderer.print_thought(event["content"])
-            elif event_type == "text":
-                # Start Live on first text chunk, not before
-                if not renderer._streaming:
-                    renderer.start_stream()
-                renderer.update_stream(event["content"])
-            elif event_type == "tool_result":
-                renderer.print_tool_result(not event["is_error"], event["content"])
-            elif event_type == "metrics":
-                u = event["usage"]
-                self.metrics.add_usage(u.input_tokens, u.output_tokens)
+    def _handle_stream_event(
+        self, renderer: "CliRenderer", status: AgentTurnStatus | None, event_type: str | None, event: dict[str, Any]
+    ) -> None:
+        if status == AgentTurnStatus.THINKING:
+            return
+
+        if status == AgentTurnStatus.EXECUTING:
+            for tool_call in event.get("tool_calls", []):
+                renderer.print_tool_call(tool_call.name, tool_call.arguments)
+            return
+
+        if event_type == "thought":
+            renderer.print_thought(event["content"])
+            return
+
+        if event_type == "text":
+            if not renderer._streaming:
+                renderer.start_stream()
+            renderer.update_stream(event["content"])
+            return
+
+        if event_type == "tool_result":
+            renderer.print_tool_result(not event["is_error"], event["content"])
+            return
+
+        if event_type == "metrics":
+            usage = event["usage"]
+            self.metrics.add_usage(usage.input_tokens, usage.output_tokens)
+
+    def _maybe_initialize_workspace(self, confirm_ask: Callable[..., bool]) -> None:
+        local_ws = Path.cwd() / ".askgem"
+        global_config_dir = Path.home() / ".askgem"
+        if local_ws.exists() or Path.cwd() == global_config_dir:
+            return
+
+        console.print("\n[bold indigo]📁 PROJECT WORKSPACE[/bold indigo]")
+        should_init = confirm_ask(
+            "No local workspace [dim](.askgem/)[/] detected. "
+            "Initialize one for this project to isolate history and knowledge?",
+            default=False,
+        )
+        if should_init:
+            local_ws.mkdir(parents=True, exist_ok=True)
+            console.print(f"[success][✓] Workspace initialized at {local_ws}[/success]")
+
+    def _restore_last_session(self) -> tuple[list[str], list[Message] | None]:
+        history_data = None
+        sessions = self.history.list_sessions()
+        if sessions:
+            history_data = self.history.load_session(sessions[-1])
+            if history_data:
+                self.messages.extend([message for message in history_data if message.role != Role.SYSTEM])
+        return sessions, history_data
+
+    async def _handle_command_input(self, user_input: str, renderer: "CliRenderer") -> bool:
+        if not user_input.startswith("/"):
+            return False
+
+        if user_input.lower() in ("/exit", "/quit", "/q"):
+            self.running = False
+            return True
+
+        result = await self.commands.execute(user_input)
+        renderer.print_command_output(result)
+        return True
+
+    async def _handle_user_turn(self, user_input: str, renderer: "CliRenderer") -> None:
+        self.session_messages += 1
+        renderer.print_user(user_input)
+
+        try:
+            await self._stream_response(user_input, renderer)
+            renderer.end_stream()
+            renderer.print_metrics(self.metrics.get_summary())
+            self._save_history()
+        except KeyboardInterrupt:
+            renderer.end_stream()
+            renderer.print_warning("Generation interrupted.")
+        except Exception as exc:
+            renderer.print_error(str(exc))
+        finally:
+            renderer.print_turn_divider()
 
     async def start(self) -> None:
         """Rich CLI entry point — streaming renderer with code blocks and think panels."""
@@ -210,40 +289,17 @@ class ChatAgent:
         from .. import __version__
         from ..cli.renderer import CliRenderer
 
-        # Workspace Initialization Check
-        local_ws = Path.cwd() / ".askgem"
-        global_config_dir = Path.home() / ".askgem"
-        # Only ask if we are NOT in the global config dir itself
-        # and no local workspace exists.
-        if not local_ws.exists() and Path.cwd() != global_config_dir:
-            console.print("\n[bold indigo]📁 PROJECT WORKSPACE[/bold indigo]")
-            should_init = Confirm.ask(
-                "No local workspace [dim](.askgem/)[/] detected. "
-                "Initialize one for this project to isolate history and knowledge?",
-                default=False,
-            )
-            if should_init:
-                local_ws.mkdir(parents=True, exist_ok=True)
-                console.print(f"[success][✓] Workspace initialized at {local_ws}[/success]")
+        self._maybe_initialize_workspace(Confirm.ask)
 
-        # Load theme from settings
         current_theme = self.config.settings.get("theme", "indigo")
         renderer = CliRenderer(console, theme_name=current_theme)
-        self.active_renderer = renderer  # Store ref for dynamic commands
+        self.active_renderer = renderer
 
         if not await self.setup_api():
             sys.exit(1)
 
         self.running = True
-
-        # ── Restore Context ───────────────────────────────────────────
-        history_data = None
-        sessions = self.history.list_sessions()
-        if sessions:
-            history_data = self.history.load_session(sessions[-1])
-            if history_data:
-                # Filter out system and virtual messages, then append to our buffer
-                self.messages.extend([m for m in history_data if m.role != Role.SYSTEM])
+        sessions, history_data = self._restore_last_session()
 
         await self.session.ensure_session(self._build_config(), history=None)
 
@@ -253,7 +309,6 @@ class ChatAgent:
 
         while self.running:
             try:
-                # ── Prompt ────────────────────────────────────────────
                 try:
                     user_input = console.input("[bold #94a3b8]  ❯  [/]").strip()
                 except EOFError:
@@ -261,32 +316,11 @@ class ChatAgent:
                 if not user_input:
                     continue
 
-                # ── Slash commands ─────────────────────────────────────
-                if user_input.startswith("/"):
-                    if user_input.lower() in ("/exit", "/quit", "/q"):
-                        self.running = False
-                        break
-                    result = await self.commands.execute(user_input)
-                    renderer.print_command_output(result)
+                handled = await self._handle_command_input(user_input, renderer)
+                if handled:
                     continue
 
-                # ── Agent turn ─────────────────────────────────────────
-                self.session_messages += 1
-                renderer.print_user(user_input)  # Echo user input before agent starts
-
-                try:
-                    await self._stream_response(user_input, renderer)
-                    renderer.end_stream()  # Finalize any active stream + structured render
-                    renderer.print_metrics(self.metrics.get_summary())
-                    self._save_history()  # AUTO SAVE
-                except KeyboardInterrupt:
-                    renderer.end_stream()
-                    renderer.print_warning("Generation interrupted.")
-                except Exception as exc:
-                    renderer.print_error(str(exc))
-                finally:
-                    renderer.print_turn_divider()
-
+                await self._handle_user_turn(user_input, renderer)
             except KeyboardInterrupt:
                 self.running = False
                 break

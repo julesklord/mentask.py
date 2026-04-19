@@ -1,17 +1,17 @@
 # askgem — Development Roadmap
 
 > **Last Updated:** April 16, 2026
-> **Current Version:** `0.13.3` ("hotfix")
+> **Current Version:** `0.13.4`
 > **Maintainer:** [@julesklord](https://github.com/julesklord)
-> **Status:** Full Stability Reached
+> **Status:** Active stabilization
 
-This document outlines the comprehensive engineering roadmap for `askgem`, organized into prioritized milestones. With the release of v0.13.2, we have achieved the goal of a bulletproof, multimodal autonomous core.
+This document outlines the engineering roadmap for `askgem`, organized into prioritized milestones. The current focus is tightening reliability, documentation coherence, and language-aware editing on top of the existing autonomous core.
 
 ---
 
 ## Current State Assessment
 
-### What askgem v0.13.2 Can Do Today
+### What askgem v0.13.4 Can Do Today
 
 | Capability | Status | Description |
 | :--- | :--- | :--- |
@@ -20,9 +20,9 @@ This document outlines the comprehensive engineering roadmap for `askgem`, organ
 | **Autonomous Orchestration** | ✅ Shipped | Advanced Think -> Act -> Observe loop with 429 retry logic. |
 | **TrustManager Security** | ✅ Shipped | Recursive directory validation and Path Traversal prevention. |
 | **Web Research** | ✅ Shipped | Live internet search (Google/DDG) and content extraction. |
-| **Full Validation** | ✅ Shipped | 129 unit/integration tests ensuring 100% stability on Windows. |
+| **Full Validation** | ✅ Shipped | Broad unit/integration coverage across the core agent, tools, and CLI. |
 | **Unified Pydantic Core** | ✅ Shipped | Type-safe communication between managers and tools. |
-| **TUI Dashboard** | ✅ Shipped | Premium Textual-based interface with real-time analytics. |
+| **Terminal Renderer** | ✅ Shipped | Rich-based streaming CLI with inline confirmations and audit views. |
 
 ### Architecture Diagram
 
@@ -85,8 +85,9 @@ graph TD
 | Item | Priority | Status |
 | :--- | :--- | :--- |
 | **Translation Parity** | High | ✅ Solved in v0.13.2 (8 locales synchronized). |
-| **Test Coverage** | Medium | ✅ 129 tests reaching critical modules. |
-| **Type Hinting** | Low | Partially complete; Move towards `mypy --strict`. |
+| **Docs Consistency** | High | In progress; remove stale dashboard/TUI references and align docs with runtime behavior. |
+| **CLI Contract Tests** | High | In progress; entrypoint tests aligned with current `--list` and default startup flow. |
+| **Type Hinting** | Low | Partially complete; move toward stricter typing in orchestration and tool layers. |
 
 ---
 
@@ -95,9 +96,9 @@ graph TD
 ```text
 2026-04-14  v0.10.0  ████      The Modular Jump
 2026-04-15  v0.13.0  ████████  Muad'Dib: Pydantic Core
-2026-04-16  v0.13.3  ████████  hotfix (CURRENT)
+2026-04-16  v0.13.4  ████████  CLI alignment and LSP hardening (CURRENT)
 2026-05     v0.14.0  ░░░       Bene Gesserit: Optimization & LSP
 ```
 
 ---
-*The spice must flow, but the code must be stable.* 🛡️✨📡🧪
+*The code must be stable before the feature set expands.*

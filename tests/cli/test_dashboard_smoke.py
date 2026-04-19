@@ -1,37 +1,8 @@
-"""
-Smoke tests for the AskGem TUI Dashboard.
-"""
-
-from unittest.mock import MagicMock, patch
-
 import pytest
 
 from askgem.cli.dashboard import AskGemDashboard
 
 
-@pytest.fixture
-def mock_agent():
-    """Mock agent with required attributes."""
-    agent = MagicMock()
-    agent.model_name = "gemini-1.5-flash"
-    agent.edit_mode = "manual"
-    agent.metrics.get_summary.return_value = "Tokens: 1,500\nCost: $0.05"
-    return agent
-
-
-def test_dashboard_initialization(mock_agent):
-    """Verifies that the dashboard app can be instantiated."""
-    app = AskGemDashboard(agent=mock_agent)
-    assert app.agent == mock_agent
-
-    # Mock internal components expected by on_mount
-    app.sidebar = MagicMock()
-    app.chat_log = MagicMock()
-    app._update_metrics = MagicMock()
-
-    # Mock set_interval and init_api to avoid event loop issues
-    with patch.object(app, "set_interval"), patch.object(app, "init_api"):
-        # Trigger the real on_mount logic manually since we're not running the full app
-        app.on_mount()
-    assert mock_agent.set_status_logger.called
-    assert app.title == "AskGem v0.10.0"
+def test_dashboard_stub_raises_clear_deprecation_error():
+    with pytest.raises(RuntimeError, match="has been removed"):
+        AskGemDashboard()

@@ -41,7 +41,7 @@ flowchart TD
 
 1. **`src/askgem/cli/` (Presentation Layer)**
     * `main.py`: Entry point for session orchestration and environment boot.
-    * `renderer.py`: Advanced TUI renderer handling interactive prompts, boxed messages, and streaming Markdown.
+    * `renderer.py`: Rich-based terminal renderer handling interactive prompts and streaming Markdown.
 
 2. **`src/askgem/agent/` (Orchestration Layer)**
     * `orchestrator.py`: **[The Heart]** Central loop managing the *Thinking -> Action -> Observation* cycle. Supports simulation playback and tool routing.
@@ -56,6 +56,10 @@ flowchart TD
     * `security.py`: Real-time risk analysis and path resolution guards.
     * `paths.py`: Maps package-internal folders, local `.askgem/` designs, and global configuration.
     * `metrics.py`: Token consumption and cost tracking.
+
+## UI Note
+
+The old Textual dashboard has been removed. `cli/dashboard.py` remains only as a compatibility stub that raises a clear deprecation error for stale imports.
 
 ## Execution Flow (v0.13.0 Hierarchical)
 

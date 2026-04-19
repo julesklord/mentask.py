@@ -1,6 +1,6 @@
 # askgem — Autonomous AI Coding Agent for the Terminal
 
-[![Python 3.8+](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/downloads/) [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-green.svg)](LICENSE) [![Powered by Gemini](https://img.shields.io/badge/Powered%20by-Google%20Gemini-4285F4?logo=google&logoColor=white)](https://ai.google.dev/) [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff) [![Security Scan](https://github.com/julesklord/askgem.py/actions/workflows/security.yml/badge.svg)](https://github.com/julesklord/askgem.py/actions/workflows/security.yml) [![CD - Release](https://github.com/julesklord/askgem.py/actions/workflows/release.yml/badge.svg)](https://github.com/julesklord/askgem.py/actions/workflows/release.yml)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/) [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-green.svg)](LICENSE) [![Powered by Gemini](https://img.shields.io/badge/Powered%20by-Google%20Gemini-4285F4?logo=google&logoColor=white)](https://ai.google.dev/) [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff) [![Security Scan](https://github.com/julesklord/askgem.py/actions/workflows/security.yml/badge.svg)](https://github.com/julesklord/askgem.py/actions/workflows/security.yml) [![CD - Release](https://github.com/julesklord/askgem.py/actions/workflows/release.yml/badge.svg)](https://github.com/julesklord/askgem.py/actions/workflows/release.yml)
 ---
 
 ![askgem banner](docs/assets/banner.png)
@@ -34,6 +34,7 @@ with your codebase.
 - [Architecture](#architecture)
 - [Development & Simulation](#development--simulation)
 - [Internationalization](#internationalization)
+- [Repository Standard](#repository-standard)
 - [Roadmap](#roadmap)
 - [Contributing](#contributing)
 - [License](#license)
@@ -85,14 +86,13 @@ Switch modes anytime mid-session:
 - **`/mode manual`** (default) — approve each file edit and shell command.
 - **`/mode auto`** — trust the agent fully; all actions execute without prompts.
 
-### Modern TUI Dashboard (Push-Layout)
+### Streaming terminal UX
 
-A stable, high-performance interface built with the `Textual` framework, optimized for Windows:
+AskGem now runs through a Rich-based terminal renderer:
 
-- Real-time syntax-highlighted Markdown streaming.
-- Reactive Sidebar showing live model context, current mission, and token stats.
-- Command Palette with autocomplete suggestions for slash commands.
-- Hidden output pane (F12) for detailed tool execution logs and debug info.
+- Real-time Markdown streaming in the terminal.
+- Inline confirmations for file edits and shell commands.
+- Focus on a fast, scriptable CLI flow instead of a separate dashboard app.
 
 ### Persistent session history
 
@@ -128,7 +128,7 @@ Specific security guards for Windows users: prevents unauthorized operations acr
 
 ### Prerequisites
 
-- **Python 3.8 to 3.14** (v0.10.0 adds support for Python 3.14).
+- **Python 3.10+**.
 - A **Google API Key** — free at [Google AI Studio](https://aistudio.google.dev/).
 
 ### From source (recommended)
@@ -292,7 +292,7 @@ flowchart TD
 
 ### Layer Breakdown
 
-1. **Presentation Layer (`cli/`)**: Handles the TUI lifecycle, interactive prompts, and real-time Markdown rendering via `renderer.py`.
+1. **Presentation Layer (`cli/`)**: Handles CLI startup, interactive prompts, audit views, and real-time Markdown rendering.
 2. **Cognitive Layer (`agent/`)**: The "Brain". Powered by the `AgentOrchestrator`, it manages state, context blueprints, and mission tracking.
 3. **Security Layer (`core/`)**: The "Guard". Gathers risk analysis and whitelisting logic to ensure the agent never exceeds its authority.
 
@@ -312,7 +312,7 @@ askgem.py/
 │   │       └── simulation.py    # Deterministic loop recording
 │   ├── cli/
 │   │   ├── main.py              # Entry point and session initialization
-│   │   ├── renderer.py          # TUI interface and interactive prompts
+│   │   ├── renderer.py          # Rich streaming renderer and interactive prompts
 │   ├── core/
 │   │   ├── security.py          # Hardened safety engine
 │   │   ├── trust_manager.py     # Directory trust whitelist control
@@ -370,12 +370,21 @@ AskGem is **English-First** at the SDK/System level for maximum model reliabilit
 
 ---
 
+## Repository Standard
+
+`askgem.py` is now the reference repo for structure, hygiene, and architecture conventions in this workspace.
+
+See [STANDARD.md](STANDARD.md) for the operating standard to apply across the other repositories.
+
+---
+
 ## Roadmap
 
 | Version | Theme | Status |
 |---|---|---|
-| `v0.10.0`| Modular core, Stable TUI, Simulation, CD | ✅ Done |
-| `v0.11.0`| **Workspaces, High-Security, Híper-Contexto** | ✅ Current |
+| `v0.10.0`| Modular core, terminal UX foundation, simulation, CD | ✅ Done |
+| `v0.11.0`| **Workspaces, High-Security, Hiper-Contexto** | ✅ Done |
+| `v0.13.4`| CLI alignment, LSP hardening, documentation cleanup | ✅ Current |
 | `v1.0.0` | Stable Release — Full docs, PyPI publication | 📋 Planned |
 | `v1.1.0` | Web tools — Google Search integration | 📋 Planned |
 | `v2.0.0` | LSP diagnostics and plugin ecosystem | 🔵 Future |
@@ -386,4 +395,4 @@ AskGem is **English-First** at the SDK/System level for maximum model reliabilit
 
 GNU General Public License v3.0 — see [LICENSE](LICENSE) for full terms.
 
-Built with 💎 by [julesklord](https://github.com/julesklord).
+Built by [julesklord](https://github.com/julesklord).

@@ -25,7 +25,6 @@ with your codebase.
 
 - [How it works](#how-it-works)
 - [Features](#features)
-- [Demo](#demo)
 - [New in v0.11.0: Hyper-Context & Security](#new-in-v0110-hyper-context--security-hardening)
 - [Installation](#installation)
 - [Configuration](#configuration)
@@ -100,60 +99,6 @@ AskGem now runs through a Rich-based terminal renderer:
 Every conversation auto-saves to `~/.askgem/history/` as JSON. Reload any past
 session with `/history load <id>`. A rolling context window and proactive summarization
 keep reloaded sessions within token budget.
-
----
-
-## Demo
-
-Watch askgem in action:
-
-### Terminal Recording (VHS)
-
-We've recorded an interactive terminal session demonstrating askgem's core workflow:
-
-```bash
-# Generate the demo recording (requires VHS)
-vhs < docs/demo.tape > docs/demo.gif
-
-# View the generated GIF
-open docs/demo.gif  # macOS
-xdg-open docs/demo.gif  # Linux
-start docs/demo.gif  # Windows
-```
-
-**What the demo shows:**
-- ✅ Startup and help system
-- ✅ Interactive mission tracking (`/mission status`)
-- ✅ Session history management (`/history list`)
-- ✅ Graceful exit with cleanup
-
-### Quick Start Example
-
-```bash
-# 1. Install askgem
-pip install askgem
-
-# 2. Set your API key (prompted on first run, saved securely)
-export GEMINI_API_KEY="your-api-key-here"
-
-# 3. Start a session
-askgem
-
-# 4. Try a simple task
-"Create a Python function that validates email addresses with regex"
-
-# 5. Review the generated code, approve edits, and move on
-# The full session is saved to ~/.askgem/history/
-```
-
-### Recording Your Own Demos
-
-To create custom terminal recordings with **VHS**:
-
-1. **Install VHS**: [github.com/charmbracelet/vhs](https://github.com/charmbracelet/vhs)
-2. **Edit `docs/demo.tape`** with your desired commands
-3. **Generate**: `vhs < docs/demo.tape > docs/your-demo.gif`
-4. **Share**: Commit the GIF and reference it in docs or issues
 
 ---
 

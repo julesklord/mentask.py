@@ -373,8 +373,8 @@ See [STANDARD.md](STANDARD.md) for the operating standard to apply across the ot
 | Version | Theme | Status |
 |---|---|---|
 | `v0.14.0`| Stability, Renderer Polish | ✅ Done |
-| `v0.14.1` - `v0.14.9`| Iterative Enhancements | 📋 Planned |
-| `v0.15.0`| Major Feature Phase | 📋 Planned |
+| `v0.14.1` - `v0.14.9`| Iterative Enhancements | ✅ Done |
+| `v0.15.0`| **Kwisatz Haderach** - Major Refactoring | ✅ Done |
 | `v1.0.0` | Stable Release — Full docs, PyPI publication | 📋 Planned |
 
 ---

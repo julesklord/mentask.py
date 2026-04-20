@@ -262,10 +262,25 @@ All notable changes to this project will be documented in this file.
 - Added: feat(config): add google search support to settings (5dd2711)
 
 
-## [0.15.0] - "Kwisatz Haderach" - 2026-04-19
+## [0.16.0] - "The Golden Path" - 2026-04-20
 
 ### Description
-Final architectural hardening of the "Bene Gesserit" initiative. This release culminates the integration of a native LSP (Language Server Protocol) client for autonomous linting via Ruff, coupled with a robust AgentOrchestrator architecture for optimized diagnostic capture and background processing, establishing the foundation for autonomous codebase integrity.
+Recovery and finalization of the "Bene Gesserit" initiative. This release consolidates the Professional Renderer, Stream Speed Control (Theme system), and native LSP integration into a stable build.
+
+### Added
+- **Professional Renderer**: Enhanced CLI output with theme support (Smuffle/Snuggles) and improved visual feedback.
+- **Stream Speed Control**: Configurable `stream_delay` to control the pacing of agent responses.
+- **LSP Auto-Check**: Integrated real-time linting diagnostics into the AgentOrchestrator loop.
+
+### Fixed
+- Fixed critical release issue where v0.15.0 was shipped as an empty commit.
+- Resolved merge conflicts and synchronized versioning across all core components.
+- Hardened GitHub Actions workflows with caching and multi-version Python testing.
+
+## [0.15.0] - "Kwisatz Haderach" - 2026-04-19 (Placeholder)
+
+### Description
+Original release target for architectural hardening. Due to a technical failure, this version was shipped empty. All intended features have been recovered and delivered in v0.16.0.
 
 ## [0.14.9] - 2026-04-19
 

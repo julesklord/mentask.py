@@ -11,7 +11,7 @@ def test_parse_args_accepts_list_option(monkeypatch):
 
     args = _parse_args()
 
-    assert args == Namespace(list="all")
+    assert args == Namespace(list="all", session_id=None)
 
 
 def test_parse_args_rejects_invalid_list_value(monkeypatch):
@@ -22,7 +22,7 @@ def test_parse_args_rejects_invalid_list_value(monkeypatch):
 
 
 def test_run_chatbot_starts_agent_when_no_list_requested():
-    with patch("askgem.cli.main._parse_args", return_value=Namespace(list=None)), \
+    with patch("askgem.cli.main._parse_args", return_value=Namespace(list=None, session_id="test_session")), \
          patch("askgem.agent.chat.ChatAgent") as mock_agent_class, \
          patch("asyncio.run") as mock_asyncio_run:
         mock_agent = MagicMock()
@@ -30,12 +30,12 @@ def test_run_chatbot_starts_agent_when_no_list_requested():
 
         run_chatbot()
 
-    mock_agent_class.assert_called_once_with()
+    mock_agent_class.assert_called_once_with(session_id="test_session")
     mock_asyncio_run.assert_called_once_with(mock_agent.start())
 
 
 def test_run_chatbot_lists_requested_audit_section():
-    with patch("askgem.cli.main._parse_args", return_value=Namespace(list="sessions")), \
+    with patch("askgem.cli.main._parse_args", return_value=Namespace(list="sessions", session_id=None)), \
          patch("askgem.cli.console.console") as mock_console, \
          patch("askgem.core.audit_manager.AuditManager") as mock_audit_class, \
          patch("askgem.agent.chat.ChatAgent") as mock_agent_class:
@@ -53,7 +53,7 @@ def test_run_chatbot_lists_requested_audit_section():
 
 
 def test_run_chatbot_lists_all_audit_sections():
-    with patch("askgem.cli.main._parse_args", return_value=Namespace(list="all")), \
+    with patch("askgem.cli.main._parse_args", return_value=Namespace(list="all", session_id=None)), \
          patch("askgem.cli.console.console") as mock_console, \
          patch("askgem.core.audit_manager.AuditManager") as mock_audit_class:
         mock_audit = MagicMock()

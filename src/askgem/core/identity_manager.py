@@ -35,12 +35,61 @@ class KnowledgeManager:
 
         return "\n\n".join(content)
 
+    def get_knowledge_index(self) -> str:
+        """
+        Returns a concise index of all available knowledge modules across hubs.
+        This is what will be injected into the system prompt.
+        """
+        index = []
+        
+        for label, directory in [
+            ("STANDARD", self.standard_dir),
+            ("GLOBAL", self.global_dir),
+            ("LOCAL", self.active_dir)
+        ]:
+            if directory.exists():
+                modules = [f"{md.stem.upper()}" for md in directory.glob("*.md")]
+                if modules:
+                    index.append(f"- {label}: {', '.join(modules)}")
+        
+        # Check for legacy local file
+        if (Path.cwd() / ".askgem_knowledge.md").exists():
+            index.append("- LOCAL: PROJECT_KNOWLEDGE (Legacy file)")
+
+        if not index:
+            return "No extended knowledge modules available."
+            
+        return "\n".join(index)
+
+    def get_module_content(self, module_name: str) -> str | None:
+        """
+        Retrieves the content of a specific module by its name (case-insensitive).
+        """
+        target = module_name.lower()
+        
+        # Search in all directories
+        for directory in [self.active_dir, self.global_dir, self.standard_dir]:
+            if not directory.exists():
+                continue
+            for md_file in directory.glob("*.md"):
+                if md_file.stem.lower() == target:
+                    try:
+                        return md_file.read_text(encoding="utf-8").strip()
+                    except Exception:
+                        continue
+        
+        # Check legacy file
+        if target in ("project_knowledge", ".askgem_knowledge"):
+            legacy_path = Path.cwd() / ".askgem_knowledge.md"
+            if legacy_path.exists():
+                return legacy_path.read_text(encoding="utf-8").strip()
+
+        return None
+
     def read_knowledge_hub(self) -> str:
         """
-        Aggregates the entire Knowledge Hub hierarchy.
-
-        Returns:
-            str: Full concatenated markdown instructions.
+        Aggregates the entire Knowledge Hub hierarchy (Legacy/Full mode).
+        Used when token economy is not a priority or for debugging.
         """
         full_hub = []
 

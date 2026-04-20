@@ -74,8 +74,41 @@ class TestKnowledgeManager:
 
     def test_read_identity_compatibility(self, mock_paths):
         # Ensure read_identity (legacy alias) still works
-        manager = KnowledgeManager()
-        with open(mock_paths["standard"] / "identity.md", "w", encoding="utf-8") as f:
-            f.write("I am AskGem")
+        with patch("pathlib.Path.cwd", return_value=mock_paths["local"]):
+            manager = KnowledgeManager()
+            with open(mock_paths["standard"] / "identity.md", "w", encoding="utf-8") as f:
+                f.write("I am AskGem")
+            # Wait, read_identity looks for .askgem_identity.md specifically now
+            # and it looks in global_dir and local_path
+            with open(mock_paths["global"] / ".askgem_identity.md", "w", encoding="utf-8") as f:
+                f.write("I am Global AskGem")
 
-        assert "I am AskGem" in manager.read_identity()
+            assert "I am Global AskGem" in manager.read_identity()
+
+    def test_get_knowledge_index(self, mock_paths):
+        # Setup files at different levels
+        with open(mock_paths["standard"] / "rules.md", "w", encoding="utf-8") as f:
+            f.write("Rules")
+        with open(mock_paths["global"] / "settings.md", "w", encoding="utf-8") as f:
+            f.write("Settings")
+            
+        manager = KnowledgeManager()
+        index = manager.get_knowledge_index()
+        
+        assert "STANDARD: RULES" in index
+        assert "GLOBAL: SETTINGS" in index
+
+    def test_get_module_content(self, mock_paths):
+        with open(mock_paths["standard"] / "rules.md", "w", encoding="utf-8") as f:
+            f.write("Strict Rules Content")
+            
+        manager = KnowledgeManager()
+        content = manager.get_module_content("RULES")
+        assert content == "Strict Rules Content"
+        
+        # Test case insensitivity
+        content_low = manager.get_module_content("rules")
+        assert content_low == "Strict Rules Content"
+        
+        # Test non-existent
+        assert manager.get_module_content("NONEXISTENT") is None

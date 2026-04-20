@@ -31,6 +31,7 @@ from .orchestrator import AgentOrchestrator
 from .schema import AgentTurnStatus, Message, Role
 from .tools.base import ToolRegistry
 from .tools.file_tools import EditFileTool, ListDirTool, ReadFileTool, WriteFileTool
+from .tools.knowledge_tool import KnowledgeTool
 from .tools.memory_tool import MemoryTool
 from .tools.search_tool import GlobFindTool, GrepSearchTool
 from .tools.shell_tools import ShellTool
@@ -90,13 +91,21 @@ class ChatAgent:
         self._setup_system_prompt()
 
     def _setup_system_prompt(self):
-        """Injects the core identity, project context, and behavioral rules."""
+        """Injects the core identity, knowledge index, project context, and behavioral rules."""
         base_identity = self.identity.read_identity()
+        knowledge_index = self.identity.get_knowledge_index()
         now = datetime.now()
         timestamp = now.strftime("%Y-%m-%d %H:%M:%S")
         day_name = now.strftime("%A")
 
-        self.system_prompt = f"{base_identity}\n\nCURRENT_TIME: {timestamp} ({day_name})\n"
+        self.system_prompt = (
+            f"{base_identity}\n\n"
+            f"## KNOWLEDGE HUB INDEX\n"
+            f"You have access to the following knowledge modules via 'query_knowledge(module_name=...)'.\n"
+            f"Consult them if you need specific guidance on architecture, rules, or standards:\n"
+            f"{knowledge_index}\n\n"
+            f"CURRENT_TIME: {timestamp} ({day_name})\n"
+        )
 
         self.session_messages = 0
         self.session_tools = 0
@@ -110,6 +119,7 @@ class ChatAgent:
         registry.register(EditFileTool())
         registry.register(ShellTool(self.config))
         registry.register(MemoryTool())
+        registry.register(KnowledgeTool(self.identity))
         registry.register(GrepSearchTool())
         registry.register(GlobFindTool())
 

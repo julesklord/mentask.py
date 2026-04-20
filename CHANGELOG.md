@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 
 
+## [0.17.2] - 2026-04-20
+
+### Changed
+- **Logging**: Migrated internal `print` statements in `LSPClient` and `HistoryManager` to `logging.info/error` for better observability and professional output control.
+- **UI**: Standardized all user-facing output to use `console.print` through the `CliRenderer` system.
+
+
 ## [0.17.1] - 2026-04-20
 
 ### Fixed

@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 
 
+## [0.17.3] - 2026-04-20
+
+### Fixed
+- **Artifact Expansion**: Resolved ANSI escape sequence corruption on Windows when expanding artifacts via `Ctrl+O` while the prompt is active (using `patch_stdout`).
+- **Highlighting**: Added syntax highlighting support for `write_file` results and ensured LSP diagnostics markup is rendered correctly.
+
+
 ## [0.17.2] - 2026-04-20
 
 ### Changed

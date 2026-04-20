@@ -400,7 +400,7 @@ class ChatAgent:
                 if HAS_PT:
                     with patch_stdout():
                         try:
-                            user_input = await session.prompt_async("  >  ").strip()
+                            user_input = (await session.prompt_async("  >  ")).strip()
                         except (EOFError, KeyboardInterrupt):
                             break
                 else:

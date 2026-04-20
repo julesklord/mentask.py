@@ -343,13 +343,16 @@ class CliRenderer:
         )
 
     def expand_artifact(self, index: int = -1) -> None:
-        """Displays the full content of a stored artifact."""
+        """Displays the full content of a stored artifact with enhanced formatting."""
+        from rich.syntax import Syntax
+        from rich.markdown import Markdown
+        from rich.markup import escape
+
         if not self.artifacts:
             self.print_warning("No tool artifacts to expand.")
             return
 
         try:
-            # Handle out of bounds or negative indexing correctly for display
             actual_idx = index if index >= 0 else len(self.artifacts) + index
             if actual_idx < 0 or actual_idx >= len(self.artifacts):
                 self.print_error(f"Artifact {index} not found.")
@@ -358,14 +361,37 @@ class CliRenderer:
             name, full_content = self.artifacts[actual_idx]
             artifact_id = f"#{actual_idx + 1}"
 
+            # 1. Prepare renderable based on tool type
+            renderable = None
+            
+            # Code-heavy tools
+            if name in ["read_file", "edit_file", "write_file", "execute_bash", "execute_command"]:
+                # Try to guess language for syntax highlighting
+                # For bash output, it's mostly text, but Syntax helps with ANSI/structure
+                renderable = Syntax(
+                    full_content, 
+                    "bash" if "bash" in name or "command" in name else "python",
+                    theme="monokai",
+                    line_numbers=True,
+                    word_wrap=True
+                )
+            # Markdown-like content or content with Rich markup (like LSP diagnostics)
+            elif full_content.strip().startswith("#") or "```" in full_content or "[LSP DIAGNOSTICS" in full_content:
+                # If it's a tool result with diagnostics, we want to see the markup colors
+                renderable = Markdown(full_content) if "#" in full_content else Text.from_markup(full_content)
+            # Generic tool output
+            else:
+                # Use Text object to handle plain strings safely
+                renderable = Text(full_content)
+
             self.console.print()
             self.console.print(
                 Panel(
-                    full_content,
+                    renderable,
                     title=f"[bold {self.C_BRAND}]Expanded Artifact {artifact_id} ({name})[/]",
                     border_style=self.C_BRAND,
                     padding=(1, 2),
-                    subtitle="[dim italic]End of expanded content[/dim italic]"
+                    subtitle="[dim italic]End of expanded content (Esc to close pager if active)[/dim italic]"
                 )
             )
         except Exception as e:

@@ -389,7 +389,8 @@ class ChatAgent:
             @kb.add("c-o")
             def _expand_last(event):
                 """Expand the last tool artifact on Ctrl+O."""
-                renderer.expand_artifact(-1)
+                with patch_stdout():
+                    renderer.expand_artifact(-1)
 
             session = PromptSession(key_bindings=kb)
         else:

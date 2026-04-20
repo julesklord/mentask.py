@@ -1,4 +1,5 @@
 ﻿import os
+import logging
 from collections.abc import AsyncGenerator, Callable
 from typing import Any
 
@@ -6,13 +7,16 @@ from .core.execution import ExecutionManager
 from .core.provider import ProviderManager
 from .schema import AgentTurnStatus, Message, Role, ToolResult
 from .tools.base import ToolRegistry
+from ..core.compression import ContextSnapper
+from ..core.summarizer import Summarizer
 
+_logger = logging.getLogger("askgem")
 
 class AgentOrchestrator:
     """
     High-level Coordinator for AskGem.
-    Implements the Thinking -> Action -> Observation loop by orchestrating 
-    specialized managers.
+    Implements the Thinking -> Action -> Observation loop.
+    Now with Proactive Context Snapping and Modular Managers.
     """
 
     def __init__(self, client, tool_registry: ToolRegistry, config: Any = None):
@@ -21,45 +25,49 @@ class AgentOrchestrator:
         self.config = config
         self.active_status = AgentTurnStatus.IDLE
         
-        # Specialized Managers (Modular Architecture)
+        # Specialized Managers
         self.provider = ProviderManager(client)
         self.executor = ExecutionManager(tool_registry)
+        
+        # Performance & Optimization
+        self.snapper = ContextSnapper(client.model_name)
+        self.summarizer = Summarizer()
 
     def _build_plan_context(self, plan_file: str = ".askgem_plan.md") -> str:
-        if not os.path.exists(plan_file):
-            return ""
-
+        if not os.path.exists(plan_file): return ""
         try:
             with open(plan_file, encoding="utf-8") as handle:
                 raw_plan = handle.read().strip()
-        except Exception:
-            return ""
-
-        if not raw_plan:
-            return ""
-
-        return (
-            f"\n\n## ACTIVE EXECUTION PLAN (from {plan_file}):\n"
-            "You are currently executing the following multi-turn plan. "
-            "Reference this to maintain state and know your next steps:\n"
-            f"```markdown\n{raw_plan}\n```"
-        )
+            return f"\n\n## ACTIVE EXECUTION PLAN (from {plan_file}):\n{raw_plan}" if raw_plan else ""
+        except Exception: return ""
 
     def _build_turn_config(self, config: Any | None) -> Any | None:
         plan_context = self._build_plan_context()
         if not plan_context or not config or not hasattr(config, "system_instruction"):
             return config
-
         from copy import copy
         turn_config = copy(config)
-        instruction = turn_config.system_instruction or ""
-        turn_config.system_instruction = f"{instruction}{plan_context}"
+        turn_config.system_instruction = f"{turn_config.system_instruction}{plan_context}"
         return turn_config
 
+    async def _perform_context_snap(self, history: list[Message], config: Any) -> list[Message]:
+        """Summarizes history and resets context."""
+        _logger.info("Context threshold reached. Snapping...")
+        summary_prompt = self.summarizer.BASE_SUMMARIZATION_PROMPT
+        history.append(Message(role=Role.USER, content=summary_prompt))
+        
+        raw_summary = ""
+        async for event in self.provider.stream_turn(history, [], config=config):
+            if event["type"] == "text":
+                raw_summary = event["content"]
+        
+        formatted_summary = self.summarizer.format_summary(raw_summary)
+        continuation_msg = self.summarizer.get_user_continuation_message(formatted_summary)
+        return [Message(role=Role.USER, content=continuation_msg)]
+
     def _find_tool_call_name(self, tool_calls: list[Any], tool_call_id: str) -> str:
-        for tool_call in tool_calls:
-            if tool_call.id == tool_call_id:
-                return tool_call.name
+        for tc in tool_calls:
+            if tc.id == tool_call_id: return tc.name
         return "unknown"
 
     async def run_query(
@@ -69,10 +77,6 @@ class AgentOrchestrator:
         config: Any | None = None,
         confirmation_callback: Callable | None = None,
     ) -> AsyncGenerator[Any, None]:
-        """
-        Main Agentic Loop. Coordinates thinking and execution phases.
-        """
-        # 1. Setup Turn
         history.append(Message(role=Role.USER, content=user_prompt))
         self.active_status = AgentTurnStatus.THINKING
 
@@ -82,55 +86,37 @@ class AgentOrchestrator:
 
             try:
                 turn_config = self._build_turn_config(config)
-                # Delegate LLM streaming to ProviderManager
-                async for event in self.provider.stream_turn(
-                    history, 
-                    self.tools.get_all_schemas(), 
-                    config=turn_config
-                ):
+                async for event in self.provider.stream_turn(history, self.tools.get_all_schemas(), config=turn_config):
                     yield event
+                    if event["type"] == "metrics":
+                        total_usage = getattr(event["usage"], "input_tokens", 0) + getattr(event["usage"], "output_tokens", 0)
+                        if self.snapper.should_snap(total_usage):
+                            yield {"type": "info", "content": "🔄 Context Snapping Triggered..."}
+                            new_history = await self._perform_context_snap(history, turn_config)
+                            history.clear()
+                            history.extend(new_history)
+                            yield {"type": "info", "content": "✅ Context snapped."}
+                
                 assistant_msg = history[-1]
             except Exception as exc:
                 yield {"type": "error", "content": f"Critical model failure: {exc}"}
                 break
 
-            # 2. Check for completion
             if not assistant_msg.tool_calls:
                 self.active_status = AgentTurnStatus.COMPLETED
                 yield {"status": AgentTurnStatus.COMPLETED}
                 break
 
-            # 3. Execution Phase
             self.active_status = AgentTurnStatus.EXECUTING
             yield {"status": AgentTurnStatus.EXECUTING, "tool_calls": assistant_msg.tool_calls}
+            all_results = await self.executor.run_batch(assistant_msg.tool_calls, confirmation_callback, client=self.client)
 
-            # Delegate execution batch to ExecutionManager
-            all_results = await self.executor.run_batch(
-                assistant_msg.tool_calls, 
-                confirmation_callback,
-                client=self.client
-            )
-
-            # 4. Process Observations
             tool_call_map = {tc.id: tc for tc in assistant_msg.tool_calls}
             for result in all_results:
                 tool_call = tool_call_map.get(result.tool_call_id)
-                if tool_call is not None:
-                    # Enrich result with LSP diagnostics if applicable
+                if tool_call:
                     result = await self.executor.append_lsp_diagnostics(tool_call, result)
                 
                 tool_name = self._find_tool_call_name(assistant_msg.tool_calls, result.tool_call_id)
-
-                history.append(
-                    Message(
-                        role=Role.TOOL,
-                        content=result.content,
-                        metadata={"tool_call_id": result.tool_call_id, "tool_name": tool_name},
-                    )
-                )
-                yield {
-                    "type": "tool_result",
-                    "content": result.content,
-                    "is_error": result.is_error,
-                    "tool_name": tool_name,
-                }
+                history.append(Message(role=Role.TOOL, content=result.content, metadata={"tool_call_id": result.tool_call_id, "tool_name": tool_name}))
+                yield {"type": "tool_result", "content": result.content, "is_error": result.is_error, "tool_name": tool_name}

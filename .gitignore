@@ -104,3 +104,8 @@ codeql-custom-queries-python/codeql-pack.yml
 codeql-custom-queries-python/example.ql
 
 .scratch/*
+FEATURES.md
+openssf_audit.md
+qp_audit.md
+.askgem/usage_log.json
+.scripts/

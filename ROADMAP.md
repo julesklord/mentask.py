@@ -42,21 +42,25 @@ graph TD
 ---
 
 ## Milestone 1: Visual Identity and Stability (COMPLETED)
+
 - [x] API Error Retry with Exponential Backoff
 - [x] Dedicated `write_file` Tool
 - [x] `/undo` Command (Restores `.bkp` snapshots)
 - [x] Graceful Truncation of Oversized Context
 
 ## Milestone 2: Code Search Navigation (COMPLETED)
+
 - [x] `grep_search` Tool (Pattern matching)
 - [x] `glob_find` Tool (File discovery)
 - [x] `diff_file` Tool (Unified diff previews)
 
 ## Milestone 3: Web Research Integration (COMPLETED)
+
 - [x] `web_search` Tool (Google Search API integration)
 - [x] `web_fetch` Tool (Markdown-friendly content extraction)
 
 ## Milestone 4: Architectural Sovereignty (COMPLETED)
+
 - [x] Transition from Monolith to Specialized Managers
 - [x] Pydantic integration for Agentturn schemas
 - [x] Hierarchical Knowledge Hub (Standard/Global/Local)
@@ -68,10 +72,12 @@ graph TD
 **Theme:** Transition from blind code editing to language-aware engineering.
 
 ### 5.1 LSP Client Bridge
+
 - [x] Integration with Ruff via JSON-RPC.
 - [x] Automated Lint-Fix Loop (Agent detects diagnostic and self-corrects).
 
 ### 5.2 Context Optimization
+
 - [x] Semantic Truncation and proactive summarization.
 
 ---
@@ -83,13 +89,16 @@ graph TD
 **Theme:** Transition to vector-based memory, deep code understanding, and autonomous engineering.
 
 ### 6.1 Vector Memory Integration
+
 - [ ] Implement local RAG (Retrieval-Augmented Generation) for codebase indexing.
 - [ ] Persistent project-level embeddings.
 
 ### 6.2 Multi-Agent Orchestration
+
 - [ ] Sub-agent spawning for parallel task execution.
 
 ### 6.3 Deep Static Analysis & Refactoring
+
 - [ ] Syntax-aware navigation (identifying classes, methods, and dependencies without full file reads).
 - [ ] Intelligent Refactoring (safe renaming, method extraction, and dependency management).
 - [ ] Detection of architectural pattern violations.
@@ -139,11 +148,11 @@ graph TD
 ## Version Release Timeline
 
 ```text
-2026-04-19  v0.15.0  â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ  Kwisatz Haderach: LSP integration
-2026-04-20  v0.16.0  â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ  The Golden Path: Professional Consolidation
-2026-04-20  v0.16.4  â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ  Isolation & Project Management (CURRENT)
-2026-05     v0.17.0  â–‘â–‘â–‘       Shai-Hulud: Vector Memory & Deep Analysis
-2026-06     v0.18.0  â–‘â–‘â–‘       Lisan al-Gaib: Autonomous Testing & Debugging
+2026-04-19  v0.15.0  -  Kwisatz Haderach: LSP integration
+2026-04-20  v0.16.0  -  The Golden Path: Professional Consolidation
+2026-04-20  v0.16.4  -  Isolation & Project Management (CURRENT)
+2026-05     v0.17.0  -  Shai-Hulud: Vector Memory & Deep Analysis
+2026-06     v0.18.0  -  Lisan al-Gaib: Autonomous Testing & Debugging
 ```
 
 ---

@@ -73,7 +73,9 @@ This document provides an assessment of AskGem's compliance with OpenSSF (Open S
 ## 4. Implementation Roadmap (Closing the Gaps)
 
 ### 4.1 Generate SBOM (Software Bill of Materials)
+
 To comply with NTIA standards, add this step to your `release.yml` or run manually:
+
 ```bash
 # Install tool
 pip install cyclonedx-bom
@@ -83,7 +85,9 @@ cyclonedx-py -o sbom.json --format json
 ```
 
 ### 4.2 Enable CodeQL Analysis
+
 Create `.github/workflows/codeql.yml`:
+
 ```yaml
 name: "CodeQL"
 on: [push, pull_request]
@@ -102,7 +106,9 @@ jobs:
 ```
 
 ### 4.3 Add OSSF Scorecard
+
 Create `.github/workflows/scorecard.yml`:
+
 ```yaml
 name: Scorecard
 on: [push, branch_protection_rule]
@@ -120,7 +126,9 @@ jobs:
 ```
 
 ### 4.4 Sign Releases (Binary Integrity)
+
 Implement signing in your release pipeline using `gpg`:
+
 ```bash
 # Create detached signature
 gpg --armor --detach-sign dist/askgem.exe

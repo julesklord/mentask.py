@@ -1,3 +1,6 @@
+import asyncio
+from ..cli.tui.layout import TuiLayoutManager
+from rich.live import Live
 """
 Main autonomous agent logic module.
 
@@ -252,6 +255,11 @@ class ChatAgent:
         if event_type == "metrics":
             usage = event["usage"]
             self.metrics.add_usage(usage.input_tokens, usage.output_tokens)
+            return
+
+        if event_type == "error":
+            renderer.print_error(event["content"])
+            return
 
     def _maybe_initialize_workspace(self, confirm_ask: Callable[..., bool]) -> None:
         local_ws = Path.cwd() / ".askgem"

@@ -7,6 +7,8 @@
 - Preferred Language: Spanish (Default)
 
 ## Lessons Learned & Facts
+- To be deleted
+- New local fact
 
 -
 

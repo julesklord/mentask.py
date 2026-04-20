@@ -1,4 +1,4 @@
-"""
+﻿"""
 Path resolution utilities for askgem.
 
 This module provides centralized access to application data directories (e.g., ~/.askgem),
@@ -60,11 +60,11 @@ def get_history_dir() -> str:
     """Gets the directory used for storing chat session histories.
 
     Returns:
-        str: The absolute path to the sessions directory.
+        str: The absolute path to the history directory.
     """
-    sessions_dir = get_config_dir() / "sessions"
-    sessions_dir.mkdir(parents=True, exist_ok=True)
-    return str(sessions_dir)
+    history_dir = get_config_dir() / "history"
+    history_dir.mkdir(parents=True, exist_ok=True)
+    return str(history_dir)
 
 
 def get_global_memory_path() -> str:

@@ -11,7 +11,7 @@ def test_context_manager_build_system_instruction():
     manager = ContextManager()
     instruction = manager.build_system_instruction()
 
-    assert "AskGem" in instruction
+    assert "askgem" in instruction
     # Check for core agent identity keywords
     assert "autonomous" in instruction.lower() or "agent" in instruction.lower()
     assert "identity" in instruction.lower() or "context" in instruction.lower()

@@ -1,4 +1,4 @@
-"""
+﻿"""
 General persistent memory manager for AskGem.
 
 Handles reading and writing to memory.md, which stores long-term facts,
@@ -7,7 +7,34 @@ user preferences, and project-specific context.
 
 import os
 
-from .paths import get_config_dir, get_global_config_dir, get_global_memory_path, get_local_knowledge_path
+from .paths import get_config_dir, get_global_config_dir, get_global_memory_path, get_local_knowledge_path, get_memory_path, get_memory_path
+
+DEFAULT_MEMORY_TEMPLATE = """# AskGem Persistent Memory
+# Last Updated: {date}
+
+## User Profile & Preferences
+- Preferred Language: Spanish (Default)
+
+## Lessons Learned & Facts
+-
+
+## Rules & Constraints
+-
+"""
+
+DEFAULT_LOCAL_TEMPLATE = """# Project Knowledge: {project}
+# Last Updated: {date}
+
+## Project Patterns
+-
+
+## Fixed Errors
+-
+
+## Tech Stack
+-
+"""
+
 
 
 class MemoryManager:
@@ -18,18 +45,8 @@ class MemoryManager:
     """
 
     def __init__(self):
-        self.path_global = get_global_memory_path()
-        
-        # Determine local path: prioritize .askgem folder if it exists
-        active_dir = get_config_dir()
-        global_dir = get_global_config_dir()
-        
-        if active_dir != global_dir:
-            # We are in an initialized project
-            self.path_local = str(active_dir / "memory.md")
-        else:
-            # Fallback to standalone legacy file in root
-            self.path_local = get_local_knowledge_path()
+        self.path_global = get_memory_path()
+        self.path_local = get_local_knowledge_path()
             
         self._ensure_memory_exists(self.path_global, DEFAULT_MEMORY_TEMPLATE)
 
@@ -111,3 +128,4 @@ class MemoryManager:
         # Re-ensure if global
         if scope == "global":
             self._ensure_memory_exists(self.path_global, DEFAULT_MEMORY_TEMPLATE)
+

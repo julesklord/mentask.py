@@ -61,7 +61,7 @@ class Translator:
 
         Falls back to 'en.json' if the detected language is not supported.
         """
-        detected_lang = self._detect_language()
+        detected_lang = "en"
 
         # Resolve the absolute path of this module to find locales/
         core_dir = Path(__file__).parent.absolute()

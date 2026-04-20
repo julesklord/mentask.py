@@ -1,4 +1,4 @@
-# askgem — Development Roadmap
+﻿# askgem â€” Development Roadmap
 
 > **Last Updated:** April 20, 2026
 > **Current Version:** `0.16.4`
@@ -15,14 +15,14 @@ This document outlines the engineering roadmap for `askgem`, organized into prio
 
 | Capability | Status | Description |
 | :--- | :--- | :--- |
-| **Multimodal Reasoning** | ✅ Shipped | Processes images, audio, and video via base64 encoding. |
-| **On-Demand Knowledge** | ✅ Shipped | Optimized Knowledge Hub via `query_knowledge` tool. |
-| **Autonomous Orchestration** | ✅ Shipped | Advanced Think -> Act -> Observe loop with 429 retry logic. |
-| **TrustManager Security** | ✅ Shipped | Recursive directory validation and Path Traversal prevention. |
-| **Web Research** | ✅ Shipped | Live internet search (Google/DDG) and content extraction. |
-| **Full Validation** | ✅ Shipped | Broad unit/integration coverage across the core agent, tools, and CLI. |
-| **Autonomous LSP** | ✅ Shipped | Real-time verification and self-correction via Ruff LSP. |
-| **Professional TUI** | ✅ Shipped | Rich-based streaming CLI with Smuffle/Snuggles themes. |
+| **Multimodal Reasoning** | âœ… Shipped | Processes images, audio, and video via base64 encoding. |
+| **On-Demand Knowledge** | âœ… Shipped | Optimized Knowledge Hub via `query_knowledge` tool. |
+| **Autonomous Orchestration** | âœ… Shipped | Advanced Think -> Act -> Observe loop with 429 retry logic. |
+| **TrustManager Security** | âœ… Shipped | Recursive directory validation and Path Traversal prevention. |
+| **Web Research** | âœ… Shipped | Live internet search (Google/DDG) and content extraction. |
+| **Full Validation** | âœ… Shipped | Broad unit/integration coverage across the core agent, tools, and CLI. |
+| **Autonomous LSP** | âœ… Shipped | Real-time verification and self-correction via Ruff LSP. |
+| **Professional TUI** | âœ… Shipped | Rich-based streaming CLI with Smuffle/Snuggles themes. |
 
 ### Architecture Diagram
 
@@ -78,7 +78,7 @@ graph TD
 
 ## Milestone 6: Scalable Memory & Intelligence ("Shai-Hulud")
 
-**Priority:** 🔴 High
+**Priority:** ðŸ”´ High
 **Estimated Effort:** Q2 2026
 **Theme:** Transition to vector-based memory, deep code understanding, and autonomous engineering.
 
@@ -92,24 +92,35 @@ graph TD
 ### 6.3 Deep Static Analysis & Refactoring
 - [ ] Syntax-aware navigation (identifying classes, methods, and dependencies without full file reads).
 - [ ] Intelligent Refactoring (safe renaming, method extraction, and dependency management).
+- [ ] Detection of architectural pattern violations.
 
-### 6.4 Advanced Git Workflow
-- [ ] Autonomous commit message generation based on diff analysis.
+
+- [ ] Assisted conflict resolution and branch management.
+- [ ] Automated pull request drafting and basic code reviews.
+
+
+- [ ] Verification-first editing (generating tests before applying changes).
+- [ ] CI/CD integration for automated test-fix loops.
+
+
+- [ ] Contextual fix suggestions for CLI/Command failures.
+- [ ] Intelligent log probing for runtime error diagnosis.
+- [ ] Intelligent Refactoring (safe renaming, method extraction, and dependency management).
+
+
 - [ ] Assisted conflict resolution and branch management.
 
 ---
 
 ## Milestone 7: Professional Reliability ("Lisan al-Gaib")
 
-**Priority:** 🟡 Medium
+**Priority:** ðŸŸ¡ Medium
 **Theme:** Self-testing, deep debugging, and predictive assistance.
 
-### 7.1 Autonomous Testing & TDD
-- [ ] Automated unit test generation for new/modified code.
+
 - [ ] Verification-first editing (generating tests before applying changes).
 
-### 7.2 Debugging Intelligence
-- [ ] Automated Traceback analysis and root cause identification.
+
 - [ ] Contextual fix suggestions for CLI/Command failures.
 
 ---
@@ -118,7 +129,7 @@ graph TD
 
 | Item | Priority | Status |
 | :--- | :--- | :--- |
-| **Translation Parity** | High | ✅ Solved in v0.13.2 (8 locales synchronized). |
+| **Translation Parity** | High | âœ… Solved in v0.13.2 (8 locales synchronized). |
 | **Docs Consistency** | High | In progress; remove stale dashboard/TUI references and align docs with runtime behavior. |
 | **CLI Contract Tests** | High | In progress; entrypoint tests aligned with current `--list` and default startup flow. |
 | **Type Hinting** | Low | Partially complete; move toward stricter typing in orchestration and tool layers. |
@@ -128,12 +139,13 @@ graph TD
 ## Version Release Timeline
 
 ```text
-2026-04-19  v0.15.0  ████████  Kwisatz Haderach: LSP integration
-2026-04-20  v0.16.0  ████████  The Golden Path: Professional Consolidation
-2026-04-20  v0.16.4  ████████  Isolation & Project Management (CURRENT)
-2026-05     v0.17.0  ░░░       Shai-Hulud: Vector Memory & Deep Analysis
-2026-06     v0.18.0  ░░░       Lisan al-Gaib: Autonomous Testing & Debugging
+2026-04-19  v0.15.0  â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ  Kwisatz Haderach: LSP integration
+2026-04-20  v0.16.0  â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ  The Golden Path: Professional Consolidation
+2026-04-20  v0.16.4  â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ  Isolation & Project Management (CURRENT)
+2026-05     v0.17.0  â–‘â–‘â–‘       Shai-Hulud: Vector Memory & Deep Analysis
+2026-06     v0.18.0  â–‘â–‘â–‘       Lisan al-Gaib: Autonomous Testing & Debugging
 ```
 
 ---
 *The code must be stable before the feature set expands.*
+

@@ -18,7 +18,6 @@ import asyncio
 import getpass
 import re
 import time
-from typing import Callable
 
 from rich.console import Console
 from rich.control import Control
@@ -211,28 +210,20 @@ class CliRenderer:
         self._last_stream_time: float = time.time()
 
     def update_stream(self, accumulated: str) -> None:
-        """Update stream with accumulated text and apply delay for readability.
-        
-        Args:
-            accumulated: Full accumulated text so far
-        """
-        self._last_text = accumulated
-        if not (self._live and self._streaming):
-            return
-
-        # Apply streaming delay for better readability
-        elapsed = time.time() - self._last_stream_time
+        """Call with the full accumulated text so far."""
+        # Professional pacing (Speed Control)
+        now = time.time()
+        elapsed = now - self._last_stream_time
         if elapsed < self._stream_delay:
             time.sleep(self._stream_delay - elapsed)
-        self._last_stream_time = time.time()
 
-        # Show appropriate amount of content
-        if self.stream_mode == "continuous":
-            preview = Text(accumulated)
-        else:
+        self._last_text = accumulated
+        if self._live and self._streaming:
             preview = Text(accumulated[-2000:] if len(accumulated) > 2000 else accumulated)
-        preview.append(" ▌", style=f"bold {self.C_BRAND}")
-        self._live.update(preview)
+            preview.append(" ▌", style=f"bold {self.C_BRAND}")
+            self._live.update(preview)
+        
+        self._last_stream_time = time.time()
 
     def end_stream(self, full_text: str | None = None) -> None:
         """Stop Live and render the structured final response.

@@ -311,9 +311,8 @@ class ChatAgent:
         self._maybe_initialize_workspace(Confirm.ask)
 
         current_theme = self.config.settings.get("theme", "indigo")
-        stream_mode = self.config.settings.get("stream_mode", "continuous")
-        stream_delay = self.config.settings.get("stream_delay", 0.01)
-        renderer = CliRenderer(console, theme_name=current_theme, stream_mode=stream_mode, stream_delay=stream_delay)
+        stream_delay = self.config.settings.get("stream_delay", 0.015)
+        renderer = CliRenderer(console, theme_name=current_theme, stream_delay=stream_delay)
         self.active_renderer = renderer
 
         if not await self.setup_api():

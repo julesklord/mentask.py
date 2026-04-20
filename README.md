@@ -26,6 +26,7 @@ with your codebase.
 - [How it works](#how-it-works)
 - [Features](#features)
 - [New in v0.16.x: The Golden Path](#new-in-v016x-the-golden-path)
+- [Project Isolation (/init)](#project-isolation-init)
 - [Installation](#installation)
 - [Configuration](#configuration)
 - [Usage](#usage)
@@ -74,9 +75,10 @@ This autonomous loop repeats until the mission is accomplished or you interrupt 
 
 AskGem now distinguishes between your **Global Persona** and your **Project Context**:
 
-- **Local Priority**: If a `.askgem/` folder exists in your project, it takes precedence for settings, memory, and history.
-- **Project Memory**: Knowledge saved via `manage_memory` is stored within the project, preventing context leakage between repositories.
-- **Mission Persistence**: Track specific dev-missions per project without cluttering your global space.
+- **Local Isolation**: Run `/init` to create a dedicated `.askgem/` folder in your project. This isolates sessions, settings, and identity to the current directory.
+- **Local Priority**: If a `.askgem/` folder exists, it takes precedence for settings, memory, and history.
+- **Project Memory**: Knowledge saved via `manage_memory` is stored in `.askgem/memory.md` (or `.askgem_knowledge.md` as fallback), preventing context leakage between repositories.
+- **Project Identity**: Customize AskGem's personality for a specific project via `.askgem/identity.md`.
 
 ### Human-in-the-loop safety
 
@@ -115,8 +117,8 @@ Native integration with the Ruff Language Server Protocol (LSP) allowing the Age
 ### 3. On-Demand Knowledge Hub
 Refactored the Knowledge Hub from full-text injection to an on-demand retrieval system via the `query_knowledge` tool. This significantly reduces token consumption while maintaining deep context awareness.
 
-### 4. Stream Speed Control
-Added a configurable `stream_delay` setting to calibrate the output velocity of the agent's responses for better readability.
+### 4. Project Isolation (/init)
+Introduced in v0.16.4, the `/init` command allows you to isolate AskGem to a specific directory. It creates a `.askgem/` folder containing local settings, a dedicated `sessions/` storage, and an `identity.md` file for project-specific instructions.
 
 ---
 
@@ -231,6 +233,7 @@ Type `exit`, `quit`, `q`, or press `Ctrl+C`.
 | `/stats` | Summary of session accomplishments (messages, tools, files) |
 | `/stop` | Interrupt the current generation immediately |
 | `/reset` | Restart the entire session and reset all counters |
+| `/init` | Initialize local project isolation and configuration |
 | `/history [list/load/delete]` | Manage saved conversation sessions |
 | `/trust [path]` | Add a directory to the permanent whitelist |
 | `/untrust [path]` | Remove a directory from the whitelist |
@@ -292,12 +295,12 @@ flowchart TD
 2. **Cognitive Layer (`agent/`)**: The "Brain". Powered by the `AgentOrchestrator`, it manages state, context blueprints, and mission tracking.
 3. **Security Layer (`core/`)**: The "Guard". Gathers risk analysis and whitelisting logic to ensure the agent never exceeds its authority.
 
-### Project Structure (v0.16.2)
+### Project Structure (v0.16.4)
 
 ```
 askgem.py/
 ├── src/askgem/
-│   ├── __init__.py              # Single source of truth for version (0.16.2)
+│   ├── __init__.py              # Single source of truth for version (0.16.4)
 │   ├── agent/
 │   │   ├── orchestrator.py      # The Reasoning Brain — Thinking/Action/Observation
 │   │   ├── schema.py            # Unified message and tool schemas

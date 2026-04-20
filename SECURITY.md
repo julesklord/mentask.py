@@ -1,12 +1,13 @@
 # Security Policy: AskGem
 
-This document outlines the security protocols, vulnerability reporting procedures, and the established trust model for **AskGem v0.16.2**. As an autonomous agent capable of executing code and shell commands, security and integrity are central to our architectural design.
+This document outlines the security protocols, vulnerability reporting procedures, and the established trust model for **AskGem v0.16.4**. As an autonomous agent capable of executing code and shell commands, security and integrity are central to our architectural design.
 
 ## Technical Safeguards
 
 AskGem implements a multi-layer defense strategy to mitigate risks associated with autonomous execution:
 
-1. **TrustManager (Filesystem Boundaries)**: AskGem utilizes a centralized trust model. Tools with write or execute capabilities are restricted to directories explicitly authorized in the `trusted.json` configuration file. Any attempt to modify files or execute scripts outside of these "trusted zones" triggers an immediate security alert and requires explicit overhead authorization.
+1. **Isolation & Trust (/init)**: AskGem promotes project-level isolation. Using the `/init` command, users can establish a dedicated `.askgem/` environment. This ensures that session history, local project identity, and sensitive operational files are confined to the workspace, preventing context leakage and unauthorized cross-project access.
+2. **TrustManager (Filesystem Boundaries)**: AskGem utilizes a centralized trust model. Tools with write or execute capabilities are restricted to directories explicitly authorized in the `trusted.json` configuration file. Any attempt to modify files or execute scripts outside of these "trusted zones" triggers an immediate security alert and requires explicit overhead authorization.
 2. **Native Credential Management**: Sensitive API credentials (e.g., Gemini API keys) are never stored in plaintext within the repository or local configuration files. AskGem integrates with the system-native credential store via the `keyring` module, ensuring secrets are handled by the operating system's established security primitives.
 3. **Human-in-the-Loop Orchestration**: By default, the agent operates in `manual` mode. This ensures that every high-impact tool invocation—such as permanent file writes or terminal commands—requires secondary confirmation from the user.
 4. **Input & Path Sanitization**: The core engine performs proactive validation of all filesystem paths to prevent directory traversal attacks (dot-dot-slash) and ensures that tool arguments conform to expected Pydantic schemas before execution.

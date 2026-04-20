@@ -248,6 +248,8 @@ class ChatAgent:
     def _restore_last_session(self) -> tuple[list[str], list[Message] | None, bool]:
         """Restores session history.
         
+        Creates a NEW session by default unless a specific session_id is requested.
+        
         Returns:
             tuple: (all_sessions, history_data, is_new_session)
         """
@@ -255,17 +257,15 @@ class ChatAgent:
         is_new = True
         sessions = self.history.list_sessions()
         
-        # Si se solicitó un session_id específico, cargarlo
+        # If a specific session_id was requested, load it
         if self.requested_session_id:
             if self.requested_session_id in sessions:
                 history_data = self.history.load_session(self.requested_session_id)
                 self.history.current_session_id = self.requested_session_id
                 is_new = False
-            # else: sesión no existe, crear nueva (is_new sigue siendo True)
-        # Si no se solicitó, cargar la última sesión
-        elif sessions:
-            history_data = self.history.load_session(sessions[-1])
-            is_new = False
+            # else: session doesn't exist, create new (is_new stays True)
+        # If no session_id requested: always create NEW (don't auto-resume)
+        # User must explicitly provide session_id to resume
         
         if history_data:
             self.messages.extend([message for message in history_data if message.role != Role.SYSTEM])
@@ -312,7 +312,8 @@ class ChatAgent:
 
         current_theme = self.config.settings.get("theme", "indigo")
         stream_mode = self.config.settings.get("stream_mode", "continuous")
-        renderer = CliRenderer(console, theme_name=current_theme, stream_mode=stream_mode)
+        stream_delay = self.config.settings.get("stream_delay", 0.01)
+        renderer = CliRenderer(console, theme_name=current_theme, stream_mode=stream_mode, stream_delay=stream_delay)
         self.active_renderer = renderer
 
         if not await self.setup_api():

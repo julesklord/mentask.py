@@ -26,8 +26,9 @@ class ConfigManager:
         self.settings = {
             "model_name": "gemini-2.5-flash-lite",
             "edit_mode": "manual",  # "manual" or "auto"
-            "theme": "indigo",      # indigo, emerald, crimson, amber, cyberpunk
-            "stream_mode": "continuous",  # "continuous" (historial completo) or "transient" (anterior)
+            "theme": "indigo",      # indigo, emerald, cyberpunk
+            "stream_mode": "continuous",  # "continuous" or "transient"
+            "stream_delay": 0.015,  # Seconds between stream updates (15ms optimal for style processing)
             "temperature": 0.7,
             "max_file_read_size": 30000,
             "bash_timeout": 60,

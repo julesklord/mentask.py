@@ -1,7 +1,7 @@
 # askgem — Development Roadmap
 
 > **Last Updated:** April 20, 2026
-> **Current Version:** `0.16.3`
+> **Current Version:** `0.16.4`
 > **Maintainer:** [@julesklord](https://github.com/julesklord)
 > **Status:** Active stabilization / Planning v0.17.0
 
@@ -130,7 +130,7 @@ graph TD
 ```text
 2026-04-19  v0.15.0  ████████  Kwisatz Haderach: LSP integration
 2026-04-20  v0.16.0  ████████  The Golden Path: Professional Consolidation
-2026-04-20  v0.16.3  ████████  Stabilization & Branding (CURRENT)
+2026-04-20  v0.16.4  ████████  Isolation & Project Management (CURRENT)
 2026-05     v0.17.0  ░░░       Shai-Hulud: Vector Memory & Deep Analysis
 2026-06     v0.18.0  ░░░       Lisan al-Gaib: Autonomous Testing & Debugging
 ```

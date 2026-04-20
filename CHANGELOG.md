@@ -262,6 +262,18 @@ All notable changes to this project will be documented in this file.
 - Added: feat(config): add google search support to settings (5dd2711)
 
 
+## [0.16.4] - 2026-04-20
+
+### Added
+- **Project Isolation (/init)**: New command to initialize local project environments with dedicated settings, sessions, and identity files.
+- **Enhanced Session Management**: Sessions are now strictly stored in `.askgem/sessions` (local) or `~/.askgem/sessions` (global) to prevent root directory clutter.
+- **Improved Garbage Prevention**: Local project memory now prioritizes `.askgem/memory.md`, moving away from scattered `.askgem_knowledge.md` files.
+- **Local Identity**: Support for project-specific personalities via `.askgem/identity.md`.
+
+### Fixed
+- **Path Consistency**: Centralized all operational files (usage logs, heartbeats, backups) within the `.askgem` folder hierarchy.
+- **Command Help**: Added `/init` to the public help menu.
+
 ## [0.16.3] - 2026-04-20
 
 ### Description

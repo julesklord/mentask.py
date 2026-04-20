@@ -132,6 +132,7 @@ class KnowledgeManager:
         Loads only the essential identity configuration from:
         1. .askgem_identity.md (Global/Home)
         2. .askgem_identity.md (Local Project Root)
+        3. identity.md (Local .askgem/ folder)
         
         The heavy Knowledge Hub aggregation is suspended.
         """
@@ -145,7 +146,16 @@ class KnowledgeManager:
             except Exception:
                 pass
                 
-        # 2. Local Identity
+        # 2. Local Identity (Folder-based)
+        if self.active_dir != self.global_dir:
+            folder_identity = self.active_dir / "identity.md"
+            if folder_identity.exists():
+                try:
+                    identity.append(folder_identity.read_text(encoding="utf-8"))
+                except Exception:
+                    pass
+
+        # 3. Local Identity (Legacy/Root file)
         local_path = Path.cwd() / ".askgem_identity.md"
         if local_path.exists():
             try:

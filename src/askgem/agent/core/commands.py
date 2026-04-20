@@ -367,39 +367,52 @@ class CommandHandler:
         return f"[info]Export to {format_type.upper()}:[/info] [dim]Coming soon - will export styled conversation[/dim]"
 
     def _cmd_init(self) -> str:
-        """Initialize local configuration and trust for the current directory.
+        """Initialize local configuration and isolation for the current directory.
 
-        Creates .askgem/settings.json in the current directory with current configuration
-        and marks this directory as trusted.
+        Creates .askgem/ directory with settings, sessions, and identity placeholders.
         """
         import json
         from pathlib import Path
 
         cwd = Path.cwd()
-        local_config_dir = cwd / ".askgem"
-        local_config_file = local_config_dir / "settings.json"
+        local_dir = cwd / ".askgem"
+        local_settings = local_dir / "settings.json"
+        local_sessions = local_dir / "sessions"
+        local_identity = local_dir / "identity.md"
 
-        # Check if already initialized
-        if local_config_file.exists():
-            return f"[warning]Local configuration already exists:[/warning] [dim]{local_config_file}[/dim]"
+        if local_settings.exists():
+            return f"[warning]Local project already initialized:[/warning] [dim]{local_dir}[/dim]"
 
         try:
-            # Create .askgem directory
-            local_config_dir.mkdir(parents=True, exist_ok=True)
+            # 1. Create structure
+            local_dir.mkdir(parents=True, exist_ok=True)
+            local_sessions.mkdir(exist_ok=True)
 
-            # Copy current settings to local config
-            local_settings = self.agent.config.settings.copy()
+            # 2. Persist current settings
+            settings_data = self.agent.config.settings.copy()
+            # Remove keys we don't want to leak into project-level JSON if possible
+            # (though keyring handles the sensitive ones usually)
+            with open(local_settings, "w", encoding="utf-8") as f:
+                json.dump(settings_data, f, indent=4)
 
-            with open(local_config_file, "w", encoding="utf-8") as f:
-                json.dump(local_settings, f, indent=4)
+            # 3. Create identity placeholder
+            if not local_identity.exists():
+                local_identity.write_text(
+                    f"# AskGem Project Identity: {cwd.name}\n\n"
+                    "Define project-specific rules, personality, or constraints here.\n",
+                    encoding="utf-8"
+                )
 
-            # Add directory to trusted list
+            # 4. Add directory to trusted list
             self.agent.orchestrator.trust.add_trust(str(cwd))
 
             return (
-                f"[success]✓ Local configuration initialized:[/success] [dim]{local_config_file}[/dim]\n"
-                f"[success]✓ Directory trusted:[/success] [dim]{cwd}[/dim]\n"
-                f"[dim]From now on, AskGem will use local settings in this folder.[/dim]"
+                f"[success]✓ Local project initialized successfully![/success]\n"
+                f"  - Folder: [dim]{local_dir}[/dim]\n"
+                f"  - Config: [dim]settings.json[/dim]\n"
+                f"  - Storage: [dim]sessions/[/dim]\n"
+                f"  - Identity: [dim]identity.md[/dim]\n\n"
+                f"[info]AskGem is now isolated to this project. All sessions and local knowledge will stay here.[/info]"
             )
         except Exception as e:
-            return f"[error]Failed to initialize local config: {e}[/error]"
+            return f"[error]Failed to initialize local project: {e}[/error]"

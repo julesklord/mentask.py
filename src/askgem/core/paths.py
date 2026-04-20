@@ -60,15 +60,20 @@ def get_history_dir() -> str:
     """Gets the directory used for storing chat session histories.
 
     Returns:
-        str: The absolute path to the history directory.
+        str: The absolute path to the sessions directory.
     """
-    history_dir = get_config_dir() / "history"
-    history_dir.mkdir(parents=True, exist_ok=True)
-    return str(history_dir)
+    sessions_dir = get_config_dir() / "sessions"
+    sessions_dir.mkdir(parents=True, exist_ok=True)
+    return str(sessions_dir)
+
+
+def get_global_memory_path() -> str:
+    """Gets the path to the global user preferences memory file (~/.askgem/memory.md)."""
+    return str(get_global_config_dir() / "memory.md")
 
 
 def get_memory_path() -> str:
-    """Gets the path to the general persistent memory file (Global)."""
+    """Gets the path to the memory file in the active configuration directory."""
     return str(get_config_dir() / "memory.md")
 
 

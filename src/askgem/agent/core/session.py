@@ -174,16 +174,24 @@ class SessionManager:
         # Re-inject recent files context
         if self.recent_files:
             files_context = "\n\nRETAINED CONTEXT (Recent Files):\n"
-            for path in self.recent_files:
-                if os.path.exists(path):
-                    try:
-                        with open(path, encoding="utf-8") as f:
-                            content = f.read()
-                            if len(content) > 2000:
-                                content = content[:2000] + "..."
-                            files_context += f"\nFile: {path}\n```\n{content}\n```\n"
-                    except Exception:
-                        pass
+
+            def _read_file_safe(path: str) -> str | None:
+                if not os.path.exists(path):
+                    return None
+                try:
+                    with open(path, encoding="utf-8") as f:
+                        content = f.read(2001)
+                        if len(content) > 2000:
+                            content = content[:2000] + "..."
+                        return f"\nFile: {path}\n```\n{content}\n```\n"
+                except Exception:
+                    return None
+
+            tasks = [asyncio.to_thread(_read_file_safe, path) for path in self.recent_files]
+            results = await asyncio.gather(*tasks)
+            for result in results:
+                if result:
+                    files_context += result
             continuation_text += files_context
 
         new_history.append(Message(role=Role.USER, content=continuation_text))

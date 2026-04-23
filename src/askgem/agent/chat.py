@@ -178,30 +178,39 @@ class ChatAgent:
         processed_input = self._process_input(user_input)
         config = self._build_config()
 
-        async for event in self.orchestrator.run_query(
-            processed_input, self.messages, config=config, confirmation_callback=renderer.ask_confirmation
-        ):
-            event_type = event.get("type")
-            status = event.get("status")
+        try:
+            async for event in self.orchestrator.run_query(
+                processed_input, self.messages, config=config, confirmation_callback=renderer.ask_confirmation
+            ):
+                event_type = event.get("type")
+                status = event.get("status")
 
-            if status == AgentTurnStatus.THINKING:
-                pass
-            elif status == AgentTurnStatus.EXECUTING:
-                for tc in event.get("tool_calls", []):
-                    renderer.print_tool_call(tc.name, tc.arguments)
-            elif event_type == "thought":
-                # Thoughts arrive before text — no Live active yet, safe to print directly
-                renderer.print_thought(event["content"])
-            elif event_type == "text":
-                # Start Live on first text chunk, not before
-                if not renderer._streaming:
-                    renderer.start_stream()
-                renderer.update_stream(event["content"])
-            elif event_type == "tool_result":
-                renderer.print_tool_result(not event["is_error"], event["content"])
-            elif event_type == "metrics":
-                u = event["usage"]
-                self.metrics.add_usage(u.input_tokens, u.output_tokens)
+                if status == AgentTurnStatus.THINKING:
+                    renderer.start_thinking_spinner()
+                elif status == AgentTurnStatus.EXECUTING:
+                    renderer.stop_thinking_spinner()
+                    for tc in event.get("tool_calls", []):
+                        renderer.print_tool_call(tc.name, tc.arguments)
+                elif event_type == "thought":
+                    renderer.stop_thinking_spinner()
+                    # Thoughts arrive before text — no Live active yet, safe to print directly
+                    renderer.print_thought(event["content"])
+                elif event_type == "text":
+                    renderer.stop_thinking_spinner()
+                    # Start Live on first text chunk, not before
+                    if not renderer._streaming:
+                        renderer.start_stream()
+                    renderer.update_stream(event["content"])
+                elif event_type == "tool_result":
+                    renderer.stop_thinking_spinner()
+                    renderer.print_tool_result(not event["is_error"], event["content"])
+                elif event_type == "error":
+                    renderer.stop_thinking_spinner()
+                elif event_type == "metrics":
+                    u = event["usage"]
+                    self.metrics.add_usage(u.input_tokens, u.output_tokens)
+        finally:
+            renderer.stop_thinking_spinner()
 
     async def start(self) -> None:
         """Rich CLI entry point — streaming renderer with code blocks and think panels."""

@@ -36,3 +36,7 @@
 ## 2026-04-14 - [Test Environment Configuration for Async Testing]
 **Learning:** Pytest doesn't natively support running `async def` test functions out of the box, throwing "async def functions are not natively supported" errors if a supporting plugin is not active. This can cause the CI to fail if the repository doesn't explicitly declare the async dependency.
 **Action:** Always ensure that `pytest-asyncio` (or a similar async test runner) is explicitly defined in `pyproject.toml` (e.g. within `[project.optional-dependencies]`) if the test suite utilizes `pytest.mark.asyncio` decorators.
+
+## 2025-05-19 - [Add Visual Loading State to CLI THINKING state]
+**Learning:** In CLI streaming applications using Rich, providing a visual loading indicator during the asynchronous `THINKING` phase (before token generation begins) improves UX by clearly signaling that the request is being processed. Failing to provide this feedback or properly cleaning up the state (e.g., stopping a spinner before transitioning to rendering code or tools) can lead to a confusing or visually corrupt user interface. Furthermore, hardcoding the loading text breaks internationalization.
+**Action:** Always add a visual spinner or loading text (using localized strings, e.g., `_("dashboard.prompt_thinking")`) when the agent enters the `THINKING` state, and ensure it is explicitly and cleanly stopped prior to transitioning to other output phases (like `thought`, `EXECUTING`, or `text`) as well as in a `finally` block.

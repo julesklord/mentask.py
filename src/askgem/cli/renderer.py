@@ -24,8 +24,11 @@ from rich.markup import escape
 from rich.panel import Panel
 from rich.prompt import Confirm
 from rich.rule import Rule
+from rich.status import Status
 from rich.syntax import Syntax
 from rich.text import Text
+
+from ..core.i18n import _
 
 # ---------------------------------------------------------------------------
 # Segment parser
@@ -150,6 +153,7 @@ class CliRenderer:
         self.console = console
         self._live: Live | None = None
         self._streaming = False
+        self._thinking_status: Status | None = None
         self._last_text = ""
         self.username = getpass.getuser()
         self.apply_theme(theme_name)
@@ -204,7 +208,9 @@ class CliRenderer:
     # Agent label (printed once before streaming starts)
     # ------------------------------------------------------------------
     def _print_agent_label(self) -> None:
-        self.console.print(f"\n [bold {self.C_BRAND}]✨ @askgem[/]")
+        if not getattr(self, "_agent_label_printed", False):
+            self.console.print(f"\n [bold {self.C_BRAND}]✨ @askgem[/]")
+            self._agent_label_printed = True
 
     def print_thought(self, text: str) -> None:
         """Renders the reasoning process in a subtle, minimalist style."""
@@ -223,6 +229,19 @@ class CliRenderer:
     # ------------------------------------------------------------------
     # Live streaming (raw text, no parsing — fast, zero flicker)
     # ------------------------------------------------------------------
+    def start_thinking_spinner(self) -> None:
+        """Starts a visual spinner indicating the agent is thinking."""
+        if not self._thinking_status:
+            self._print_agent_label()
+            self._thinking_status = Status(_("dashboard.prompt_thinking"), console=self.console, spinner="dots")
+            self._thinking_status.start()
+
+    def stop_thinking_spinner(self) -> None:
+        """Stops the thinking spinner if it's running."""
+        if self._thinking_status:
+            self._thinking_status.stop()
+            self._thinking_status = None
+
     def start_stream(self) -> None:
         self._print_agent_label()
         self._live = Live(
@@ -244,6 +263,9 @@ class CliRenderer:
 
     def end_stream(self, full_text: str | None = None) -> None:
         """Stop Live and render the structured final response."""
+        if getattr(self, "_agent_label_printed", False):
+            self._agent_label_printed = False
+
         if not self._streaming:
             return
 
@@ -377,11 +399,13 @@ class CliRenderer:
             self._live = None
 
         if warning:
-            self.console.print(Panel(
-                f"[bold white]{warning}[/bold white]",
-                title="[bold yellow]⚠️ SECURITY WARNING[/bold yellow]",
-                border_style="red"
-            ))
+            self.console.print(
+                Panel(
+                    f"[bold white]{warning}[/bold white]",
+                    title="[bold yellow]⚠️ SECURITY WARNING[/bold yellow]",
+                    border_style="red",
+                )
+            )
         else:
             self.console.print(f"\n[bold {self.C_TOOL}]🛡  SECURITY CHECK[/]")
 

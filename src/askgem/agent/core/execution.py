@@ -30,12 +30,19 @@ class ExecutionManager:
                 return f"DANGEROUS COMMAND DETECTED ({report.category}): {report.description}"
 
         if tool_call.name in ("read_file", "write_file", "edit_file", "list_dir", "replace"):
-            from ...core.security import ensure_safe_path
+            from ...core.security import ensure_safe_path, analyze_path_safety, SafetyLevel
             try:
-                # Use resolve() to get canonical path and prevent bypasses
                 raw_path = tool_call.arguments.get("path") or tool_call.arguments.get("file_path", ".")
                 resolved_path = Path(raw_path).resolve()
+                
+                # 1. Check for Path Escape (Basic Security)
                 ensure_safe_path(str(resolved_path))
+                
+                # 2. Check for Critical Asset Modification (Intelligent Safety)
+                if tool_call.name in ("write_file", "edit_file", "replace"):
+                    report = analyze_path_safety(str(resolved_path))
+                    if report.level != SafetyLevel.SAFE:
+                        return f"SECURITY RISK ({report.category}): {report.description}"
             except PermissionError as exc:
                 return f"PATH ESCAPE ATTEMPT: {exc}"
             except Exception as exc:

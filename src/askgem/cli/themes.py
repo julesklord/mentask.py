@@ -95,9 +95,9 @@ class ThemeConfig:
             "info": Style(color=self.info, dim=False),
             # Code and thinking
             "code": Style(color="cyan"),
-            "think": Style(color=self.think_color, italic=True, dim=True),
+            "think": Style(color=self.think_color, dim=True),
             # User/Agent
-            "user_label": Style(color=self.text_secondary, italic=True),
+            "user_label": Style(color=self.text_secondary),
             "agent_label": Style(color=self.brand_primary, bold=True),
             # Utilities
             "dim": Style(dim=True),

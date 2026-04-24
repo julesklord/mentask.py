@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 
 
+## [0.17.4] - 2026-04-24
+
+### Changed
+- **UI Design**: Redesigned the `CliRenderer` interface to match the Gemini CLI aesthetic. Removed all italic fonts, added Unicode status icons (`✦`, `⚡`, `✓`, `✗`, `⚠`) with ASCII fallbacks for legacy Windows consoles, and made tool call displays compact and clean.
+- **Security Hardening**: Implemented the "System Guardian" trait. The agent now actively protects critical files (like `uv.lock`, `.gitignore`, `.env`, `.git`) and will generate explicit red security warnings if operations attempt to modify them.
+- **Project Hygiene**: Added specific system prompt instructions strictly prohibiting the alteration or deletion of operational metadata and lockfiles.
+
 ## [0.17.3] - 2026-04-20
 
 ### Fixed

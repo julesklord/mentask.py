@@ -139,8 +139,7 @@ class ChatAgent:
 
     def set_status_logger(self, logger_func: Callable[[str], None]):
         """Sets the callback for real-time status/debug logging."""
-        # TODO: Implement logging in the new AgentOrchestrator if needed
-        pass
+        self.orchestrator.status_callback = logger_func
 
     def _build_config(self) -> types.GenerateContentConfig:
         """Helper to build consistent generation config."""
@@ -363,6 +362,7 @@ class ChatAgent:
         stream_delay = self.config.settings.get("stream_delay", 0.015)
         renderer = CliRenderer(console, theme_name=current_theme, stream_delay=stream_delay)
         self.active_renderer = renderer
+        self.set_status_logger(renderer.print_status)
 
         if not await self.setup_api():
             sys.exit(1)

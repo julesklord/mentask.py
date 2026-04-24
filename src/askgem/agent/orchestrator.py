@@ -24,6 +24,7 @@ class AgentOrchestrator:
         self.tools = tool_registry
         self.config = config
         self.active_status = AgentTurnStatus.IDLE
+        self.status_callback: Callable[[str], None] | None = None
         
         # Specialized Managers
         self.provider = ProviderManager(client)
@@ -32,6 +33,15 @@ class AgentOrchestrator:
         # Performance & Optimization
         self.snapper = ContextSnapper(client.model_name)
         self.summarizer = Summarizer()
+
+    def _report_status(self, message: str) -> None:
+        """Internal helper to log and report status via callback."""
+        _logger.info(message)
+        if self.status_callback:
+            try:
+                self.status_callback(message)
+            except Exception as e:
+                _logger.error(f"Failed to call status_callback: {e}")
 
     def _build_plan_context(self, plan_file: str = ".askgem_plan.md") -> str:
         if not os.path.exists(plan_file): return ""
@@ -83,7 +93,7 @@ class AgentOrchestrator:
 
         while True:
             turn_id += 1
-            _logger.info(f"--- Agent Turn {turn_id} Start ---")
+            self._report_status(f"--- Agent Turn {turn_id} Start ---")
             await self.executor.initialize()
             yield {"status": AgentTurnStatus.THINKING}
 
@@ -113,7 +123,7 @@ class AgentOrchestrator:
 
             self.active_status = AgentTurnStatus.EXECUTING
             yield {"status": AgentTurnStatus.EXECUTING, "tool_calls": assistant_msg.tool_calls}
-            _logger.info(f"Executing {len(assistant_msg.tool_calls)} tools...")
+            self._report_status(f"Executing {len(assistant_msg.tool_calls)} tools...")
             
             all_results = await self.executor.run_batch(assistant_msg.tool_calls, confirmation_callback, client=self.client)
 

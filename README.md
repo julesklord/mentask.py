@@ -1,10 +1,23 @@
-# mentask — Autonomous AI Coding Agent for the Terminal
+<p align="center">
+  <img src="docs/assets/logo.svg" width="120" alt="mentask logo">
+</p>
 
-[![PyPI version](https://img.shields.io/pypi/v/mentask.svg)](https://pypi.org/project/mentask/) [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/) [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE) [![Powered by models.dev](https://img.shields.io/badge/Powered%20by-models.dev-6366f1)](https://models.dev/) [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff) [![Security Scan](https://github.com/julesklord/mentask/actions/workflows/security.yml/badge.svg)](https://github.com/julesklord/mentask/actions/workflows/security.yml) [![Python CI (Pro)](https://github.com/julesklord/mentask/actions/workflows/python-ci.yml/badge.svg)](https://github.com/julesklord/mentask/actions/workflows/python-ci.yml) [![CD - Release](https://github.com/julesklord/mentask/actions/workflows/release.yml/badge.svg)](https://github.com/julesklord/mentask/actions/workflows/release.yml)
+<h1 align="center">mentask</h1>
 
----
+<p align="center">
+  <strong>Autonomous AI Coding Agent for the Terminal</strong>
+</p>
 
-![mentask banner](docs/assets/banner.png)
+<p align="center">
+  <a href="https://pypi.org/project/mentask/"><img src="https://img.shields.io/pypi/v/mentask.svg" alt="PyPI version"></a>
+  <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.10%2B-blue.svg" alt="Python 3.10+"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"></a>
+  <a href="https://models.dev/"><img src="https://img.shields.io/badge/Powered%20by-models.dev-6366f1" alt="Powered by models.dev"></a>
+  <a href="https://github.com/astral-sh/ruff"><img src="https://img.shields.io/badge/code%20style-ruff-000000.svg" alt="Code style: ruff"></a><br>
+  <a href="https://github.com/julesklord/mentask/actions/workflows/security.yml"><img src="https://github.com/julesklord/mentask/actions/workflows/security.yml/badge.svg" alt="Security Scan"></a>
+  <a href="https://github.com/julesklord/mentask/actions/workflows/python-ci.yml"><img src="https://github.com/julesklord/mentask/actions/workflows/python-ci.yml/badge.svg" alt="Python CI (Pro)"></a>
+  <a href="https://github.com/julesklord/mentask/actions/workflows/release.yml"><img src="https://github.com/julesklord/mentask/actions/workflows/release.yml/badge.svg" alt="CD - Release"></a>
+</p>
 
 ---
 

@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.19.5] - 2026-04-26
+
+### Fixed
+
+- **CI/CD Workflow**: Unified the binary build workflow to trigger immediately on version tag pushes (`v*`), ensuring that executables for Windows, Linux, and macOS are generated and attached to the release simultaneously with the PyPI package.
+- **Build System**: Fixed PyInstaller glob expansion bug in GitHub Actions that was causing build failures on all platforms.
+
 ## [0.19.3] - 2026-04-26
 
 ### Fixed

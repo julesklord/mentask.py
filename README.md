@@ -1,18 +1,27 @@
-# mentask — Autonomous AI Coding Agent for the Terminal
+<p align="center">
+  <img src="docs/assets/logo.svg" width="120" alt="mentask logo">
+</p>
 
-[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/) [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-green.svg)](LICENSE) [![Powered by models.dev](https://img.shields.io/badge/Powered%20by-models.dev-6366f1)](https://models.dev/) [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff) [![Security Scan](https://github.com/julesklord/mentask/actions/workflows/security.yml/badge.svg)](https://github.com/julesklord/mentask/actions/workflows/security.yml) [![CD - Release](https://github.com/julesklord/mentask/actions/workflows/release.yml/badge.svg)](https://github.com/julesklord/mentask/actions/workflows/release.yml)
+<h1 align="center">mentask</h1>
+
+<p align="center">
+  <strong>Autonomous AI Coding Agent for the Terminal</strong>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python">
+  <img src="https://img.shields.io/badge/License-MIT-6366F1?style=for-the-badge" alt="MIT License">
+  <img src="https://img.shields.io/badge/Security-Hardened-10B981?style=for-the-badge" alt="Security">
+  <img src="https://github.com/julesklord/mentask/actions/workflows/release.yml/badge.svg" alt="Release Status">
+</p>
 
 ---
 
-![mentask banner](docs/assets/banner.png)
+**WORK IN PROGRESS** | *Professional intelligence for complex codebases*
 
 ---
 
-**WORK IN PROGRESS** | *Formerly known as askgem*
-
----
-
-**mentask** is a professional, autonomous coding agent that lives in your terminal. Powered by [models.dev](https://models.dev/) and Google Gemini, it reads your files, edits your code, runs shell commands, and navigates your filesystem — all within an interactive session and with hardened safety guardrails that keep you in control.
+**mentask** is a professional, autonomous coding agent that lives in your terminal. Powered by Google Gemini and a custom orchestration engine, it reads your files, edits your code, runs shell commands, and navigates your filesystem — all within an interactive session and with hardened safety guardrails that keep you in control.
 
 No GUI. No cloud sync. No bloat. Just a fast, opinionated CLI agent you can trust with your codebase.
 
@@ -56,7 +65,7 @@ This autonomous loop repeats until the mission is accomplished or you interrupt 
 
 ## Features
 
-### Agentic tool engine
+### Agentic Tool Engine
 
 | Tool | Description |
 |---|---|
@@ -95,9 +104,7 @@ mentask now runs through a Rich-based terminal renderer:
 
 ### Persistent session history
 
-Every conversation auto-saves to `~/.mentask/history/` as JSON. Reload any past
-session with `/history load <id>`. A rolling context window and proactive summarization
-keep reloaded sessions within token budget.
+Every conversation auto-saves to `~/.mentask/history/` as JSON. Reload any past session with `/history load <id>`. A rolling context window and proactive summarization keep reloaded sessions within token budget.
 
 ---
 
@@ -106,39 +113,29 @@ keep reloaded sessions within token budget.
 The v0.18.5 release ("Lisan al-Gaib") transforms mentask into a persistent, self-correcting agent with advanced cognitive tools.
 
 ### 1. Persistent Gem-Style Renderer
-
-A complete architectural overhaul of the CLI output. All thoughts, tool calls, and results now persist in your terminal scroll buffer, providing a seamless and professional experience similar to Google's own Gem CLI.
+A complete architectural overhaul of the CLI output. All thoughts, tool calls, and results now persist in your terminal scroll buffer, providing a seamless and professional experience.
 
 ### 2. Intelligence Tools (Working Memory & Planning)
-
 - **`working_memory`**: A semantic scratchpad for the agent to store hypotheses and partial conclusions across multiple turns.
 - **`plan`**: Interactive checkpointing of `.mentask_plan.md` to track multi-step missions effectively.
 
 ### 3. Self-Critique & Error Correction
-
 Integrated reflection loops that force the agent to analyze tool failures before attempting alternative strategies, significantly increasing operational success rates.
 
 ### 4. Advanced UX Commands
-
 - **`/undo`**: Instantly rollback accidental file modifications.
 - **`/artifacts`**: Browse and expand previous tool results with a compact, interactive UI.
 - **`/theme`**: Switch between premium color schemes (indigo, monokai, ocean) in real-time.
-
-### 5. Robust Security & Memory
-
-Automatic file backups and dynamic context management to prevent token overflows and memory leaks in long sessions.
 
 ---
 
 ## Installation
 
 ### Prerequisites
+- Python 3.10+
+- A Google API Key — free at [Google AI Studio](https://aistudio.google.dev/).
 
-- **Python 3.10+**.
-- A **Google API Key** — free at [Google AI Studio](https://aistudio.google.dev/).
-
-### From source (recommended)
-
+### From Source
 ```bash
 git clone https://github.com/julesklord/mentask
 cd mentask.py
@@ -148,38 +145,33 @@ source venv/bin/activate
 pip install -e ".[dev]"
 ```
 
+### Via Pip
+```bash
+pip install mentask
+```
+
 ---
 
 ## Configuration
 
 ### API key (Standardized)
-
 mentask loads your key from these sources, in order:
-
 1. **Environment variable** — `GEMINI_API_KEY=your_key mentask` (Preferred)
-2. **System Keyring** — Secure storage via Windows Credential Manager or macOS Keychain (Recommended).
+2. **System Keyring** — Secure storage via Windows Credential Manager or macOS Keychain.
 3. **Saved file** — `~/.mentask/settings.json` (Local fallback).
 
-On first launch without a key, mentask prompts interactively and saves it securely in your system's keyring.
-
-### Settings file
-
-You can find the global configuration at `~/.mentask/settings.json`.
-
----
-
-## 🧠 Core Knowledge Hub
-
-mentask now features a **Hierarchical Knowledge Hub**, separating core behavioral rules from user-specific customizations. The agent reloads its intelligence every turn from three layers:
-
-1. **📦 Standard Hub (Internal)**: Built-in modules defining the "Staff Engineer" persona, operational safety rules, and multimodal guidelines (audio/video/vision).
-2. **🌍 Global Hub (`~/.mentask/*.md`)**: Your cross-project technical preferences, API guidelines, or personal style.
-3. **🚀 Project Hub (`.mentask/*.md`)**: Project-specific context, build commands, architecture rules, and "Mission" specifics.
+### Hierarchical Knowledge Hub
+The agent reloads its intelligence every turn from three layers:
+1. **Standard Hub (Internal)**: Built-in modules defining the "Staff Engineer" persona, operational safety rules, and multimodal guidelines (audio/video/vision).
+2. **Global Hub (`~/.mentask/*.md`)**: Your cross-project technical preferences, API guidelines, or personal style.
+3. **Project Hub (`.mentask/*.md`)**: Project-specific context, build commands, architecture rules, and "Mission" specifics.
 
 > [!TIP]
 > Just drop a `.md` file in any of these locations to instantly update mentask's cognitive behavior without touching the code.
 
-## 👁️ Multimodal Intelligence
+---
+
+## Multimodal Intelligence
 
 Fully optimized for Gemini 1.5 Pro and 2.0 Flash:
 
@@ -191,13 +183,9 @@ Fully optimized for Gemini 1.5 Pro and 2.0 Flash:
 
 ## Usage
 
-Stored at `~/.mentask/settings.json` (POSIX) or `%APPDATA%\mentask\settings.json` (Windows):
-
-```json
-{
-    "model_name": "gemini-1.5-flash",
-    "edit_mode": "manual"
-}
+Launch the agent:
+```bash
+mentask
 ```
 
 ### Configuration paths
@@ -208,26 +196,10 @@ Stored at `~/.mentask/settings.json` (POSIX) or `%APPDATA%\mentask\settings.json
 | `~/.mentask/history/` | Auto-saved session JSON files |
 | `~/.mentask/mentask.log` | Debug log — tool execution events and retry details |
 
----
-
-## Usage
-
-Launch the agent:
-
-```bash
-mentask
-```
-
 ### Common Workflows
-
-- **Context Analysis:** "Read my `pyproject.toml` and explain the dependencies."
-- **Code Generation:** "Create a `src/utils.py` file with a function to calculate SHA256 hashes."
-- **Refactoring:** "Refactor `authenticate()` in `src/auth.py` to use JWT instead of sessions."
-- **Exploration:** "Find all TODO comments in the project and group them by file."
-
-### Exiting
-
-Type `exit`, `quit`, `q`, or press `Ctrl+C`.
+- **Context Analysis**: "Read my `pyproject.toml` and explain the dependencies."
+- **Code Generation**: "Create a `src/utils.py` file with a function to calculate SHA256 hashes."
+- **Refactoring**: "Refactor `authenticate()` in `src/auth.py` to use JWT instead of sessions."
 
 ---
 
@@ -238,38 +210,36 @@ Type `exit`, `quit`, `q`, or press `Ctrl+C`.
 | `/help` | Show the full command reference and examples |
 | `/model <name>` | Switch Gemini models mid-conversation (history preserved) |
 | `/mode [auto/manual]` | Toggle between approving actions or automatic execution |
-| `/clear` | Reset the context window to free up tokens without ending session |
-| `/usage` | Show detailed token consumption and estimated USD cost |
-| `/stats` | Summary of session accomplishments (messages, tools, files) |
-| `/stop` | Interrupt the current generation immediately |
-| `/reset` | Restart the entire session and reset all counters |
+| `/clear` | Reset the context window to free up tokens |
+| `/usage` | Show detailed token consumption and estimated cost |
+| `/stats` | Summary of session accomplishments |
+| `/undo` | Rollback the last file modification |
 | `/init` | Initialize local project isolation and configuration |
-| `/history [list/load/delete]` | Manage saved conversation sessions |
+| `/history` | Manage saved conversation sessions |
 | `/trust [path]` | Add a directory to the permanent whitelist |
-| `/untrust [path]` | Remove a directory from the whitelist |
 
 ---
 
 ## Safety model
 
-**Always, regardless of mode (Sandboxed Environment):**
+**Trust Management Layer**: mentask implements a strict whitelist for file operations. By default, it can only touch the current workspace. Use `/trust` to authorize external paths.
 
-- **Trust Management Layer:** mentask now implements a strict whitelist for file operations. By default, it can only touch the current workspace. Use `/trust` to authorize external paths.
-- **Cross-Drive Protection:** On Windows, the agent is blocked from crossing drive letters (e.g., C: to G:) unless the target is explicitly trusted, preventing unintended system-wide access.
-- **Risk Analysis Engine:** Powered by `core/security.py`, every command is categorized:
-  - `SAFE`: Informative commands (ls, git status).
-  - `NOTICE`: Standard operations.
-  - `WARNING`: High-risk patterns (sudo, sensitive file access).
-  - `DANGEROUS`: Critical risk (rm -rf, fork bombs, world-writable chmod).
-- **Atomic Writing:** `edit_file` uses a temporary file + rename strategy to prevent corruption.
-- **Automatic Backups:** Every file modification creates a `.bkp` backup at `<path>.bkp`.
-- **Hard Timeouts:** Shell commands have a strict 60-second execution limit.
+**Cross-Drive Protection**: On Windows, the agent is blocked from crossing drive letters unless the target is explicitly trusted.
+
+**Risk Analysis Engine**: Every command is categorized:
+- `SAFE`: Informative commands (ls, git status).
+- `NOTICE`: Standard operations.
+- `WARNING`: High-risk patterns (sudo, sensitive file access).
+- `DANGEROUS`: Critical risk (rm -rf, world-writable chmod).
+
+**Atomic Writing**: `edit_file` uses a temporary file + rename strategy to prevent corruption.
+**Automatic Backups**: Every file modification creates a backup at `~/.mentask/backups/`.
 
 ---
 
 ## Architecture
 
-mentask operates across three tightly decoupled layers enforcing strong logical boundaries. As of version **0.16.0**, the system has evolved into an **Orchestrated Architecture**, where a central engine manages cognitive managers, security centinels, and an autonomous LSP verification loop.
+mentask operates across three tightly decoupled layers enforcing strong logical boundaries.
 
 ### High-Level System Diagram
 
@@ -277,62 +247,45 @@ mentask operates across three tightly decoupled layers enforcing strong logical 
 flowchart TD
     CLI(["User execution (mentask)"]) --> Main(cli/main.py)
     Main --> Renderer(cli/renderer.py)
-    Renderer <--> Orchestrator(agent/orchestrator.py: AgentOrchestrator)
+    Renderer <--> Orchestrator(agent/orchestrator.py)
     
     subgraph Cognitive_Layer [Cognitive Managers]
         Orchestrator --> Session[agent/core/session.py]
         Orchestrator --> Context[agent/core/context.py]
         Orchestrator --> Stream[agent/core/stream.py]
-        Orchestrator --> Commands[agent/core/commands.py]
-        Orchestrator --> Simulation[agent/core/simulation.py]
     end
 
     Orchestrator <--> GenAI[Google Gemini API]
     
-    subgraph Security_Layer [Security & Trust Centinel]
+    subgraph Security_Layer [Security & Trust]
         GenAI -. function calls .-> Trust[core/trust_manager.py]
         Trust --> SecurityCheck[core/security.py]
         SecurityCheck --> Tools(tools/)
     end
 
     Tools --> localDisk[(Local Workspace)]
-    Context -. Blueprint .-> localDisk
 ```
 
 ### Layer Breakdown
+1. **Presentation Layer (`cli/`)**: Handles CLI startup, interactive prompts, and real-time Markdown rendering.
+2. **Cognitive Layer (`agent/`)**: The "Brain". Manages state, context blueprints, and mission tracking.
+3. **Security Layer (`core/`)**: The "Guard". Gathers risk analysis and whitelisting logic.
 
-1. **Presentation Layer (`cli/`)**: Handles CLI startup, interactive prompts, audit views, and real-time Markdown rendering.
-2. **Cognitive Layer (`agent/`)**: The "Brain". Powered by the `AgentOrchestrator`, it manages state, context blueprints, and mission tracking.
-3. **Security Layer (`core/`)**: The "Guard". Gathers risk analysis and whitelisting logic to ensure the agent never exceeds its authority.
+### Project Structure
 
-### Project Structure (v0.16.4)
-
-```
+```text
 mentask.py/
 ├── src/mentask/
-│   ├── __init__.py              # Single source of truth for version (0.18.5)
-│   ├── agent/
-│   │   ├── orchestrator.py      # The Reasoning Brain — Thinking/Action/Observation
-│   │   ├── schema.py            # Unified message and tool schemas
-│   │   └── core/                # Cognitive Managers
-│   │       ├── session.py       # API lifecycle, Retries and Error handling
-│   │       ├── context.py       # Blueprint, Memory and Mission management
-│   │       ├── commands.py      # Slash command handler
-│   │       └── simulation.py    # Deterministic loop recording
-│   ├── cli/
-│   │   ├── main.py              # Entry point and session initialization
-│   │   ├── renderer.py          # Rich streaming renderer and interactive prompts
-│   ├── core/
-│   │   ├── security.py          # Hardened safety engine
-│   │   ├── trust_manager.py     # Directory trust whitelist control
-│   │   ├── paths.py             # OS-agnostic path resolution (Workspace aware)
-│   ├── tools/                   # Atomic agentic tools
-│   └── locales/                 # i18n JSON data (8 languages supported)
-├── tests/                       # Reliable unit and integration tests
-├── scripts/                     # Maintenance and diagnostic utilities
-├── docs/                        # Rich documentation and assets
+│   ├── agent/               # Orchestrator and Cognitive Managers
+│   ├── cli/                 # Startup and Rich streaming renderer
+│   ├── core/                # Safety engine and Path resolution
+│   ├── tools/               # Atomic agentic tools
+│   └── locales/             # i18n JSON data (8 languages)
+├── tests/                   # Unit and integration tests
+├── docs/                    # Technical documentation and assets
 └── pyproject.toml
 ```
+
 
 ---
 
@@ -350,8 +303,8 @@ pip install -e ".[dev]"
 
 mentask introduces a **Simulation Layer**. You can record agent turns and play them back deterministically:
 
-1. **Record:** Set `SIMULATION_MODE=record` to capture interactions.
-2. **Playback:** Run `pytest tests/integration/test_full_agent_loop.py` to verify the logic against the recorded transcript without hitting the real API.
+1. **Record**: Set `SIMULATION_MODE=record` to capture interactions.
+2. **Playback**: Run `pytest tests/integration/test_full_agent_loop.py` to verify the logic against the recorded transcript without hitting the real API.
 
 ### Tests & Linting
 
@@ -363,8 +316,6 @@ ruff check src/ tests/ --fix    # auto-fix linting violations
 ---
 
 ## Internationalization
-
-mentask is **English-First** at the SDK/System level for maximum model reliability, but the entire user interface supports 8 languages:
 
 | Code | Language | File |
 |---|---|---|
@@ -387,22 +338,25 @@ See [STANDARD.md](STANDARD.md) for the operating standard to apply across the ot
 
 ---
 
+## Contributing
+
+Contributions are welcome! Please see [CONTRIBUTING.md](docs/CONTRIBUTING.md) for our development workflow and code of conduct.
+
+---
+
 ## Roadmap
 
 | Version | Theme | Status |
 |---|---|---|
-| `v0.14.0`| Stability, Renderer Polish | ✅ Done |
-| `v0.15.0`| **Kwisatz Haderach** - LSP Integration | ✅ Done |
-| `v0.16.0`| **The Golden Path** - Professional Recovery | ✅ Done |
-| `v0.18.0`| **Lisan al-Gaib** - Cognitive Architecture | ✅ Done |
-| `v0.18.5`| **Full Branding & Stability** | ✅ Done |
-| `v0.19.0`| **Water of Life** - Self-Healing Loop | 📋 Planned |
-| `v0.20.0`| **God Emperor** - Absolute Orchestration | 📋 Planned |
+| `v0.18.0`| Cognitive Architecture | ✅ Done |
+| `v0.18.5`| Full Branding & Stability | ✅ Done |
+| `v0.19.0`| Self-Healing Loop | 📋 Planned |
+| `v0.20.0`| Absolute Orchestration | 📋 Planned |
 
 ---
 
 ## License
 
-GNU General Public License v3.0 — see [LICENSE](LICENSE) for full terms.
+Licensed under the **MIT License**. See [LICENSE](LICENSE) for details.
 
-Built by [julesklord](https://github.com/julesklord).
+Built with precision by [julesklord](https://github.com/julesklord).

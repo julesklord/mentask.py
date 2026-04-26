@@ -1,4 +1,4 @@
-name: Deploy askgem
+name: Deploy mentask
 
 on:
   release:
@@ -40,7 +40,7 @@ jobs:
     if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
     environment:
       name: pypi
-      url: https://pypi.org/p/askgem
+      url: https://pypi.org/p/mentask
     permissions:
       id-token: write  # IMPORTANT: mandatory for trusted publishing
       contents: read

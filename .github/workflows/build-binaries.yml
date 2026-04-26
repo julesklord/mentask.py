@@ -38,18 +38,18 @@ jobs:
 
       - name: Build with PyInstaller
         run: |
-          pyinstaller --onefile --add-data "src/askgem/locales/*${{ matrix.separator }}askgem/locales" --name askgem run.py
+          pyinstaller --onefile --add-data "src/mentask/locales/*${{ matrix.separator }}mentask/locales" --name mentask run.py
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: askgem-${{ matrix.os }}
-          path: dist/askgem${{ matrix.ext }}
+          name: mentask-${{ matrix.os }}
+          path: dist/mentask${{ matrix.ext }}
 
       - name: Attach to Release
         if: github.event_name == 'release'
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/askgem${{ matrix.ext }}
+          files: dist/mentask${{ matrix.ext }}
         env:
           GITHUB_TOKEN: ${{ github.token }}

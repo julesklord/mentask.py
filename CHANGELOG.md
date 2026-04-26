@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.20.1-fix] - 2026-04-26
+## [0.20.1] - 2026-04-26
 
 ### Fixed
 - **LSP Stability**: Resolved infinite hangs during the Ruff server handshake by implementing timeouts and robust error handling in the background reader loop.

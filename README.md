@@ -1,19 +1,10 @@
-<p align="center">
-  <img src="docs/assets/logo.svg" width="120" alt="mentask logo">
-</p>
+# mentask — Autonomous AI Coding Agent for the Terminal
 
-<h1 align="center">mentask</h1>
+[![PyPI version](https://img.shields.io/pypi/v/mentask.svg)](https://pypi.org/project/mentask/) [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/) [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE) [![Powered by models.dev](https://img.shields.io/badge/Powered%20by-models.dev-6366f1)](https://models.dev/) [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff) [![Security Scan](https://github.com/julesklord/mentask/actions/workflows/security.yml/badge.svg)](https://github.com/julesklord/mentask/actions/workflows/security.yml) [![Python CI (Pro)](https://github.com/julesklord/mentask/actions/workflows/python-ci.yml/badge.svg)](https://github.com/julesklord/mentask/actions/workflows/python-ci.yml) [![CD - Release](https://github.com/julesklord/mentask/actions/workflows/release.yml/badge.svg)](https://github.com/julesklord/mentask/actions/workflows/release.yml)
 
-<p align="center">
-  <strong>Autonomous AI Coding Agent for the Terminal</strong>
-</p>
+---
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python">
-  <img src="https://img.shields.io/badge/License-MIT-6366F1?style=for-the-badge" alt="MIT License">
-  <img src="https://img.shields.io/badge/Security-Hardened-10B981?style=for-the-badge" alt="Security">
-  <img src="https://github.com/julesklord/mentask/actions/workflows/release.yml/badge.svg" alt="Release Status">
-</p>
+![mentask banner](docs/assets/banner.png)
 
 ---
 

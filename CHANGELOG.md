@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.19.3] - 2026-04-26
+
+### Fixed
+
+- **Execution Engine**: Fixed a critical `TypeError` in `system_tools.py` where the built-in `callable` was incorrectly used as a type hint instead of `typing.Callable`, which caused silent crashes during tool calls.
+
 ## [0.19.2] - 2026-04-26
 
 ### Fixed

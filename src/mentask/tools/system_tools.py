@@ -9,6 +9,7 @@ import asyncio
 import contextlib
 import platform
 import shutil
+from typing import Callable
 
 _WINDOWS_SHELL = None
 
@@ -57,7 +58,7 @@ async def _create_process(command: str) -> asyncio.subprocess.Process:
         )
 
 
-async def _read_stream(stream, callback: callable | None, prefix: str = ""):
+async def _read_stream(stream, callback: Callable | None, prefix: str = ""):
     """Reads from a stream line by line and sends it to the callback."""
     if not stream:
         return ""
@@ -78,7 +79,7 @@ async def _read_stream(stream, callback: callable | None, prefix: str = ""):
 
 
 async def execute_bash(
-    command: str, timeout: int = 60, max_output: int = 10000, output_callback: callable | None = None
+    command: str, timeout: int = 60, max_output: int = 10000, output_callback: Callable | None = None
 ) -> str:
     """
     Executes a shell command asynchronously, captures its standard output (stdout)

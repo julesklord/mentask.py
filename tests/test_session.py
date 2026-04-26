@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -11,7 +11,7 @@ async def test_generate_stream_parsing():
     # Setup
     mock_config = MagicMock()
     session = SessionManager(mock_config, "gemini-2.0-flash")
-    
+
     # Mock the provider instead of the client
     session.provider = MagicMock()
 

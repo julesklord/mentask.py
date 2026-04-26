@@ -75,7 +75,7 @@ class AgentOrchestrator:
     async def _perform_context_snap(self, history: list[Message], config: Any) -> list[Message]:
         """Summarizes history and resets context without corrupting state."""
         _logger.warning(f"Context Snapping Triggered! Threshold exceeded. Current model: {self.client.model_name}")
-        
+
         # Use a copy to prevent corrupting history if synthesis fails
         history_copy = [m for m in history]
         summary_prompt = self.summarizer.BASE_SUMMARIZATION_PROMPT
@@ -94,7 +94,7 @@ class AgentOrchestrator:
             formatted_summary = self.summarizer.format_summary(raw_summary)
             continuation_msg = self.summarizer.get_user_continuation_message(formatted_summary)
             return [Message(role=Role.USER, content=continuation_msg)]
-        
+
         return history
 
     def _find_tool_call_name(self, tool_calls: list[Any], tool_call_id: str) -> str:

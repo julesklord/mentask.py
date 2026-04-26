@@ -1,4 +1,3 @@
-from typing import Any
 
 from ...core.identity_manager import KnowledgeManager
 from .base import BaseTool as Tool

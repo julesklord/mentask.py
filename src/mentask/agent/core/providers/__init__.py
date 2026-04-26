@@ -1,6 +1,7 @@
 from typing import Any
 
 from mentask.core.models_hub import hub
+
 from .base import BaseProvider
 from .gemini import GeminiProvider
 from .openai import OpenAIProvider

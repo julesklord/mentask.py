@@ -42,11 +42,11 @@ async def test_session_manager_setup_api_delegation(mock_config):
 async def test_session_manager_switch_model(mock_config):
     """Verifies that switch_model re-initializes the provider."""
     manager = SessionManager(mock_config, model_name="gemini-1.5-flash")
-    
+
     with patch("mentask.agent.core.session.get_provider") as mock_get:
         mock_get.return_value = AsyncMock()
         mock_get.return_value.setup.return_value = True
-        
+
         success = await manager.switch_model("gemini-1.5-pro")
         assert success is True
         assert manager.model_name == "gemini-1.5-pro"
@@ -62,23 +62,23 @@ async def test_session_manager_compaction_trigger(mock_config):
     manager = SessionManager(mock_config, model_name="gemini-2.0-flash")
     manager.compaction_threshold = 1000
     manager.provider = MagicMock()
-    
+
     # Mock _compact_history
     manager._compact_history = AsyncMock(return_value=[Message(role=Role.USER, content="summary")])
-    
+
     history = [
         AssistantMessage(content="prev", usage=UsageMetrics(input_tokens=900, output_tokens=10))
     ]
-    
+
     # We need to iterate the stream to trigger the check
     async def mock_gen(*args, **kwargs):
         yield {"type": "text", "content": "done"}
-        
+
     manager.provider.generate_stream.side_effect = mock_gen
-    
+
     events = []
     async for event in manager.generate_stream(history, tools_schema=[]):
         events.append(event)
-        
+
     manager._compact_history.assert_called_once()
     assert history[0].content == "summary"

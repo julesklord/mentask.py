@@ -284,7 +284,7 @@ class GemStyleRenderer:
         view = self._build_view(show_cursor=False)
         if view.renderables:
             self.console.print(view)
-        
+
         self.printed_count = len(self.committed_buffer)
         self._streaming = False
 
@@ -426,7 +426,7 @@ class GemStyleRenderer:
             return
         for line in text.strip().splitlines():
             self.committed_buffer.append(Text(f"  {icons.vbar} {line}", style=f"dim {self.C_THINK}"))
-        
+
         if self._live:
             self._live.update(self._build_view())
         else:

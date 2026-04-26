@@ -31,6 +31,7 @@ COMMAND_METADATA = {
     "/mode": {"desc": _("cmd.desc.mode_manual"), "example": "/mode auto/manual", "category": "Config"},
     "/stream": {"desc": "Change streaming display mode", "example": "/stream transient", "category": "Config"},
     "/theme": {"desc": "List or change UI themes", "example": "/theme [name]", "category": "Config"},
+    "/init": {"desc": "Initialize local project isolation and configuration", "example": "/init", "category": "Config"},
     # --- Security ---
     "/auth": {"desc": "Sets the Gemini API Key securely", "example": "/auth <key>", "category": "Security"},
     "/trust": {"desc": "Authorizes current directory for auto-execution", "example": "/trust", "category": "Security"},
@@ -89,8 +90,6 @@ class CommandHandler:
             return self._cmd_usage(args)
         elif command == "/stats":
             return self._cmd_stats()
-        elif command == "/compact":
-            return await self._cmd_compact()
         elif command in ("/themes", "/theme"):
             return self._cmd_theme(args)
         elif command in ("/artifacts", "/art"):
@@ -134,8 +133,9 @@ class CommandHandler:
             return await self._cmd_export(args)
         elif command == "/discover":
             return await self._cmd_discover(args)
+        elif command == "/prompt":
+            return self._cmd_prompt(args)
         elif command == "/init":
-            # Hidden command: initialize local configuration
             return await self._cmd_init()
         return None
 

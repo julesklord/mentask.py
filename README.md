@@ -212,15 +212,23 @@ mentask
 | Command | Description |
 |---|---|
 | `/help` | Show the full command reference and examples |
+| `/init` | Initialize local project isolation and configuration |
 | `/model <name>` | Switch Gemini models mid-conversation (history preserved) |
 | `/mode [auto/manual]` | Toggle between approving actions or automatic execution |
+| `/prompt --theme <name>` | Customize the interactive prompt style |
+| `/theme [name]` | List or change UI themes |
+| `/stream [mode]` | Change streaming display mode (continuous/transient) |
 | `/clear` | Reset the context window to free up tokens |
+| `/compact` | Compress conversation history to save tokens |
+| `/sessions` | List previous chat sessions |
+| `/load <id>` | Load a specific saved session |
+| `/undo` | Rollback the last file modification |
+| `/trust [path]` | Add a directory to the permanent whitelist |
+| `/untrust` | Remove authorization from current directory |
+| `/auth <key>` | Securely set the Gemini API Key |
 | `/usage` | Show detailed token consumption and estimated cost |
 | `/stats` | Summary of session accomplishments |
-| `/undo` | Rollback the last file modification |
-| `/init` | Initialize local project isolation and configuration |
-| `/history` | Manage saved conversation sessions |
-| `/trust [path]` | Add a directory to the permanent whitelist |
+| `/artifacts` | Browse and expand previous tool results |
 
 ---
 

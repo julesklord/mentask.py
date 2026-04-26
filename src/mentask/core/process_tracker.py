@@ -6,8 +6,6 @@ are properly terminated when the agent shuts down.
 
 import asyncio
 import logging
-import weakref
-from typing import Set
 
 _logger = logging.getLogger("mentask")
 
@@ -18,11 +16,11 @@ class ProcessTracker:
     but keeps a strong list for the duration of the execution.
     """
     _instance = None
-    _active_processes: Set[asyncio.subprocess.Process] = set()
+    _active_processes: set[asyncio.subprocess.Process] = set()
 
     def __new__(cls):
         if cls._instance is None:
-            cls._instance = super(ProcessTracker, cls).__new__(cls)
+            cls._instance = super().__new__(cls)
         return cls._instance
 
     def register(self, process: asyncio.subprocess.Process):
@@ -42,10 +40,10 @@ class ProcessTracker:
             return
 
         _logger.info(f"Shutting down {len(self._active_processes)} active processes...")
-        
+
         # Create a copy to iterate while modifying
         to_kill = list(self._active_processes)
-        
+
         for proc in to_kill:
             try:
                 if proc.returncode is None:

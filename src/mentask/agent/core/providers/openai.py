@@ -25,7 +25,6 @@ class OpenAIProvider(BaseProvider):
 
     async def setup(self) -> bool:
         """Resolves API Base and Key dynamically using models.dev metadata."""
-        import os
 
         from ....core.models_hub import hub
 

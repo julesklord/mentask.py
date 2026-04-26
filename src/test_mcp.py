@@ -1,5 +1,4 @@
 import asyncio
-import logging
 
 from mentask.agent.chat import ChatAgent
 from mentask.core.config_manager import ConfigManager

@@ -38,7 +38,7 @@ jobs:
 
       - name: Build with PyInstaller
         run: |
-          pyinstaller --onefile --add-data "src/mentask/locales/*${{ matrix.separator }}mentask/locales" --name mentask run.py
+          pyinstaller --onefile --add-data "src/mentask/locales${{ matrix.separator }}mentask/locales" --name mentask run.py
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4

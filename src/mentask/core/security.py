@@ -7,6 +7,7 @@ import enum
 import os
 import re
 from dataclasses import dataclass
+from pathlib import Path
 
 
 class SafetyLevel(enum.Enum):
@@ -111,6 +112,9 @@ CRITICAL_DIRECTORIES: set[str] = {
 
 def ensure_safe_path(path: str) -> str:
     """Ensures that the provided path is within the current working directory."""
+    if (re.match(r"^[a-zA-Z]:[\\/]", path) or path.startswith("\\\\")) and os.name != "nt":
+        raise PermissionError(f"Access denied: Path '{path}' is an absolute Windows path.")
+
     abs_path = os.path.abspath(path)
     cwd = os.getcwd()
     try:
@@ -176,7 +180,7 @@ def analyze_path_safety(path_str: str) -> SafetyReport:
     intersect = parts.intersection(CRITICAL_DIRECTORIES)
     if intersect:
         dir_name = list(intersect)[0]
-        
+
         # Exception: Allow dynamic agent tools in .mentask/plugins/
         if dir_name == ".mentask" and "plugins" in [p.lower() for p in path.parts]:
             pass

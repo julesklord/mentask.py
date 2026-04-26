@@ -24,6 +24,7 @@ class GeminiProvider(BaseProvider):
 
     async def setup(self) -> bool:
         from google import genai
+
         self.api_key = self.config.load_api_key("google")
         if not self.api_key:
             return False
@@ -38,6 +39,7 @@ class GeminiProvider(BaseProvider):
         config: Any | None = None,
     ) -> AsyncGenerator[dict[str, Any], None]:
         from google.genai import types
+
         if not self.client:
             raise RuntimeError("GeminiProvider not setup.")
 

@@ -137,9 +137,7 @@ class PromptEngine:
                 PromptSegment(tool, "white", self.theme.brand_secondary, icon="🛠️" if self.use_nerdfonts else ">")
             )
         elif is_natural:
-            segments.append(
-                PromptSegment("MESSAGE", "black", "#A855F7", icon="󰭻" if self.use_nerdfonts else "»")
-            )
+            segments.append(PromptSegment("MESSAGE", "black", "#A855F7", icon="󰭻" if self.use_nerdfonts else "»"))
 
         renderer = self.STYLES.get(style_name, self._render_atomic)
         return renderer(segments)

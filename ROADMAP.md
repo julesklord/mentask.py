@@ -1,9 +1,9 @@
 # mentask — Development Roadmap
 
 > **Last Updated:** April 24, 2026
-> **Current Version:** `0.18.0`
+> **Current Version:** `0.19.0`
 > **Maintainer:** [@julesklord](https://github.com/julesklord)
-> **Status:** Milestone 7 (Lisan al-Gaib) COMPLETED
+> **Status:** Milestone 8 (Water of Life) COMPLETED
 
 This document outlines the engineering roadmap for `mentask`, organized into prioritized milestones. The current focus is resolving technical bugs, improving UX, and enhancing agent cognitive capabilities based on the latest v0.18.0 audit.
 
@@ -118,7 +118,7 @@ graph TD
 
 ### 6.2 Multi-Agent Orchestration
 
-- [ ] Sub-agent spawning for parallel task execution.
+- [x] Sub-agent spawning for parallel task execution (`delegate_mission`).
 
 ### 6.3 Deep Static Analysis & Refactoring
 
@@ -150,8 +150,8 @@ graph TD
 ```text
 2026-04-19  v0.15.0  -  Kwisatz Haderach: LSP integration
 2026-04-20  v0.16.0  -  The Golden Path: Professional Consolidation
-2026-04-24  v0.18.0  -  Lisan al-Gaib: Cognitive Architecture (CURRENT)
-2026-05     v0.19.0  -  Water of Life: Universal Provider & MentAsk Vision
+2026-04-24  v0.18.0  -  Lisan al-Gaib: Cognitive Architecture
+2026-04-26  v0.19.0  -  Water of Life: Universal Provider & MentAsk Vision (CURRENT)
 ```
 
 ---

@@ -22,7 +22,7 @@ class UsageMetrics(BaseModel):
 class ToolCall(BaseModel):
     id: str
     name: str
-    arguments: dict[str, Any]
+    arguments: dict[str, Any] = Field(default_factory=dict)
 
 
 class ToolResult(BaseModel):

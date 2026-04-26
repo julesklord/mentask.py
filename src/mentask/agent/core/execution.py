@@ -65,6 +65,7 @@ class ExecutionManager:
                 await self.lsp.stop()
             except Exception as e:
                 from logging import getLogger
+
                 getLogger("mentask").error(f"Error stopping LSP: {e}")
             finally:
                 self.lsp = None

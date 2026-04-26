@@ -42,9 +42,9 @@ class ConfigManager:
 
     def load_settings(self) -> None:
         """Loads user settings from the JSON file if available.
-
-        Modifies the settings dict in place.
+        Supports hierarchical loading: Global -> Local (.mentask/settings.json).
         """
+        # 1. Global settings
         path = get_config_path(self.SETTINGS_FILE)
         if os.path.exists(path):
             try:
@@ -52,7 +52,19 @@ class ConfigManager:
                     data = json.load(f)
                     self.settings.update(data)
             except Exception as e:
-                self.console.print(f"[error][X] Error loading settings.json: {e}[/error]")
+                self.console.print(f"[error][X] Error loading global settings.json: {e}[/error]")
+
+        # 2. Local settings (Project Override)
+        local_path = os.path.join(os.getcwd(), ".mentask", self.SETTINGS_FILE)
+        if os.path.exists(local_path):
+            try:
+                with open(local_path, encoding="utf-8") as f:
+                    local_data = json.load(f)
+                    self.settings.update(local_data)
+                    # We don't print a success message here to keep the startup clean,
+                    # but the settings are now overridden.
+            except Exception as e:
+                self.console.print(f"[error][!] Error loading local .mentask/settings.json: {e}[/error]")
 
         # Load sensitive keys from keyring
         try:

@@ -52,7 +52,13 @@ class AgentOrchestrator:
             with open(plan_file, encoding="utf-8") as handle:
                 raw_plan = handle.read().strip()
             return f"\n\n## ACTIVE EXECUTION PLAN (from {plan_file}):\n{raw_plan}" if raw_plan else ""
-        except Exception:
+        except FileNotFoundError:
+            return ""
+        except PermissionError:
+            _logger.warning(f"Cannot read plan file (permission denied): {plan_file}")
+            return ""
+        except Exception as e:
+            _logger.error(f"Unexpected error reading plan file: {e}")
             return ""
 
     def _build_turn_config(self, config: Any | None) -> Any | None:

@@ -93,6 +93,7 @@ async def execute_bash(
     try:
         process = await _create_process(command)
         from ..core.process_tracker import tracker
+
         tracker.register(process)
 
         try:
@@ -106,6 +107,9 @@ async def execute_bash(
             except asyncio.TimeoutError:
                 # Force kill the process and all its children if possible
                 with contextlib.suppress(Exception):
+                    if platform.system() == "Windows":
+                        import subprocess
+                        subprocess.run(["taskkill", "/F", "/T", "/PID", str(process.pid)], capture_output=True)
                     process.kill()
                 await process.wait()
                 return f"Error: Command '{command}' timed out after {timeout} seconds."
@@ -118,6 +122,9 @@ async def execute_bash(
 
         except Exception as e:
             with contextlib.suppress(Exception):
+                if platform.system() == "Windows":
+                    import subprocess
+                    subprocess.run(["taskkill", "/F", "/T", "/PID", str(process.pid)], capture_output=True)
                 process.kill()
             tracker.unregister(process)
             return f"Error during execution: {e}"

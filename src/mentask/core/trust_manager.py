@@ -28,16 +28,19 @@ class TrustManager:
     async def save_trust(self) -> None:
         """Async-safe trust persistence."""
         import asyncio
+
         try:
             await asyncio.to_thread(self._write_trust_file)
         except Exception as e:
             import logging
+
             logging.getLogger("mentask").error(f"Failed to save trust config: {e}")
 
     def _write_trust_file(self) -> None:
         """Síncrono, corrido en thread pool."""
         with open(self.path, "w", encoding="utf-8") as f:
             import json
+
             json.dump(list(self.trusted_paths), f, indent=4)
 
     def is_trusted(self, path: str) -> bool:

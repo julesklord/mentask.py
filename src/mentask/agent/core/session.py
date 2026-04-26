@@ -72,7 +72,7 @@ class SessionManager:
                 provider_id = self.model_name.split(":")[0].lower()
 
             console.print(f"\n[error]{_('api.missing', provider=provider_id.upper())}[/error]")
-            prompt_msg = _('api.prompt', provider=provider_id.upper())
+            prompt_msg = _("api.prompt", provider=provider_id.upper())
             api_key = Prompt.ask(f"[bold cyan]{prompt_msg}[/bold cyan]").strip()
 
             if not api_key:

@@ -41,11 +41,11 @@ No GUI. No cloud sync. No bloat. Just a fast, opinionated CLI agent you can trus
   - [Human-in-the-loop safety](#human-in-the-loop-safety)
   - [Streaming terminal UX](#streaming-terminal-ux)
   - [Persistent session history](#persistent-session-history)
-- [New in v0.18.5: Lisan al-Gaib](#new-in-v0185-lisan-al-gaib)
-  - [1. Persistent Gem-Style Renderer](#1-persistent-gem-style-renderer)
-  - [2. Intelligence Tools (Working Memory \& Planning)](#2-intelligence-tools-working-memory--planning)
-  - [3. Self-Critique \& Error Correction](#3-self-critique--error-correction)
-  - [4. Advanced UX Commands](#4-advanced-ux-commands)
+- [New in v0.19.0: Water of Life](#new-in-v0190-water-of-life)
+  - [1. Autonomous Delegation (\`delegate_mission\`)](#1-autonomous-delegation-delegate_mission)
+  - [2. High-Speed Analysis (\`analyze_codebase\`)](#2-high-speed-analysis-analyze_codebase)
+  - [3. Professional Efficiency (Level 403)](#3-professional-efficiency-level-403)
+  - [4. Persistent Gem-Style Renderer](#4-persistent-gem-style-renderer)
 - [Installation](#installation)
   - [Prerequisites](#prerequisites)
   - [From Source](#from-source)
@@ -70,7 +70,6 @@ No GUI. No cloud sync. No bloat. Just a fast, opinionated CLI agent you can trus
 - [Internationalization](#internationalization)
 - [Repository Standard](#repository-standard)
 - [Contributing](#contributing)
-- [Roadmap](#roadmap)
 - [License](#license)
 
 ---
@@ -100,9 +99,10 @@ This autonomous loop repeats until the mission is accomplished or you interrupt 
 | `read_file` | Read any file with optional line ranges — 30k char cap prevents token overflow |
 | `edit_file` | Find-and-replace with **atomic writing**, uniqueness guard, and automatic `.bkp` backup |
 | `execute_bash` | Run shell commands with 60s timeout and full **Risk Analysis** |
+| `analyze_codebase` | Perform high-speed repository mapping and git delta analysis |
+| `delegate_mission` | Spawn specialized **Subagents** (Explorer, Verifier) for autonomous research or adversarial testing |
 | `manage_memory` | Save important project facts to `memory.md` for long-term recall |
 | `manage_mission` | Track complex goals and sub-tasks via `heartbeat.md` mission control |
-| `manage_workspace` | Detects and initializes local project knowledge bases |
 
 ## Project Isolation (/init)
 
@@ -135,24 +135,24 @@ Every conversation auto-saves to `~/.mentask/history/` as JSON. Reload any past 
 
 ---
 
-## New in v0.18.5: Lisan al-Gaib
+---
 
-The v0.18.5 release ("Lisan al-Gaib") transforms mentask into a persistent, self-correcting agent with advanced cognitive tools.
+## New in v0.19.0: Water of Life
+The "Specialist Collective" update introduces high-performance agent patterns ported from the `reference_code` standard.
 
-### 1. Persistent Gem-Style Renderer
+### 1. Autonomous Delegation (`delegate_mission`)
+The main agent can now spawn specialized subagents to offload context-heavy tasks:
+- **Explorer**: Read-only specialist for deep repository research.
+- **Verifier**: Adversarial agent that tries to "break" implementations before reporting success.
+
+### 2. High-Speed Analysis (`analyze_codebase`)
+A "first-strike" tool that builds a recursive tree map and analyzes git deltas in milliseconds, ensuring the agent understands the project structure before spending tokens on large reads.
+
+### 3. Professional Efficiency (Level 403)
+Updated system instructions prioritize "Measure Twice, Cut Once" philosophy, forcing agents to analyze first, use surgical reads, and provide verification evidence.
+
+### 4. Persistent Gem-Style Renderer
 A complete architectural overhaul of the CLI output. All thoughts, tool calls, and results now persist in your terminal scroll buffer, providing a seamless and professional experience.
-
-### 2. Intelligence Tools (Working Memory & Planning)
-- **`working_memory`**: A semantic scratchpad for the agent to store hypotheses and partial conclusions across multiple turns.
-- **`plan`**: Interactive checkpointing of `.mentask_plan.md` to track multi-step missions effectively.
-
-### 3. Self-Critique & Error Correction
-Integrated reflection loops that force the agent to analyze tool failures before attempting alternative strategies, significantly increasing operational success rates.
-
-### 4. Advanced UX Commands
-- **`/undo`**: Instantly rollback accidental file modifications.
-- **`/artifacts`**: Browse and expand previous tool results with a compact, interactive UI.
-- **`/theme`**: Switch between premium color schemes (indigo, monokai, ocean) in real-time.
 
 ---
 
@@ -376,17 +376,6 @@ See [STANDARD.md](STANDARD.md) for the operating standard to apply across the ot
 ## Contributing
 
 Contributions are welcome! Please see [CONTRIBUTING.md](docs/CONTRIBUTING.md) for our development workflow and code of conduct.
-
----
-
-## Roadmap
-
-| Version | Theme | Status |
-|---|---|---|
-| `v0.18.0`| Cognitive Architecture | ✅ Done |
-| `v0.18.5`| Full Branding & Stability | ✅ Done |
-| `v0.19.0`| Self-Healing Loop | 📋 Planned |
-| `v0.20.0`| Absolute Orchestration | 📋 Planned |
 
 ---
 

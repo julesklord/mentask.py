@@ -106,6 +106,8 @@ def _parse_segments(text: str) -> list:
     if tail:
         segments.append(("text", tail))
     return segments
+
+
 class GemStyleRenderer:
     """Gem CLI-style renderer with persistent scroll buffer."""
 
@@ -368,7 +370,12 @@ class GemStyleRenderer:
             artifact_id = f"#{actual + 1}"
 
             if name in ["read_file", "edit_file", "write_file", "execute_bash", "execute_command", "read_url"]:
-                renderable = Syntax(content, "bash" if "bash" in name or "command" in name else "python", theme="monokai", line_numbers=True)
+                renderable = Syntax(
+                    content,
+                    "bash" if "bash" in name or "command" in name else "python",
+                    theme="monokai",
+                    line_numbers=True,
+                )
             elif "[LSP DIAGNOSTICS" in content or "Error:" in content:
                 renderable = Text.from_markup(content)
             else:
@@ -446,7 +453,9 @@ class GemStyleRenderer:
 
         if metrics:
             # Minimalist one-liner divider
-            self.console.print(f"  [dim]{icons.hdash * 2} {model} {icons.dot} {metrics} {icons.dot} {now} {icons.hdash * 2}[/dim]\n")
+            self.console.print(
+                f"  [dim]{icons.hdash * 2} {model} {icons.dot} {metrics} {icons.dot} {now} {icons.hdash * 2}[/dim]\n"
+            )
         else:
             self.console.print(f"\n  [dim]{icons.hdash * 20}[/dim]\n")
 

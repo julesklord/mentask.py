@@ -9,12 +9,14 @@ import logging
 
 _logger = logging.getLogger("mentask")
 
+
 class ProcessTracker:
     """
     Global singleton (effectively) to track active subprocesses.
     Uses weak references to avoid preventing GC of finished processes,
     but keeps a strong list for the duration of the execution.
     """
+
     _instance = None
     _active_processes: set[asyncio.subprocess.Process] = set()
 
@@ -60,6 +62,7 @@ class ProcessTracker:
                 self.unregister(proc)
 
         self._active_processes.clear()
+
 
 # Singleton instance
 tracker = ProcessTracker()

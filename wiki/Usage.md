@@ -12,7 +12,7 @@ mentask
 When you launch mentask, you'll see a professional header with the version and current model:
 
 ```text
- ──────────────── mentask v0.18.7 • gemini-2.0-flash • manual ───────────────── 
+ ──────────────── mentask v0.19.0 • gemini-2.0-flash • manual ───────────────── 
                        Type /help for commands • Ctrl+C to exit                       
 
  @julesklord

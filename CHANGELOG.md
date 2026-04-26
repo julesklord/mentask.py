@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.19.0] - "Water of Life" - 2026-04-26
+
+### Added
+
+- **Autonomous Sub-agents**: Introduced `delegate_mission` tool allowing the agent to spawn isolated "Explorer" (read-only) and "Verifier" (sandbox) sub-agents for parallel task execution.
+- **Repository Analysis**: Added `analyze_codebase` tool for efficient, multi-mode (stat, map, blueprint) repository scanning without reading full directories.
+- **Project Isolation**: Implemented the `/init` command to initialize local `.mentask/` directories, providing scoped configuration, isolated history, and local `identity.md` files.
+
+### Fixed
+
+- **Process Integrity**: Implemented platform-specific process tree cleanup (taskkill/kill) to prevent zombie processes on `execute_bash` timeouts.
+- **Security Validation**: Fortified `build_security_warning` against unresolved path traversals by capturing generic `OSError` and `ValueError`.
+- **LSP Leaks**: Fixed memory leaks during session resets by guaranteeing graceful `shutdown()` for the background LSP process.
+- **Architecture Stability**: Removed race conditions in `compress_history` to prevent session corruption and enforced validation on `ToolCall.arguments`.
+- **CI/CD Reliability**: Refactored `tox.ini` to pull dependencies directly from `pyproject.toml` `dev` extras, ensuring stable pytest-asyncio runs.
+
 ## [0.18.8] - 2026-04-26
 
 ### Fixed

@@ -28,7 +28,9 @@ from .core.context import ContextManager
 from .core.session import SessionManager
 from .orchestrator import AgentOrchestrator
 from .schema import AgentTurnStatus, Message, Role
+from .tools.analysis_tools import AnalyzeTool
 from .tools.base import ToolRegistry
+from .tools.delegation_tools import SubagentTool
 from .tools.file_tools import EditFileTool, ListDirTool, ReadFileTool, WriteFileTool
 from .tools.knowledge_tool import KnowledgeTool
 from .tools.memory_tool import MemoryTool
@@ -141,6 +143,8 @@ class ChatAgent:
         registry.register(GlobFindTool())
         registry.register(AskUserTool())
         registry.register(PythonReplTool())
+        registry.register(AnalyzeTool())
+        registry.register(SubagentTool(self.session, registry, self.config))
 
         if self.config.settings.get("web_search_enabled", True):
             registry.register(WebSearchTool(self.config))
@@ -366,6 +370,7 @@ class ChatAgent:
     async def close(self):
         """Cleanup resources."""
         from ..core.process_tracker import tracker
+
         await tracker.kill_all()
         await self.orchestrator.executor.shutdown()
         await self.session.close()
@@ -434,13 +439,13 @@ class ChatAgent:
             completion_dict = {cmd: None for cmd in self.commands.get_all_commands()}
 
             # Add specific sub-commands
-            completion_dict["/theme"] = {t: None for t in themes.THEMES.keys()}
+            completion_dict["/theme"] = {t: None for t in themes.THEMES}
             completion_dict["/mode"] = {"auto": None, "manual": None}
             completion_dict["/usage"] = {"--reset": None, "-r": None}
             completion_dict["/stream"] = {"transient": None, "continuous": None}
 
             # Dynamic prompt styles from engine
-            styles = {s: None for s in renderer.prompt_engine.STYLES.keys()}
+            styles = {s: None for s in renderer.prompt_engine.STYLES}
             completion_dict["/prompt"] = {"--theme": styles, "--nerdfonts": {"on": None, "off": None}}
 
             # For /model, we can try to pre-load some popular ones or current ones

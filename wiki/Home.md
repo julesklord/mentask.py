@@ -2,7 +2,7 @@
 
 ![mentask Banner](https://raw.githubusercontent.com/julesklord/mentask.py/main/docs/assets/banner.png)
 
-**mentask** is a professional, autonomous command-line AI coding agent powered by Google Gemini. Reborn with the **v0.18.x** core, it features **Autonomous Tool Orchestration**, **Gem-Style Terminal Rendering**, and a **Hardened Trust System** designed for high-stakes technical environments.
+**mentask** is a professional, autonomous command-line AI coding agent. Evolved with the **v0.19.x** core, it features **Autonomous Sub-agents**, **Gem-Style Terminal Rendering**, and a **Hardened Trust System** designed for high-stakes technical environments.
 
 ## Quick Start
 

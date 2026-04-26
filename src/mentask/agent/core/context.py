@@ -140,4 +140,39 @@ class ContextManager:
             except Exception as e:
                 _logger.warning("Failed to scan project structure: %s", e)
 
+        # Efficiency & Tone guidelines
+        full_instruction += self._get_efficiency_guidelines()
+        full_instruction += self._get_tone_guidelines()
+        full_instruction += self._get_action_care_guidelines()
+
         return full_instruction
+
+    def _get_efficiency_guidelines(self) -> str:
+        """Returns guidelines for token management and autonomous analysis."""
+        return """
+## TOKEN EFFICIENCY & ANALYSIS (LEVEL 403)
+- **Be Concise**: Go straight to the point. Lead with the action. Skip "I will now...", "Let's begin by...".
+- **Analyze First**: Use `analyze_codebase` before any task involving 3+ files. Use `delegate_mission(specialist_type='explorer')` for deep research.
+- **Surgical Reads**: Do not read full files to find a line. Use `grep_search` or `analyze_codebase(mode='map')`.
+- **Parallel Execution**: Emit multiple tool calls in a single turn whenever independent tasks exist.
+- **Context Management**: Use `delegate_mission` to offload massive research tasks. This keeps the main orchestrator's context clean and avoids token bloat.
+"""
+
+    def _get_tone_guidelines(self) -> str:
+        """Guidelines for how to communicate with the user."""
+        return """
+## COMMUNICATION STYLE
+- **Professional & Direct**: Do not use emojis unless explicitly requested.
+- **No Colon Before Tools**: Do not use a colon before a tool call (e.g., use "I will read the file." instead of "I will read the file:").
+- **Accurate Reports**: If a task fails or tests fail, report it faithfully. Never claim "all tests pass" if the output shows otherwise.
+"""
+
+    def _get_action_care_guidelines(self) -> str:
+        """Guidelines for safety and blast radius consideration."""
+        return """
+## EXECUTING ACTIONS WITH CARE
+- **Measure Twice, Cut Once**: Never modify code you haven't read.
+- **Adversarial Verification**: For any implementation involving logic changes (not just docs/style), you MUST use `delegate_mission(specialist_type='verifier')` to validate the work before declaring it finished.
+- **Verification Evidence**: Do not accept "it works" as an answer. Require command output or screenshot evidence.
+- **Atomic Commits**: If you have git access, favor small, logical commits over one giant dump.
+"""

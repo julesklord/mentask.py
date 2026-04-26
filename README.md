@@ -5,7 +5,7 @@
 <h1 align="center">mentask</h1>
 
 <p align="center">
-  <strong>The Self-Evolving Autonomous Agent for Engineers Who Hate Repetitive Tasks.</strong>
+  <strong>The Self-Evolving Autonomous Agent for Engineers Who loves to work with the cli (im talking tou you "btw i use arch" users)</strong>
 </p>
 
 <p align="center">

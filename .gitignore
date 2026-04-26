@@ -95,7 +95,6 @@ identity.md
 scripts/cleanup_branches.sh
 .askgem
 .mentask
-identity*
 docs/Artifacts
 
 .github/codeql/extensions/askgem.py-python/codeql-pack.yml

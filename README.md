@@ -41,11 +41,11 @@ No GUI. No cloud sync. No bloat. Just a fast, opinionated CLI agent you can trus
   - [Human-in-the-loop safety](#human-in-the-loop-safety)
   - [Streaming terminal UX](#streaming-terminal-ux)
   - [Persistent session history](#persistent-session-history)
-- [New in v0.19.0: Water of Life](#new-in-v0190-water-of-life)
-  - [1. Autonomous Delegation (\`delegate_mission\`)](#1-autonomous-delegation-delegate_mission)
-  - [2. High-Speed Analysis (\`analyze_codebase\`)](#2-high-speed-analysis-analyze_codebase)
-  - [3. Professional Efficiency (Level 403)](#3-professional-efficiency-level-403)
-  - [4. Persistent Gem-Style Renderer](#4-persistent-gem-style-renderer)
+- [New in v0.18.5: Lisan al-Gaib](#new-in-v0185-lisan-al-gaib)
+  - [1. Persistent Gem-Style Renderer](#1-persistent-gem-style-renderer)
+  - [2. Intelligence Tools (Working Memory \& Planning)](#2-intelligence-tools-working-memory--planning)
+  - [3. Self-Critique \& Error Correction](#3-self-critique--error-correction)
+  - [4. Advanced UX Commands](#4-advanced-ux-commands)
 - [Installation](#installation)
   - [Prerequisites](#prerequisites)
   - [From Source](#from-source)
@@ -138,20 +138,26 @@ Every conversation auto-saves to `~/.mentask/history/` as JSON. Reload any past 
 ---
 
 ## New in v0.19.0: Water of Life
+
 The "Specialist Collective" update introduces high-performance agent patterns ported from the `reference_code` standard.
 
 ### 1. Autonomous Delegation (`delegate_mission`)
+
 The main agent can now spawn specialized subagents to offload context-heavy tasks:
+
 - **Explorer**: Read-only specialist for deep repository research.
 - **Verifier**: Adversarial agent that tries to "break" implementations before reporting success.
 
 ### 2. High-Speed Analysis (`analyze_codebase`)
+
 A "first-strike" tool that builds a recursive tree map and analyzes git deltas in milliseconds, ensuring the agent understands the project structure before spending tokens on large reads.
 
 ### 3. Professional Efficiency (Level 403)
+
 Updated system instructions prioritize "Measure Twice, Cut Once" philosophy, forcing agents to analyze first, use surgical reads, and provide verification evidence.
 
 ### 4. Persistent Gem-Style Renderer
+
 A complete architectural overhaul of the CLI output. All thoughts, tool calls, and results now persist in your terminal scroll buffer, providing a seamless and professional experience.
 
 ---
@@ -159,10 +165,12 @@ A complete architectural overhaul of the CLI output. All thoughts, tool calls, a
 ## Installation
 
 ### Prerequisites
+
 - Python 3.10+
 - A Google API Key — free at [Google AI Studio](https://aistudio.google.dev/).
 
 ### From Source
+
 ```bash
 git clone https://github.com/julesklord/mentask
 cd mentask.py
@@ -173,6 +181,7 @@ pip install -e ".[dev]"
 ```
 
 ### Via Pip
+
 ```bash
 pip install mentask
 ```
@@ -182,13 +191,17 @@ pip install mentask
 ## Configuration
 
 ### API key (Standardized)
+
 mentask loads your key from these sources, in order:
+
 1. **Environment variable** — `GEMINI_API_KEY=your_key mentask` (Preferred)
 2. **System Keyring** — Secure storage via Windows Credential Manager or macOS Keychain.
 3. **Saved file** — `~/.mentask/settings.json` (Local fallback).
 
 ### Hierarchical Knowledge Hub
+
 The agent reloads its intelligence every turn from three layers:
+
 1. **Standard Hub (Internal)**: Built-in modules defining the "Staff Engineer" persona, operational safety rules, and multimodal guidelines (audio/video/vision).
 2. **Global Hub (`~/.mentask/*.md`)**: Your cross-project technical preferences, API guidelines, or personal style.
 3. **Project Hub (`.mentask/*.md`)**: Project-specific context, build commands, architecture rules, and "Mission" specifics.
@@ -211,6 +224,7 @@ Fully optimized for Gemini 1.5 Pro and 2.0 Flash:
 ## Usage
 
 Launch the agent:
+
 ```bash
 mentask
 ```
@@ -224,6 +238,7 @@ mentask
 | `~/.mentask/mentask.log` | Debug log — tool execution events and retry details |
 
 ### Common Workflows
+
 - **Context Analysis**: "Read my `pyproject.toml` and explain the dependencies."
 - **Code Generation**: "Create a `src/utils.py` file with a function to calculate SHA256 hashes."
 - **Refactoring**: "Refactor `authenticate()` in `src/auth.py` to use JWT instead of sessions."
@@ -262,6 +277,7 @@ mentask
 **Cross-Drive Protection**: On Windows, the agent is blocked from crossing drive letters unless the target is explicitly trusted.
 
 **Risk Analysis Engine**: Every command is categorized:
+
 - `SAFE`: Informative commands (ls, git status).
 - `NOTICE`: Standard operations.
 - `WARNING`: High-risk patterns (sudo, sensitive file access).
@@ -302,6 +318,7 @@ flowchart TD
 ```
 
 ### Layer Breakdown
+
 1. **Presentation Layer (`cli/`)**: Handles CLI startup, interactive prompts, and real-time Markdown rendering.
 2. **Cognitive Layer (`agent/`)**: The "Brain". Manages state, context blueprints, and mission tracking.
 3. **Security Layer (`core/`)**: The "Guard". Gathers risk analysis and whitelisting logic.
@@ -320,7 +337,6 @@ mentask.py/
 ├── docs/                    # Technical documentation and assets
 └── pyproject.toml
 ```
-
 
 ---
 

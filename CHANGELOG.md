@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.19.1] - 2026-04-26
+
+### Fixed
+
+- **Packaging**: Removed overly broad `.gitignore` rule that was inadvertently excluding `identity_manager.py` from the release package.
+
 ## [0.19.0] - "Water of Life" - 2026-04-26
 
 ### Added

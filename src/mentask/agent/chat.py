@@ -247,9 +247,15 @@ class ChatAgent:
         self, renderer: "CliRenderer", status: AgentTurnStatus | None, event_type: str | None, event: dict[str, Any]
     ) -> None:
         if status == AgentTurnStatus.THINKING:
+            renderer.show_thinking()
+            return
+
+        if status == AgentTurnStatus.COMPLETED:
+            renderer.stop_thinking()
             return
 
         if status == AgentTurnStatus.EXECUTING:
+            renderer.stop_thinking()
             if renderer._streaming:
                 renderer.end_stream()
 
@@ -264,18 +270,21 @@ class ChatAgent:
             return
 
         if event_type == "thought":
+            renderer.stop_thinking()
             if renderer._streaming:
                 renderer.end_stream()
             renderer.print_thought(event["content"])
             return
 
         if event_type == "text":
+            renderer.stop_thinking()
             if not renderer._streaming:
                 renderer.start_stream(is_natural=True)
             renderer.update_stream(event["content"])
             return
 
         if event_type == "tool_result":
+            renderer.stop_thinking()
             renderer.print_tool_result(not event["is_error"], event["content"], tool_name=event.get("tool_name"))
             return
 
@@ -287,6 +296,7 @@ class ChatAgent:
             return
 
         if event_type == "error":
+            renderer.stop_thinking()
             renderer.print_error(event["content"])
             return
 
@@ -400,6 +410,7 @@ class ChatAgent:
         except Exception as exc:
             renderer.print_error(str(exc))
         finally:
+            renderer.stop_thinking()
             renderer.print_turn_divider(model=self.model_name)
 
     async def close(self):

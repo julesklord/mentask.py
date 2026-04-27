@@ -23,6 +23,7 @@ from rich.markdown import Markdown
 from rich.markup import escape
 from rich.panel import Panel
 from rich.prompt import Confirm
+from rich.status import Status
 from rich.syntax import Syntax
 from rich.text import Text
 
@@ -174,6 +175,7 @@ class CliRenderer:
         self.stream_mode: str = stream_mode
         self._label_printed: bool = False
         self.prompt_style: str = "atomic"
+        self._thinking_status: Status | None = None
 
         # New streaming architecture variables
         self.committed_buffer = []
@@ -230,7 +232,7 @@ class CliRenderer:
     # ------------------------------------------------------------------
     # User turn header
     # ------------------------------------------------------------------
-    def print_user(self, text: str, prompt_text: Optional[Text] = None) -> None:
+    def print_user(self, text: str, prompt_text: Text | None = None) -> None:
         """Print user input — clean prefix style, no heavy panels."""
         # Clear the prompt line (only works in some terminals)
         self.console.control(Control.move(0, -1))
@@ -246,11 +248,32 @@ class CliRenderer:
     # ------------------------------------------------------------------
     # Agent label (printed once before streaming starts)
     # ------------------------------------------------------------------
-    def _print_agent_label(self, tool: Optional[str] = None, is_natural: bool = False) -> None:
+    def _print_agent_label(self, tool: str | None = None, is_natural: bool = False) -> None:
         header = self.prompt_engine.build_agent_header(self.prompt_style, tool=tool, is_natural=is_natural)
         if is_natural:
             self.console.print("\n")
         self.console.print(f"\n{header}")
+
+    def show_thinking(self) -> None:
+        """Display a thinking spinner."""
+        if self._thinking_status:
+            return
+
+        from ..core.i18n import _
+
+        self._thinking_status = Status(
+            _("dashboard.prompt_thinking"),
+            console=self.console,
+            spinner="dots",
+            spinner_style=f"bold {self.C_THINK}",
+        )
+        self._thinking_status.start()
+
+    def stop_thinking(self) -> None:
+        """Stop the thinking spinner."""
+        if self._thinking_status:
+            self._thinking_status.stop()
+            self._thinking_status = None
 
     def print_thought(self, text: str) -> None:
         """Renders the reasoning process — dim sidebar, no italics."""

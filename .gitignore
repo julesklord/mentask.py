@@ -1,5 +1,5 @@
 # ============================================================
-# askgem — .gitignore
+# mentask — .gitignore
 # Comprehensive Python project ignore rules
 # ============================================================
 
@@ -59,7 +59,7 @@ ehthumbs.db
 .gemini_api_key_encrypted
 .gemini_api_key_unencrypted
 local_settings.py
-askgem_knowledge.md
+mentask_knowledge.md
 mentask_knowledge.md
 claude_audit.md
 
@@ -93,11 +93,11 @@ holamundo.md
 identity.md
 .github/agents/debug-python.agent.md
 scripts/cleanup_branches.sh
-.askgem
+.mentask
 .mentask
 docs/Artifacts
 
-.github/codeql/extensions/askgem.py-python/codeql-pack.yml
+.github/codeql/extensions/mentask.py-python/codeql-pack.yml
 codeql-custom-queries-actions/codeql-pack.lock.yml
 codeql-custom-queries-actions/codeql-pack.yml
 codeql-custom-queries-actions/example.ql
@@ -116,3 +116,5 @@ qp_audit.md
 .gemini/
 gha-creds-*.json
 *.ini
+.mentask/usage_log.json
+.scripts/

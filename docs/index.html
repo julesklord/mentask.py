@@ -1,805 +1,380 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="mentask — Self-Evolving Autonomous Python Agent. Multi-provider. Modular. Production-grade.">
-    <meta name="keywords" content="AI agent, Python, CLI, Gemini, DeepSeek, modular, autonomous coding">
-    <meta name="theme-color" content="#6366F1">
-    <title>mentask | Autonomous Python Agent with Dynamic Plugin Evolution</title>
-    <style>
-        :root {
-            --deep-python: #1A1F36;
-            --electric-indigo: #6366F1;
-            --mint-module: #10B981;
-            --coral-alert: #F97316;
-            --slate-grid: #64748B;
-            --cloud-white: #F8FAFC;
-            --night-dark: #0F172A;
-            --frost-gray: #E2E8F0;
-            --python-gold: #FBBF24;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            background: var(--deep-python);
-            color: var(--cloud-white);
-            font-family: 'IBM Plex Mono', monospace;
-            line-height: 1.7;
-            overflow-x: hidden;
-        }
-
-        a {
-            color: var(--electric-indigo);
-            text-decoration: none;
-            transition: all 0.2s;
-        }
-        a:hover { color: var(--mint-module); }
-
-        /* HEADER & NAV */
-        header {
-            background: linear-gradient(135deg, var(--deep-python) 0%, var(--night-dark) 100%);
-            border-bottom: 1px solid var(--slate-grid);
-            padding: 1rem 0;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-
-        nav {
-            max-width: 1400px;
-            margin: 0 auto;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0 2rem;
-        }
-
-        .logo {
-            font-size: 20px;
-            font-weight: 700;
-            color: var(--electric-indigo);
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        nav ul {
-            list-style: none;
-            display: flex;
-            gap: 1.5rem;
-        }
-
-        nav a {
-            font-size: 13px;
-            color: var(--cloud-white);
-            transition: color 0.2s;
-        }
-
-        nav a:hover { color: var(--electric-indigo); }
-
-        .cta-btn {
-            background: var(--electric-indigo);
-            color: white;
-            padding: 0.6rem 1.2rem;
-            border-radius: 4px;
-            font-weight: 600;
-            font-size: 12px;
-        }
-
-        /* HERO */
-        .hero {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 5rem 2rem;
-            text-align: center;
-        }
-
-        .hero h1 {
-            font-size: 3.5rem;
-            font-weight: 700;
-            margin-bottom: 1rem;
-            background: linear-gradient(135deg, var(--electric-indigo) 0%, var(--mint-module) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .hero-subtitle {
-            font-size: 18px;
-            color: var(--slate-grid);
-            margin-bottom: 0.5rem;
-        }
-
-        .hero-description {
-            font-size: 14px;
-            color: var(--slate-grid);
-            max-width: 800px;
-            margin: 0 auto 2rem;
-            line-height: 1.8;
-        }
-
-        .hero-tags {
-            display: flex;
-            gap: 1rem;
-            justify-content: center;
-            margin-bottom: 2rem;
-            flex-wrap: wrap;
-        }
-
-        .tag {
-            background: rgba(99, 102, 241, 0.1);
-            border: 1px solid var(--electric-indigo);
-            color: var(--electric-indigo);
-            padding: 0.4rem 0.8rem;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-
-        .cta-buttons {
-            display: flex;
-            gap: 1rem;
-            justify-content: center;
-            margin-top: 2rem;
-            flex-wrap: wrap;
-        }
-
-        .btn {
-            padding: 0.8rem 1.5rem;
-            border: none;
-            border-radius: 4px;
-            font-family: 'IBM Plex Mono', monospace;
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .btn-primary {
-            background: var(--electric-indigo);
-            color: white;
-        }
-        .btn-primary:hover {
-            background: var(--mint-module);
-            transform: translateY(-2px);
-        }
-
-        .btn-secondary {
-            background: transparent;
-            color: var(--electric-indigo);
-            border: 1px solid var(--electric-indigo);
-        }
-        .btn-secondary:hover {
-            background: var(--electric-indigo);
-            color: white;
-        }
-
-        /* SECTIONS */
-        section {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 4rem 2rem;
-        }
-
-        section h2 {
-            font-size: 2.5rem;
-            margin-bottom: 1rem;
-            color: var(--cloud-white);
-        }
-
-        section > p:first-of-type {
-            color: var(--slate-grid);
-            margin-bottom: 2rem;
-            font-size: 15px;
-            line-height: 1.8;
-        }
-
-        /* GRID LAYOUT */
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 2rem;
-            margin: 2rem 0;
-        }
-
-        .card {
-            background: rgba(99, 102, 241, 0.05);
-            border: 1px solid var(--slate-grid);
-            padding: 1.5rem;
-            border-radius: 8px;
-            transition: all 0.2s;
-        }
-
-        .card:hover {
-            border-color: var(--electric-indigo);
-            background: rgba(99, 102, 241, 0.1);
-            transform: translateY(-4px);
-        }
-
-        .card h3 {
-            color: var(--electric-indigo);
-            margin-bottom: 0.8rem;
-            font-size: 16px;
-        }
-
-        .card p {
-            color: var(--slate-grid);
-            font-size: 13px;
-            line-height: 1.7;
-        }
-
-        .card code {
-            background: var(--night-dark);
-            padding: 0.2rem 0.4rem;
-            border-radius: 3px;
-            color: var(--python-gold);
-            font-size: 12px;
-        }
-
-        /* CODE BLOCKS */
-        .code-block {
-            background: var(--night-dark);
-            border: 1px solid var(--slate-grid);
-            border-radius: 8px;
-            padding: 1.5rem;
-            overflow-x: auto;
-            margin: 1.5rem 0;
-            font-size: 12px;
-        }
-
-        .code-block code {
-            color: var(--cloud-white);
-            font-family: 'Fira Code', monospace;
-        }
-
-        .code-block .keyword { color: var(--electric-indigo); }
-        .code-block .string { color: var(--mint-module); }
-        .code-block .comment { color: var(--slate-grid); }
-
-        /* TABLE */
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 1.5rem 0;
-            border: 1px solid var(--slate-grid);
-            border-radius: 8px;
-            overflow: hidden;
-        }
-
-        th {
-            background: rgba(99, 102, 241, 0.1);
-            border: 1px solid var(--slate-grid);
-            padding: 1rem;
-            text-align: left;
-            color: var(--electric-indigo);
-            font-weight: 600;
-            font-size: 13px;
-        }
-
-        td {
-            border: 1px solid var(--slate-grid);
-            padding: 0.8rem 1rem;
-            font-size: 12px;
-            color: var(--slate-grid);
-        }
-
-        tr:hover {
-            background: rgba(99, 102, 241, 0.05);
-        }
-
-        /* DIAGRAM */
-        .diagram {
-            background: var(--night-dark);
-            border: 1px solid var(--slate-grid);
-            padding: 2rem;
-            border-radius: 8px;
-            overflow-x: auto;
-            margin: 2rem 0;
-            font-size: 12px;
-            color: var(--mint-module);
-        }
-
-        /* FOOTER */
-        footer {
-            background: var(--night-dark);
-            border-top: 1px solid var(--slate-grid);
-            padding: 3rem 2rem;
-            margin-top: 4rem;
-        }
-
-        .footer-content {
-            max-width: 1400px;
-            margin: 0 auto;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 2rem;
-            margin-bottom: 2rem;
-        }
-
-        .footer-section h4 {
-            color: var(--electric-indigo);
-            margin-bottom: 1rem;
-            font-size: 14px;
-        }
-
-        .footer-section ul {
-            list-style: none;
-        }
-
-        .footer-section a {
-            color: var(--slate-grid);
-            font-size: 12px;
-            display: block;
-            margin-bottom: 0.5rem;
-        }
-
-        .footer-bottom {
-            border-top: 1px solid var(--slate-grid);
-            padding-top: 2rem;
-            text-align: center;
-            color: var(--slate-grid);
-            font-size: 12px;
-        }
-
-        /* RESPONSIVE */
-        @media (max-width: 768px) {
-            .hero h1 { font-size: 2rem; }
-            nav ul { flex-direction: column; gap: 0.8rem; }
-            .cta-buttons { flex-direction: column; }
-            .btn { width: 100%; }
-            section { padding: 2rem 1rem; }
-        }
-
-        .highlight {
-            color: var(--python-gold);
-        }
-    </style>
+    <title>mentask | Level 4 Autonomous AI Coding Agent</title>
+    <meta name="description"
+        content="mentask — Self-Evolving Autonomous Python Agent. Multi-provider. Modular. Production-grade.">
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
 </head>
+
 <body>
-    <!-- HEADER -->
-    <header>
-        <nav>
-            <div class="logo">⬡ mentask</div>
-            <ul>
-                <li><a href="#architecture">Architecture</a></li>
+    <header class="navbar">
+        <div class="container navbar-content">
+            <div class="brand">
+                <img src="assets/logo.svg" alt="mentask logo">
+                <span>mentask</span>
+            </div>
+            <ul class="nav-links">
                 <li><a href="#features">Features</a></li>
                 <li><a href="#usage">Usage</a></li>
+                <li><a href="#architecture">Architecture</a></li>
                 <li><a href="#security">Security</a></li>
                 <li><a href="#roadmap">Roadmap</a></li>
                 <li><a href="https://github.com/julesklord/mentask" class="cta-btn">GitHub</a></li>
             </ul>
-        </nav>
+        </div>
     </header>
 
-    <!-- HERO -->
-    <section class="hero">
-        <h1>mentask</h1>
-        <p class="hero-subtitle">Self-Evolving Autonomous Python Agent (v0.20.0+)</p>
-        <p class="hero-description">
-            A production-grade CLI agent powered by Gemini, Claude, or DeepSeek. 
-            Thinks modularly. Creates tools on-the-fly. Executes with you in control. 
-            <strong>Level 4 Autonomy: Agent produces engineering specialized plugins dynamically.</strong>
-        </p>
-        <div class="hero-tags">
-            <span class="tag">Multi-Provider</span>
-            <span class="tag">Dynamic Plugins</span>
-            <span class="tag">Zero-Trust Security</span>
-            <span class="tag">Terminal-Native</span>
-            <span class="tag">Production Ready</span>
-        </div>
-        <div class="cta-buttons">
-            <button class="btn btn-primary">Install Now</button>
-            <button class="btn btn-secondary">View on GitHub</button>
-            <button class="btn btn-secondary">Read Docs</button>
-        </div>
-    </section>
+    <main>
+        <!-- Hero -->
+        <section class="hero">
+            <div class="container hero-inner">
+                <div class="hero-text">
+                    <img src="assets/logo.svg" alt="mentask logo" class="hero-logo">
+                    <p class="hero-subtitle">v0.20.0 THE SPICE MUST FLOW</p>
+                    <h1>The Universal<br>AI Coding Agent</h1>
+                    <p class="hero-description">
+                        Level 4 Autonomy in your terminal. mentask is no longer a static consumer of tools; it is an active producer of engineering-specialized plugins.
+                    </p>
+                    <div class="hero-tags">
+                        <span class="tag">Multi-Provider</span>
+                        <span class="tag">Dynamic Forge</span>
+                        <span class="tag">Zero-Trust</span>
+                        <span class="tag">Production Ready</span>
+                    </div>
+                    <div class="hero-actions">
+                        <a href="#installation" class="btn btn-primary">Get Started →</a>
+                        <a href="https://github.com/julesklord/mentask.py" class="btn btn-secondary">Source Code</a>
+                    </div>
+                </div>
+                <div class="hero-terminal">
+                    <div class="term">
+                        <div class="term-bar">
+                            <span class="dot red"></span>
+                            <span class="dot yellow"></span>
+                            <span class="dot green"></span>
+                            <span class="term-title">jules_dev@ESTUDIO: ~/mentask.py</span>
+                        </div>
+                        <div class="term-body" id="terminal">
+                            <!-- Typewriter content -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
 
-    <!-- ARCHITECTURE -->
-    <section id="architecture">
-        <h2>System Architecture</h2>
-        <p>mentask operates across <strong>4 tightly decoupled layers</strong> that enforce strong logical boundaries and enable self-evolution.</p>
+        <!-- Features -->
+        <section id="features" class="section section-alt">
+            <div class="container">
+                <h2>Core Evolution</h2>
+                <p>mentask integrates reasoning, execution, and self-evolution in a single terminal-native agent.</p>
+                <div class="grid">
+                    <div class="card">
+                        <h3>🔧 The Forge Engine</h3>
+                        <p>Autonomous tool synthesis. The agent identifies repetitive patterns and architects new Python plugins on-the-fly via <code>forge_plugin()</code>.</p>
+                        <div class="card-specs"><span>AST Validation</span><span>Hot-Reload</span><span>Dynamic Import</span></div>
+                    </div>
+                    <div class="card">
+                        <h3>🔌 MCP Native</h3>
+                        <p>First-class Model Context Protocol support. Connect to community servers, databases, and external APIs with zero-config tool discovery.</p>
+                        <div class="card-specs"><span>JSON-RPC 2.0</span><span>Lifecycle Mgr</span><span>Introspection</span></div>
+                    </div>
+                    <div class="card">
+                        <h3>👁️ LSP Diagnostic Loop</h3>
+                        <p>Direct integration with Ruff LSP. The agent reads real-time lint feedback and fixes syntax issues autonomously before you even notice.</p>
+                        <div class="card-specs"><span>Ruff Native</span><span>Auto-Fix</span><span>PEP 8 Logic</span></div>
+                    </div>
+                    <div class="card">
+                        <h3>🛡️ Trust Architecture</h3>
+                        <p>Hierarchical security with three-tier directory trust. Path canonicalization and OS Keyring encryption for secure credential storage.</p>
+                        <div class="card-specs"><span>Keyring Enc</span><span>Whitelist</span><span>Traversal Guard</span></div>
+                    </div>
+                    <div class="card">
+                        <h3>🧠 Cognitive Context</h3>
+                        <p>Advanced token management using "Context Snapping" (proactive summarization) and priority-based sliding window attention.</p>
+                        <div class="card-specs"><span>Sliding Window</span><span>Snapping</span><span>Token Opt</span></div>
+                    </div>
+                    <div class="card">
+                        <h3>📦 Project Isolation</h3>
+                        <p>Isolated <code>.mentask</code> workspaces ensure history, identity, and agent-forged plugins remain scoped to your project.</p>
+                        <div class="card-specs"><span>Local DB</span><span>Workspace Scoping</span><span>No Pollution</span></div>
+                    </div>
+                </div>
+            </div>
+        </section>
 
-        <div class="diagram">
-<pre><span class="comment">┌─ COGNITIVE LAYER (Thinking)</span>
-│  └─ AgentOrchestrator (thinking → action → observation loop)
+        <!-- Installation -->
+        <section id="installation" class="section">
+            <div class="container">
+                <h2>Installation</h2>
+                <p>Python 3.10+ required. Install the latest stable build from PyPI:</p>
+                <div class="code-block">
+                    <code><span class="c-dim"># Using pip</span><br><span class="c-green">$</span> pip install mentask<br><br><span class="c-dim"># Or from source</span><br><span class="c-green">$</span> git clone https://github.com/julesklord/mentask<br><span class="c-green">$</span> cd mentask && pip install -e .</code>
+                </div>
+                <div class="note">
+                    <p><strong>Pro Tip:</strong> On first run, mentask will prompt for your API keys (Gemini, OpenAI, DeepSeek) and store them securely in your system keyring.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Usage & Interface -->
+        <section id="usage" class="section section-alt">
+            <div class="container">
+                <h2>Interface & Workflow</h2>
+                <p>Designed for the terminal. mentask provides a high-performance, color-coded TUI with real-time streaming.</p>
+                
+                <div class="grid">
+                    <div class="card">
+                        <h3>✨ Thinking Process</h3>
+                        <p>Subtle vertical lines indicate the agent's internal reasoning loop before any tool execution occurs.</p>
+                        <div class="code-box" style="margin-top:10px; font-size:10px;">
+<pre> ✨ @mentask
+  │ I will check pyproject.toml...
+  ⚙ EXECUTING: read_file(...)</pre>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3>🛡️ Security Confirmation</h3>
+                        <p>In manual mode, all mutations require explicit permission with a detailed diff preview.</p>
+                        <div class="code-box" style="margin-top:10px; font-size:10px;">
+<pre> 🛡 SECURITY CHECK
+  mentask wants to edit_file...
+  Allow execution? (y/n):</pre>
+                        </div>
+                    </div>
+                </div>
+
+                <h3>Command Reference</h3>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Command</th>
+                                <th>Internals</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>/help</code></td><td>Manifests current ToolRegistry and configuration state.</td><td>Stable</td></tr>
+                            <tr><td><code>/model &lt;id&gt;</code></td><td>Hot-swaps LLM provider and re-initializes context buffers.</td><td>Stable</td></tr>
+                            <tr><td><code>/mode [auto|manual]</code></td><td>Toggles the TrustManager confirmation bypass.</td><td>Stable</td></tr>
+                            <tr><td><code>/trust &lt;path&gt;</code></td><td>Authorizes a directory for recursive file operations.</td><td>Stable</td></tr>
+                            <tr><td><code>/init</code></td><td>Bootstraps <code>.mentask/</code> with SQLite and project identity.</td><td>Stable</td></tr>
+                            <tr><td><code>/artifacts</code></td><td>Introspects the <code>forge/</code> incubator for generated tools.</td><td>v0.20.0</td></tr>
+                            <tr><td><code>/undo</code></td><td>Performs a state rollback of the last file mutation.</td><td>Stable</td></tr>
+                            <tr><td><code>/usage</code></td><td>Calculates real-time token consumption and USD cost.</td><td>Stable</td></tr>
+                            <tr><td><code>/stats</code></td><td>Session summary (messages, tools, files edited).</td><td>Stable</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Architecture Deep Dive -->
+        <section id="architecture" class="section">
+            <div class="container">
+                <h2>Technical Architecture</h2>
+                <p>The system operates across three tightly decoupled layers enforcing strong logical boundaries.</p>
+
+                <div class="diagram">
+                    <pre>┌─ COGNITIVE LAYER (Thinking)
+│  └─ AgentOrchestrator [The Heart]
 │     ├─ SessionManager (persistent memory, rollback)
-│     ├─ ContextManager (compression, snapping, token optimization)
-│     └─ KnowledgeManager (semantic indexing, retrieval)
+│     ├─ ContextManager (compression, snapping)
+│     └─ PluginLoader [The Evolver]
 │
-├─ TOOL ECOSYSTEM (3-Tier Toolset)</span>
-│  ├─ Layer 1: Core Tools (immutable, built-in)
-│  ├─ Layer 2: MCP Community (via models.dev)
-│  └─ Layer 3: Evolved Plugins (dynamic, agent-forged)
-│     └─ PluginLoader (hot-reload, runtime injection)
+├─ TOOL ECOSYSTEM (3-Tier Toolset)
+│  ├─ Layer 1: Core Tools (immutable foundation)
+│  ├─ Layer 2: MCP Community (modular extensions)
+│  └─ Layer 3: Evolved Plugins (agent-forged artifacts)
 │
-├─ SECURITY & TRUST LAYER</span>
-│  ├─ TrustManager (whitelist-based file access)
-│  ├─ SecurityAnalyzer (dangerous pattern detection)
-│  └─ PathValidator (cross-drive, symlink, traversal checks)
+├─ SECURITY & TRUST LAYER
+│  ├─ TrustManager (whitelist-based access)
+│  └─ SecurityAnalyzer (dangerous pattern detection)
 │
-└─ LLM BACKEND (Reasoning)</span>
-   ├─ Google Gemini 2.0 Flash
-   ├─ DeepSeek / Claude (via models.dev)
-   └─ Streaming + function calling + structured outputs</pre>
-        </div>
+└─ LLM BACKEND (Reasoning)
+   └─ Gemini / DeepSeek / Claude via models.dev</pre>
+                </div>
 
-        <h3 style="color: var(--electric-indigo); margin-top: 2rem; font-size: 1.5rem;">Execution Flow (v0.20.0)</h3>
-        <table>
-            <thead>
-                <tr>
-                    <th>Stage</th>
-                    <th>Component</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>1. Boot</td>
-                    <td>cli/main.py</td>
-                    <td>Initialize environment, load settings, establish API connection</td>
-                </tr>
-                <tr>
-                    <td>2. Discovery</td>
-                    <td>PluginLoader</td>
-                    <td>Scan <code>.mentask/plugins/</code> and inject BaseTool subclasses into ToolRegistry</td>
-                </tr>
-                <tr>
-                    <td>3. Cognition</td>
-                    <td>AgentOrchestrator</td>
-                    <td>LLM reasons about task, decides tools needed</td>
-                </tr>
-                <tr>
-                    <td>4. Forging</td>
-                    <td>ForgePluginTool</td>
-                    <td>If task requires new tool, agent uses <code>forge_plugin(name, code)</code> to create Python module</td>
-                </tr>
-                <tr>
-                    <td>5. Validation</td>
-                    <td>ast.parse</td>
-                    <td>Validate generated Python syntax before commitment</td>
-                </tr>
-                <tr>
-                    <td>6. Hot-Reload</td>
-                    <td>importlib</td>
-                    <td>Register new tool immediately, available for next turn</td>
-                </tr>
-                <tr>
-                    <td>7. Execution</td>
-                    <td>ExecutionManager</td>
-                    <td>Run tool with security checks, stream results</td>
-                </tr>
-            </tbody>
-        </table>
+                <div class="grid">
+                    <div class="card">
+                        <h3>The Heart (Orchestrator)</h3>
+                        <p>Central loop managing the <i>Thinking → Action → Observation</i> cycle with absolute precision.</p>
+                        <div class="card-specs"><span>Central Loop</span><span>State Mgmt</span><span>Turn Logic</span></div>
+                    </div>
+                    <div class="card">
+                        <h3>The Forge (Tool Generator)</h3>
+                        <p>Contains <code>ForgePluginTool</code>, allowing the agent to write and register new Python tools at runtime.</p>
+                        <div class="card-specs"><span>Tool Synthesis</span><span>Plugin Forge</span><span>Runtime Reg</span></div>
+                    </div>
+                    <div class="card">
+                        <h3>The Guard (Security)</h3>
+                        <p>Validated paths and commands. Specifically tuned to allow agent-forged modifications in <code>plugins/</code>.</p>
+                        <div class="card-specs"><span>Path Validation</span><span>Command Sanitization</span><span>Trust Policy</span></div>
+                    </div>
+                </div>
+            </div>
+        </section>
 
-        <h3 style="color: var(--electric-indigo); margin-top: 2rem; font-size: 1.5rem;">Key Design Decisions</h3>
-        <div class="grid">
-            <div class="card">
-                <h3>Separation of Concerns</h3>
-                <p>Core tools remain immutable. Evolved plugins isolated in <code>.mentask/plugins/</code> prevent source pollution and merge conflicts.</p>
+        <!-- Roadmap -->
+        <section id="roadmap" class="section section-alt">
+            <div class="container">
+                <h2>The Road to Autonomy</h2>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Version</th>
+                                <th>Thematic Milestone</th>
+                                <th>Core Evolution</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>v0.18.0</code></td><td>Lisan al-Gaib</td><td>Core orchestrator, security layer, multi-provider support.</td></tr>
+                            <tr><td><code>v0.19.0</code></td><td>Water of Life</td><td>Robustness, self-correction, and test suite expansion.</td></tr>
+                            <tr><td><code>v0.20.0</code></td><td>The Spice Must Flow</td><td>Dynamic plugin evolution, hot-reload, and The Forge.</td></tr>
+                            <tr><td><code>v0.21.0</code></td><td>God Emperor</td><td>Self-repairing code and distributed execution.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
-            <div class="card">
-                <h3>Verification-First Forging</h3>
-                <p>Forge engine uses <code>ast.parse()</code> to validate syntax before commitment. No invalid Python reaches disk.</p>
-            </div>
-            <div class="card">
-                <h3>Hot-Reload Injection</h3>
-                <p>New tools available in same session via <code>importlib</code>. Agent creates and uses custom tools without restart.</p>
-            </div>
-        </div>
-    </section>
+        </section>
+    </main>
 
-    <!-- FEATURES -->
-    <section id="features">
-        <h2>Core Features</h2>
-        <p>mentask combines reasoning, execution, and self-evolution in a single terminal-native agent.</p>
-
-        <div class="grid">
-            <div class="card">
-                <h3>🧠 Modular Cognition</h3>
-                <p>Agent reasons about tasks, creates specialized tools on-the-fly. Thinking → Action → Observation loop with self-critique.</p>
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>Engine</h4>
+                    <ul>
+                        <li><a href="#architecture">Architecture</a></li>
+                        <li><a href="#features">Features</a></li>
+                        <li><a href="#usage">Usage Reference</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Community</h4>
+                    <ul>
+                        <li><a href="https://github.com/julesklord/mentask">GitHub Repo</a></li>
+                        <li><a href="https://github.com/julesklord/mentask/issues">Issue Tracker</a></li>
+                        <li><a href="https://github.com/julesklord/mentask/discussions">Discussions</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Resources</h4>
+                    <ul>
+                        <li><a href="https://github.com/julesklord/mentask/blob/main/SECURITY.md">Security Model</a></li>
+                        <li><a href="https://github.com/julesklord/mentask/blob/main/LICENSE">MIT License</a></li>
+                    </ul>
+                </div>
             </div>
-            <div class="card">
-                <h3>⚙️ Dynamic Plugin Forging</h3>
-                <p>Agent writes Python plugins when it detects repetitive patterns. <code>ForgePluginTool</code> handles creation, validation, registration.</p>
+            <div class="footer-bottom">
+                <div class="footer-brand">
+                    <img src="assets/logo.svg" alt="mentask logo">
+                    <span>© 2026 mentask project. Developed by julesklord.</span>
+                </div>
+                <p>Powered by models.dev • Multi-provider support • Terminal-native • Self-evolving</p>
             </div>
-            <div class="card">
-                <h3>🔐 Zero-Trust Security</h3>
-                <p>Trust whitelist + dangerous pattern detection. <code>/trust</code> commands explicit. Cross-drive blocks without authorization.</p>
-            </div>
-            <div class="card">
-                <h3>📦 Multi-Provider</h3>
-                <p>Swap providers mid-session with <code>/model</code>. Gemini, Claude, DeepSeek via models.dev abstraction.</p>
-            </div>
-            <div class="card">
-                <h3>💾 Persistent Memory</h3>
-                <p>Session history with rollback. Context snapping auto-summarizes. Semantic indexing for fast retrieval.</p>
-            </div>
-            <div class="card">
-                <h3>⚡ Terminal-Native TUI</h3>
-                <p>High-performance rendering with Rich. Streaming output, color-coded security checks, professional prompts.</p>
-            </div>
-        </div>
-    </section>
-
-    <!-- USAGE -->
-    <section id="usage">
-        <h2>Usage & Commands</h2>
-        <p>Launch mentask in your project root:</p>
-
-        <div class="code-block">
-            <code><span class="keyword">$</span> mentask<br>
- ──────────────── mentask v0.20.0 • gemini-2.0-flash • manual ───────────────── <br>
-                       Type /help for commands • Ctrl+C to exit<br>
-<br>
- @julesklord<br>
- ──────────────────────────────────────────────────────────────────────────────</code>
-        </div>
-
-        <h3 style="color: var(--electric-indigo); margin-top: 2rem; font-size: 1.5rem;">Slash Commands</h3>
-        <table>
-            <thead>
-                <tr>
-                    <th>Command</th>
-                    <th>Effect</th>
-                    <th>Example</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td><code>/help</code></td>
-                    <td>Show all commands</td>
-                    <td><code>/help</code></td>
-                </tr>
-                <tr>
-                    <td><code>/model &lt;name&gt;</code></td>
-                    <td>Switch provider</td>
-                    <td><code>/model gemini-2.0-flash</code></td>
-                </tr>
-                <tr>
-                    <td><code>/mode [auto|manual]</code></td>
-                    <td>Trust mode toggle</td>
-                    <td><code>/mode auto</code></td>
-                </tr>
-                <tr>
-                    <td><code>/trust &lt;path&gt;</code></td>
-                    <td>Whitelist directory</td>
-                    <td><code>/trust G:/COMMON_LIBS</code></td>
-                </tr>
-                <tr>
-                    <td><code>/init</code></td>
-                    <td>Init local workspace</td>
-                    <td><code>/init</code></td>
-                </tr>
-                <tr>
-                    <td><code>/usage</code></td>
-                    <td>Token + cost summary</td>
-                    <td><code>/usage</code></td>
-                </tr>
-                <tr>
-                    <td><code>/stats</code></td>
-                    <td>Session metrics</td>
-                    <td><code>/stats</code></td>
-                </tr>
-                <tr>
-                    <td><code>/sessions</code></td>
-                    <td>List saved sessions</td>
-                    <td><code>/sessions</code></td>
-                </tr>
-                <tr>
-                    <td><code>/clear</code></td>
-                    <td>Clear context window</td>
-                    <td><code>/clear</code></td>
-                </tr>
-            </tbody>
-        </table>
-
-        <h3 style="color: var(--electric-indigo); margin-top: 2rem; font-size: 1.5rem;">Example Workflows</h3>
-        <div class="grid">
-            <div class="card">
-                <h3>📝 Code Refactoring</h3>
-                <p><strong>Request:</strong> <code>"Refactor src/db.py to use SQLAlchemy. Add type hints. Ensure queries are parameterized."</strong><br><br>
-                <strong>Agent:</strong> Reads file, identifies patterns, creates test_refactor.py, edits db.py, validates.</p>
-            </div>
-            <div class="card">
-                <h3>🐛 Bug Investigation</h3>
-                <p><strong>Request:</strong> <code>"I'm getting TypeError on line 42. Find cause, fix it, add test."</code><br><br>
-                <strong>Agent:</strong> Traces code paths, identifies null check missing, creates test_edge_cases.py, patches code.</p>
-            </div>
-            <div class="card">
-                <h3>🛠️ Tool Creation</h3>
-                <p><strong>Request:</strong> <code>"Create a file watcher that runs pytest on changes."</code><br><br>
-                <strong>Agent:</strong> Writes scripts/watch_test.py, integrates into pyproject.toml, validates with test run.</p>
-            </div>
-        </div>
-    </section>
-
-    <!-- SECURITY -->
-    <section id="security">
-        <h2>Security Model</h2>
-        <p>mentask employs <strong>zero-trust</strong> principles: every file operation is validated, logged, and requires explicit authorization.</p>
-
-        <div class="grid">
-            <div class="card">
-                <h3>🔐 Trust Whitelist</h3>
-                <p>By default, agent can only access current directory. Use <code>/trust</code> to authorize external paths explicitly.</p>
-            </div>
-            <div class="card">
-                <h3>⚠️ Dangerous Pattern Detection</h3>
-                <p>Regex matching detects: <code>rm -rf /</code>, <code>sudo</code>, <code>chmod 777</code>, fork bombs, privilege escalation.</p>
-            </div>
-            <div class="card">
-                <h3>📋 Command Analysis</h3>
-                <p>Every tool call analyzed before execution. Suspicious patterns require <code>/mode manual</code> confirmation.</p>
-            </div>
-            <div class="card">
-                <h3>💾 Atomic Writes</h3>
-                <p>Edit-safe semantics: temp file → rename. Automatic <code>.bkp</code> backup on every modification.</p>
-            </div>
-        </div>
-
-        <h3 style="color: var(--electric-indigo); margin-top: 2rem; font-size: 1.5rem;">OWASP Alignment</h3>
-        <table>
-            <thead>
-                <tr>
-                    <th>OWASP</th>
-                    <th>Risk</th>
-                    <th>mentask Mitigation</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>A01: Broken Access Control</td>
-                    <td>Unauthorized file access</td>
-                    <td>Trust whitelist + path validation</td>
-                </tr>
-                <tr>
-                    <td>A03: Injection</td>
-                    <td>Command injection</td>
-                    <td>Argument parsing, no shell=True</td>
-                </tr>
-                <tr>
-                    <td>A05: Broken Configs</td>
-                    <td>API keys in plaintext</td>
-                    <td>Keyring + environment variables</td>
-                </tr>
-            </tbody>
-        </table>
-    </section>
-
-    <!-- ROADMAP -->
-    <section id="roadmap">
-        <h2>Roadmap</h2>
-        <p>mentask evolves through major thematic releases. Each version increases autonomy and capability.</p>
-
-        <table>
-            <thead>
-                <tr>
-                    <th>Version</th>
-                    <th>Theme</th>
-                    <th>Key Features</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td><code>v0.18.0</code></td>
-                    <td>Lisan al-Gaib</td>
-                    <td>Core orchestrator, security layer, multi-provider</td>
-                    <td>✅ Done</td>
-                </tr>
-                <tr>
-                    <td><code>v0.19.0</code></td>
-                    <td>Water of Life</td>
-                    <td>Robustness, bug fixes, test suite expansion</td>
-                    <td>🔧 In Progress</td>
-                </tr>
-                <tr>
-                    <td><code>v0.20.0</code></td>
-                    <td>The Spice Must Flow</td>
-                    <td>Dynamic plugin evolution, hot-reload, ForgePluginTool</td>
-                    <td>✅ Done</td>
-                </tr>
-                <tr>
-                    <td><code>v0.21.0</code></td>
-                    <td>God Emperor</td>
-                    <td>Self-repairing code, semantic indexing, distributed execution</td>
-                    <td>📋 Planned</td>
-                </tr>
-            </tbody>
-        </table>
-
-        <h3 style="color: var(--electric-indigo); margin-top: 2rem; font-size: 1.5rem;">Next Phase (v0.21.0)</h3>
-        <div class="grid">
-            <div class="card">
-                <h3>📊 Static Code Analysis</h3>
-                <p>AST-based analysis of project structure. Refactor with confidence. Safe symbol renaming across files.</p>
-            </div>
-            <div class="card">
-                <h3>🔄 Git Integration</h3>
-                <p>Assisted conflict resolution. Auto-generated commit messages. Branch management. Code review hints.</p>
-            </div>
-            <div class="card">
-                <h3>✅ Unit Test Generation</h3>
-                <p>Auto-generate test skeletons. Run & report. Coverage tracking. TDD workflow support.</p>
-            </div>
-            <div class="card">
-                <h3>🐛 Smart Debugging</h3>
-                <p>Analyze error messages, identify root cause, suggest fixes. Trace code paths automatically.</p>
-            </div>
-        </div>
-    </section>
-
-    <!-- INSTALL -->
-    <section>
-        <h2>Installation</h2>
-        <div class="code-block">
-            <code><span class="comment"># Clone</span><br>
-<span class="keyword">$</span> git clone https://github.com/julesklord/mentask<br>
-<span class="keyword">$</span> cd mentask<br><br>
-
-<span class="comment"># Setup</span><br>
-<span class="keyword">$</span> python -m venv venv<br>
-<span class="keyword">$</span> source venv/bin/activate  <span class="comment"># Windows: venv\Scripts\activate</span><br>
-<span class="keyword">$</span> pip install -e ".[dev]"<br><br>
-
-<span class="comment"># API Key</span><br>
-<span class="keyword">$</span> export GEMINI_API_KEY=your_key<br><br>
-
-<span class="comment"># Launch</span><br>
-<span class="keyword">$</span> mentask</code>
-        </div>
-    </section>
-
-    <!-- FOOTER -->
-    <footer>
-        <div class="footer-content">
-            <div class="footer-section">
-                <h4>Product</h4>
-                <ul>
-                    <li><a href="#architecture">Architecture</a></li>
-                    <li><a href="#features">Features</a></li>
-                    <li><a href="#security">Security</a></li>
-                    <li><a href="#roadmap">Roadmap</a></li>
-                </ul>
-            </div>
-            <div class="footer-section">
-                <h4>Community</h4>
-                <ul>
-                    <li><a href="https://github.com/julesklord/mentask">GitHub</a></li>
-                    <li><a href="https://github.com/julesklord/mentask/issues">Issues</a></li>
-                    <li><a href="https://github.com/julesklord/mentask/wiki">Wiki</a></li>
-                    <li><a href="https://github.com/julesklord/mentask/discussions">Discussions</a></li>
-                </ul>
-            </div>
-            <div class="footer-section">
-                <h4>Resources</h4>
-                <ul>
-                    <li><a href="#usage">Usage Guide</a></li>
-                    <li><a href="https://github.com/julesklord/mentask/blob/main/SECURITY.md">Security Model</a></li>
-                    <li><a href="https://github.com/julesklord/mentask/blob/main/PALETTE.md">Design System</a></li>
-                    <li><a href="https://github.com/julesklord/mentask/blob/main/LICENSE">License (GPLv3)</a></li>
-                </ul>
-            </div>
-            <div class="footer-section">
-                <h4>By</h4>
-                <ul>
-                    <li><a href="https://github.com/julesklord">julesklord</a></li>
-                    <li><a href="https://fearlessmedia.group">Fearless Media</a></li>
-                    <li><a href="https://github.com/julesklord/askgem.py">askgem</a></li>
-                </ul>
-            </div>
-        </div>
-
-        <div class="footer-bottom">
-            <p>© 2026 mentask. Licensed under <a href="#">GPLv3</a>. Built with ❤️ for Python developers.</p>
-            <p>Powered by <a href="https://models.dev">models.dev</a> • Multi-provider support • Terminal-native • Self-evolving</p>
         </div>
     </footer>
+
+    <script>
+        const lines = [
+            { text: '/home/jules_dev/mentask.py [git::main *] [jules_dev@ESTUDIO] [2:14]', cls: 'c-dim', delay: 0 },
+            { text: '> ./.venv/bin/mentask', cls: 'c-bold', delay: 300 },
+            { text: '> Engine: Gemini | Source: Keyring/Settings', cls: 'c-dim', delay: 100 },
+            { text: '', delay: 100 },
+            { text: '  ✦ mentask  v0.20.1  ·  gemini-2.5-pro  ·  manual mode', cls: 'c-bold', delay: 400 },
+            { text: '  Type /help for commands · Ctrl+O to expand last result · Ctrl+C to exit', cls: 'c-dim', delay: 100 },
+            { text: '', delay: 100 },
+            { text: '', delay: 100 },
+            { text: '  ⚠️ UNTRUSTED DIRECTORY', cls: 'c-red', delay: 600 },
+            { text: '  The directory /home/jules_dev/mentask.py is not trusted.', cls: '', delay: 50 },
+            { text: '  Trusting allows the agent to execute tools without excessive confirmations.', cls: '', delay: 50 },
+            { text: '', delay: 50 },
+            { text: '  Trust this directory? (permanent, session, no) : permanent', cls: '', delay: 800 },
+            { text: '  Directory remains untrusted.', cls: '', delay: 200 },
+            { text: '', delay: 100 },
+            { text: '', delay: 100 },
+            { text: '  ⚠️ Warning:  New session: 2eca562a', cls: 'c-yellow', delay: 300 },
+            { html: '<span class="pl"><span class="pl-seg pl-red">⚠️ UNTRUSTED</span><span class="pl-arr"></span><span class="pl-seg pl-dark">📂 mentask.py</span><span class="pl-arr"></span><span class="pl-seg pl-dark">💰 $0.000</span><span class="pl-end"></span></span> <span class="c-bold">/trust</span>', delay: 600 },
+            { text: '✓ Directory added to trusted list: /home/jules_dev/mentask.py', cls: 'c-green', delay: 400 },
+            { text: 'Tools will now execute automatically in this folder.', cls: '', delay: 200 },
+            { html: '<span class="pl"><span class="pl-seg pl-green">✅ TRUSTED</span><span class="pl-arr"></span><span class="pl-seg pl-dark">📂 mentask.py</span><span class="pl-arr"></span><span class="pl-seg pl-dark">💰 $0.000</span><span class="pl-end"></span></span> <span class="c-bold">who are you</span>', delay: 800 },
+            { text: '', delay: 100 },
+            { text: '', delay: 100 },
+            { html: '<span class="pl"><span class="pl-seg pl-blue">✦ mentask</span><span class="pl-arr"></span><span class="pl-seg pl-dark">⏱️ 02:15</span><span class="pl-arr"></span><span class="pl-seg pl-dark">💬 MESSAGE</span><span class="pl-end"></span></span>', delay: 400 },
+            { text: 'I am mentask, a professional autonomous coding agent. I can help you with your coding tasks.', cls: '', delay: 50 },
+            { text: '  ── gemini-2.5-pro · 5,108 tokens · 02:15:16 ──', cls: 'c-dim', delay: 300 },
+            { text: '', delay: 100 },
+            { html: '<span class="pl"><span class="pl-seg pl-green">✅ TRUSTED</span><span class="pl-arr"></span><span class="pl-seg pl-dark">📂 mentask.py</span><span class="pl-arr"></span><span class="pl-seg pl-dark">💰 $0.007</span><span class="pl-end"></span></span> <span class="c-bold">show me the diffs of this project</span>', delay: 800 },
+            { text: '', delay: 100 },
+            { text: '', delay: 100 },
+            { html: '<span class="pl"><span class="pl-seg pl-blue">✦ mentask</span><span class="pl-arr"></span><span class="pl-seg pl-dark">⏱️ 02:15</span><span class="pl-arr"></span><span class="pl-seg pl-dark">💬 MESSAGE</span><span class="pl-end"></span></span>', delay: 400 },
+            { text: 'I will analyze the codebase to see the differences.', cls: '', delay: 50 },
+            { text: '', delay: 100 },
+            { html: '<span class="pl"><span class="pl-seg pl-blue">✦ mentask</span><span class="pl-arr"></span><span class="pl-seg pl-dark">⏱️ 02:15</span><span class="pl-arr"></span><span class="pl-seg pl-dark">🛠️ analyze_codebase</span><span class="pl-end"></span></span>', delay: 400 },
+            { text: '  ⚡ analyze_codebase  mode=stat', cls: 'c-dim', delay: 100 },
+            { text: '  · Executing 1 tools...', cls: 'c-dim', delay: 400 },
+            { text: '  ✓ analyze_codebase (#1)', cls: 'c-green', delay: 200 },
+            { text: '╭─────────────────────────────────────────────────────────────────────────────╮', cls: 'c-dim', delay: 100 },
+            { text: '│  --- GIT DIFF STAT (HEAD) ---                                               │', cls: 'c-dim', delay: 50 },
+            { text: '│   docs/index.html | 265 +++++++++++++++++++++++++++-----------------------  │', cls: 'c-dim', delay: 50 },
+            { text: '│   1 file changed, 138 insertions(+), 127 deletions(-)                       │', cls: 'c-dim', delay: 50 },
+            { text: '╰─────────────────────────────────────────────────────────────────────────────╯', cls: 'c-dim', delay: 100 },
+            { text: '', delay: 100 },
+            { text: 'Okay, I\'ve got the stats. Now, I\'ll fetch and display the full diff.', cls: '', delay: 50 },
+            { text: '', delay: 100 },
+            { html: '<span class="pl"><span class="pl-seg pl-blue">✦ mentask</span><span class="pl-arr"></span><span class="pl-seg pl-dark">⏱️ 02:15</span><span class="pl-arr"></span><span class="pl-seg pl-dark">🛠️ execute_command</span><span class="pl-end"></span></span>', delay: 400 },
+            { text: '  ⚡ execute_command  command=git diff', cls: 'c-dim', delay: 100 },
+            { text: '  · Executing 1 tools...', cls: 'c-dim', delay: 400 },
+            { text: '  ✓ execute_command (#2)  STDOUT: diff --git a/docs/index.html b/docs/index.html...', cls: 'c-green', delay: 200 },
+            { text: 'I see the diff for docs/index.html. It\'s a complete rewrite of the page.', cls: '', delay: 50 },
+            { text: '', delay: 100 },
+            { html: '<span class="pl"><span class="pl-seg pl-blue">✦ mentask</span><span class="pl-arr"></span><span class="pl-seg pl-dark">⏱️ 02:16</span><span class="pl-arr"></span><span class="pl-seg pl-dark">🛠️ read_file</span><span class="pl-end"></span></span>', delay: 400 },
+            { text: '  ⚡ read_file  path=docs/index.html', cls: 'c-dim', delay: 100 },
+            { text: '  · Executing 1 tools...', cls: 'c-dim', delay: 400 },
+            { text: '  ✓ read_file (#3)  --- Reading \'/home/jules_dev/mentask.py/docs/index.html\' ---', cls: 'c-green', delay: 200 },
+            { text: '', delay: 100 },
+            { html: '<span class="pl"><span class="pl-seg pl-blue">✦ mentask</span><span class="pl-arr"></span><span class="pl-seg pl-dark">⏱️ 02:16</span><span class="pl-arr"></span><span class="pl-seg pl-dark">🛠️ execute_command</span><span class="pl-end"></span></span>', delay: 400 },
+            { text: '  ⚡ execute_command  command=git status --porcelain', cls: 'c-dim', delay: 100 },
+            { text: '  · Executing 1 tools...', cls: 'c-dim', delay: 400 },
+            { text: '  ✓ execute_command (#4)', cls: 'c-green', delay: 200 },
+            { text: '╭────────────────────────╮', cls: 'c-dim', delay: 100 },
+            { text: '│  STDOUT:               │', cls: 'c-dim', delay: 50 },
+            { text: '│   M docs/index.html    │', cls: 'c-dim', delay: 50 },
+            { text: '│  ?? docs/style.css     │', cls: 'c-dim', delay: 50 },
+            { text: '╰────────────────────────╯', cls: 'c-dim', delay: 100 },
+            { text: '', delay: 100 },
+            { text: '❓ AGENT QUESTION: Do you want me to add the untracked file', cls: 'c-yellow', delay: 50 },
+            { text: '   `docs/style.css` before committing?', cls: 'c-yellow', delay: 50 },
+            { html: '<span class="c-dim">Your Answer:</span> <span class="cursor">▋</span>', delay: 0 },
+        ];
+
+        const terminal = document.getElementById('terminal');
+        let lineIndex = 0;
+
+        function addLine() {
+            if (lineIndex >= lines.length) return;
+            const line = lines[lineIndex];
+            const div = document.createElement('div');
+            div.className = 'term-line';
+            if (line.html) div.innerHTML = line.html;
+            else {
+                if (line.cls) div.className += ' ' + line.cls;
+                div.textContent = line.text;
+            }
+            terminal.appendChild(div);
+            terminal.scrollTop = terminal.scrollHeight;
+            lineIndex++;
+            if (lineIndex < lines.length) setTimeout(addLine, lines[lineIndex].delay);
+        }
+        setTimeout(addLine, 500);
+    </script>
 </body>
+
 </html>

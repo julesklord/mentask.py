@@ -2,7 +2,7 @@
   <img src="docs/assets/logo.svg" width="160" alt="mentask logo">
 </p>
 
-<h1 align="center">mentask</h1>
+# mentask
 
 <p align="center">
   <strong>The Self-Evolving Autonomous Agent for Engineers Who loves to work with the cli (im talking tou you "btw i use arch" users)</strong>

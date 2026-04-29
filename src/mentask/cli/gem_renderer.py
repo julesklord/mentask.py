@@ -19,7 +19,6 @@ from rich.markdown import Markdown
 from rich.markup import escape
 from rich.panel import Panel
 from rich.prompt import Confirm
-from rich.status import Status
 from rich.syntax import Syntax
 from rich.text import Text
 
@@ -142,7 +141,6 @@ class GemStyleRenderer:
         self._last_metrics = ""
         self._last_stream_time = time.time()
         self.printed_count = 0  # Number of items in committed_buffer already printed definitively
-        self._thinking_status: Status | None = None
 
     def _setup_colors(self) -> None:
         self.C_BRAND = self.theme.brand_primary
@@ -167,27 +165,6 @@ class GemStyleRenderer:
     # ─────────────────────────────────────────────────────────────────
     # Core Rendering
     # ─────────────────────────────────────────────────────────────────
-
-    def show_thinking(self) -> None:
-        """Display a thinking spinner."""
-        if self._thinking_status:
-            return
-
-        from ..core.i18n import _
-
-        self._thinking_status = Status(
-            _("dashboard.prompt_thinking"),
-            console=self.console,
-            spinner="dots",
-            spinner_style=f"bold {self.C_THINK}",
-        )
-        self._thinking_status.start()
-
-    def stop_thinking(self) -> None:
-        """Stop the thinking spinner."""
-        if self._thinking_status:
-            self._thinking_status.stop()
-            self._thinking_status = None
 
     def _build_view(self, show_cursor: bool = True) -> Group:
         """Construct a Group with only the UNPRINTED committed content + live text."""
@@ -344,23 +321,13 @@ class GemStyleRenderer:
 
         # Design decision: Show more lines for tool results to avoid "collapsed" feel
         lines = content.strip().splitlines()
-        is_list = any(line.strip().startswith(("-", "*", "1.", " •", "Directory:")) for line in lines[:10])
+        is_list = any(l.strip().startswith(("-", "*", "1.", " •", "Directory:")) for l in lines[:10])
         is_diff = content.strip().startswith(("---", "+++", "@@"))
 
         # Expand if it's a list, diff, or short structured content (up to 100 lines)
-        # OR if it's an error (always show errors expanded for visibility)
-        if (ok and len(lines) <= 100 and (is_list or is_diff or len(content) < 2000)) or not ok:
+        if ok and len(lines) <= 100 and (is_list or is_diff or len(content) < 2000):
             # Render structured output with more prominence
-            border_style = self.C_DIM
-            if not ok:
-                # Limit error preview to avoid blowing up the terminal
-                error_lines = lines[:30]
-                error_text = "\n".join(error_lines)
-                if len(lines) > 30:
-                    error_text += f"\n... ({len(lines)-30} more lines)"
-                preview_renderable = Text(error_text, style=self.C_ERROR)
-                border_style = self.C_ERROR
-            elif is_diff:
+            if is_diff:
                 preview_renderable = Syntax(content, "diff", theme="monokai", background_color="default")
             else:
                 # Use Text for lists/logs to avoid Markdown parsing overhead/memory issues
@@ -368,7 +335,7 @@ class GemStyleRenderer:
 
             line = Group(
                 Text.from_markup(f"  {icon} [bold]{name_display}[/] [dim]({artifact_id})[/]"),
-                Panel(preview_renderable, border_style=border_style, padding=(0, 2), expand=False),
+                Panel(preview_renderable, border_style=self.C_DIM, padding=(0, 2), expand=False),
                 Text(""),  # Spacer
             )
         else:

@@ -109,5 +109,12 @@ codeql-custom-queries-python/example.ql
 FEATURES.md
 openssf_audit.md
 qp_audit.md
+.askgem/usage_log.json
+.scripts/
+.vs/
+
+.gemini/
+gha-creds-*.json
+*.ini
 .mentask/usage_log.json
 .scripts/

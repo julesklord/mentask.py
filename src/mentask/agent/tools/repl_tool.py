@@ -40,8 +40,9 @@ class PythonReplTool(BaseTool):
 
         try:
             with redirect_stdout(output), redirect_stderr(error):
-                # We use exec for multi-line support and persistent state
-                exec(code, self.globals)
+                # We compile the code first and use exec for multi-line support and persistent state
+                compiled_code = compile(code, "<string>", "exec")
+                exec(compiled_code, self.globals)  # nosec B102
 
             result = output.getvalue()
             err_result = error.getvalue()

@@ -14,3 +14,7 @@
 ## 2025-05-17 - Fuzzy Slash Command Matching
 **Learning:** Users often make typos when entering slash commands in a CLI (e.g., `/stat` instead of `/stats`). Providing immediate, fuzzy-matched suggestions (e.g., "Did you mean /stats?") reduces friction and prevents the frustration of "Unknown command" errors by guiding the user back to the correct path.
 **Action:** Implement fuzzy matching (e.g., using `difflib`) for all interactive CLI command parsers to provide helpful suggestions on mismatch.
+
+## 2025-05-18 - Language-Aware Syntax Highlighting in Tool Previews
+**Learning:** Hardcoding syntax highlighting (e.g., to Python) for all tool outputs in a multi-language agent CLI causes cognitive dissonance when the agent is working on other file types (JS, HTML, etc.). Detecting the file extension from tool results or arguments and applying the correct lexer makes the interface feel much more intelligent and reduces eye strain.
+**Action:** Use a language detection helper based on file extensions for all UI components that render code blocks or file contents.

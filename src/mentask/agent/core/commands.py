@@ -176,24 +176,42 @@ class CommandHandler:
 
     async def _cmd_model(self, args: list[str]) -> str | Table:
         """Lists or switches models for the active provider."""
+        from ...core.models_hub import hub
+
         if not args:
             try:
+                # Force a sync check
+                hub.sync()
+
                 models = await self.agent.session.provider.list_models()
                 if not models:
                     return "[warning]No models found for the current provider.[/warning]"
 
                 table = Table(title=_("cmd.model.available"), box=None)
-                table.add_column("Model", style="#4285F4")
+                table.add_column("Model ID", style="bold cyan")
+                table.add_column("Context", justify="right")
                 table.add_column("Status")
 
-                for name in models:
-                    status = "[success]Active[/success]" if name == self.agent.model_name else ""
-                    table.add_row(name, status)
+                for m_id in models:
+                    status = "[success]● Active[/success]" if m_id == self.agent.model_name else ""
+
+                    # Try to get extra info from hub
+                    m_info = hub.get_model(m_id)
+                    context_str = ""
+                    if m_info:
+                        ctx = m_info.get("limit", {}).get("context", 0)
+                        if ctx:
+                            context_str = f"{ctx // 1000}K"
+
+                    table.add_row(m_id, context_str, status)
                 return table
             except Exception as e:
                 return f"[dim]Error listing models: {e}[/dim]"
 
         new_model = args[0]
+
+        # Check if it's an index from the last list (not implemented yet, but good for UX)
+        # For now, just direct name
         self.agent.model_name = new_model
 
         # Swapping provider if necessary
@@ -508,26 +526,46 @@ class CommandHandler:
 
         new_key = args[0].strip()
 
-        # Determine default provider
-        provider_class = self.agent.session.provider.__class__.__name__.replace("Provider", "")
-        default_provider = "google" if provider_class == "Gemini" else "openai"
-        if provider_class == "OpenAI" and ":" in self.agent.model_name:
-            default_provider = self.agent.model_name.split(":")[0].lower()
+        # 1. Detect provider automatically if not specified
+        if len(args) > 1:
+            provider_id = args[1].lower()
+        else:
+            provider_id = self.agent.config.detect_provider(new_key)
 
-        provider_id = args[1].lower() if len(args) > 1 else default_provider
-
+        # 2. Save the key to the global configuration (keyring)
         success = self.agent.config.save_api_key(new_key, provider=provider_id)
 
         if success:
-            # Force session reload with the new key
             try:
-                # Re-setup API client (it will load the newly saved key)
-                await self.agent.session.setup_api()
+                # 3. Check if we need to switch the active provider family
+                provider_obj = self.agent.session.provider
+                from .providers.gemini import GeminiProvider
+                from .providers.openai import OpenAIProvider
+
+                current_is_google = isinstance(provider_obj, GeminiProvider)
+                target_is_google = provider_id == "google"
+
+                if current_is_google != target_is_google:
+                    # On-the-fly switch to a default model for the new provider
+                    new_model = "gemini-2.0-flash" if target_is_google else "gpt-4o-mini"
+                    await self.agent.session.switch_model(new_model)
+                    self.agent.model_name = new_model
+                    #
+                    # Persist the new model choice in global settings
+                    self.agent.config.settings["model_name"] = new_model
+                    self.agent.config.save_settings()
+
+                    msg = f"[success]Provider switched to {provider_id.upper()}![/success]\n"
+                    msg += f"[info]New default model active:[/info] [bold]{new_model}[/bold]\n"
+                else:
+                    # Same provider family, just refresh the key
+                    await self.agent.session.setup_api()
+                    msg = f"[success]{provider_id.upper()} API Key updated and active![/success]\n"
 
                 # Reset the reasoning chat session
                 await self.agent.session.reset_session(self.agent._build_config())
 
-                msg = f"[success]{provider_id.upper()} API Key saved and engine reloaded![/success]\n[dim]The new key (***{new_key[-4:]}) is now active in memory.[/dim]"
+                msg += f"[dim]The new key (***{new_key[-4:]}) is now active. Environment variables are now overridden.[/dim]"
                 return msg
             except Exception as e:
                 return f"[error]Key saved but engine reload failed: {e}[/error]"

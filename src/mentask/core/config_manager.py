@@ -35,7 +35,22 @@ class ConfigManager:
         self.settings = {
             "model_name": "gemini-2.0-flash",
             "edit_mode": "manual",  # "manual" or "auto"
-            "theme": "indigo",  # indigo, emerald, crimson, amber, cyberpunk
+            "theme": "neon_cyan",  # Default neon theme
+            "available_themes": [
+                "indigo",
+                "emerald",
+                "crimson",
+                "amber",
+                "cyberpunk",
+                "dracula",
+                "nord",
+                "sakura",
+                "neon_cyan",
+                "neon_pink",
+                "neon_purple",
+                "neon_matrix",
+            ],
+            "context_type": "general",
             "stream_delay": 0.015,  # 15ms default delay for professional feel
             "temperature": 0.7,
             "max_file_read_size": 30000,
@@ -48,6 +63,23 @@ class ConfigManager:
             "nerdfonts_enabled": True,
         }
         self.load_settings()
+
+    def get_resolved_theme(self):
+        """Resolves a theme, legacy or neon.
+
+        Returns:
+            ThemeConfig: The resolved theme configuration.
+        """
+        theme_name = self.settings.get("theme", "neon_cyan")
+
+        # Lazy import to avoid circular dependencies
+        from ..cli.contextual_prompts import NeonTheme
+        from ..cli.themes import get_theme
+
+        if theme_name.startswith("neon_"):
+            return NeonTheme.get(theme_name)
+        else:
+            return get_theme(theme_name)
 
     def load_settings(self) -> None:
         """Loads user settings from the JSON file if available.
@@ -121,48 +153,70 @@ class ConfigManager:
         except Exception as e:
             self.console.print(f"[error][X] Error saving settings: {e}[/error]")
 
-    def load_api_key(self, provider: str = "google") -> str | None:
+    def detect_provider(self, api_key: str) -> str:
+        """Heuristically detects the provider from the API key format.
+
+        Args:
+            api_key: The raw API key string.
+
+        Returns:
+            str: 'google', 'openai', 'anthropic', 'deepseek', 'groq', etc.
+        """
+        key = api_key.strip()
+        if key.startswith("sk-ant-"):
+            return "anthropic"
+        if key.startswith("sk-proj-"):
+            return "openai"
+        if key.startswith("gsk_"):
+            return "groq"
+        if key.startswith("sk-"):
+            # Could be DeepSeek or generic OpenAI
+            return "openai"
+        if key.startswith("AIzaSy"):
+            return "google"
+        return "google"  # Default fallback
+
+    def load_api_key(self, provider: str = "google", return_source: bool = False) -> str | tuple[str, str] | None:
         """Attempts to load the API_KEY from available sources for a given provider.
 
         Args:
-            provider (str): The provider name (e.g., 'google', 'openai', 'deepseek').
+            provider (str): The provider name.
+            return_source (bool): If True, returns a tuple (key, source_name).
 
         Priority:
-            1. Environment variable ({PROVIDER}_API_KEY)
-            2. Local settings.json ({provider}_api_key)
-            3. System keyring
-
-        Returns:
-            Optional[str]: The API key string if found, otherwise None.
+            1. Local settings.json ({provider}_api_key) - Project Specific
+            2. System keyring (Global) - Explicitly set via /auth
+            3. Environment variable ({PROVIDER}_API_KEY) - System default
         """
         provider = provider.lower()
         env_var = f"{provider.upper()}_API_KEY"
 
-        # 1. Environment variable
-        env_key = os.getenv(env_var)
-        if env_key:
-            return env_key
-
-        # Fallback for Google specifically
-        if provider == "google":
-            gemini_key = os.getenv("GEMINI_API_KEY")
-            if gemini_key:
-                return gemini_key
-
-        # 2. Local Settings
+        # 1. Local Settings (Project Override)
         settings_key = self.settings.get(f"{provider}_api_key")
         if settings_key and settings_key != "STORED_IN_KEYRING":
-            return settings_key
+            return (settings_key, "Local Settings") if return_source else settings_key
 
-        # 3. System Keyring
+        # 2. System Keyring (Global - Explicitly set)
         try:
             keyring_key = keyring.get_password(self.SERVICE_NAME, env_var)
             if keyring_key:
-                return keyring_key
+                return (keyring_key, "Keyring") if return_source else keyring_key
         except Exception as e:
             self.console.print(f"[error][!] Error accessing keyring for {provider}: {e}[/error]")
 
-        return None
+        # 3. Environment variable (Fallback)
+        env_key = os.getenv(env_var)
+        if env_key:
+            return (env_key, "Environment Variable") if return_source else env_key
+
+        # Fallback for Google specifically
+        if provider == "google":
+            for fallback in ["GEMINI_API_KEY", "GEM_API_KEY"]:
+                val = os.getenv(fallback)
+                if val:
+                    return (val, "Environment Variable") if return_source else val
+
+        return (None, None) if return_source else None
 
     def save_api_key(self, api_key: str, provider: str = "google") -> bool:
         """Saves the API_KEY to the system keyring.

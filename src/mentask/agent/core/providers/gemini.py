@@ -25,7 +25,7 @@ class GeminiProvider(BaseProvider):
     async def setup(self) -> bool:
         from google import genai
 
-        self.api_key = self.config.load_api_key("google")
+        self.api_key, self.key_source = self.config.load_api_key("google", return_source=True)
         if not self.api_key:
             return False
 

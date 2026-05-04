@@ -11,7 +11,7 @@ _logger = logging.getLogger("mentask")
 
 MODELS_DEV_URL = "https://models.dev/api.json"
 CACHE_FILENAME = "models_cache.json"
-CACHE_TTL = 86400  # 24 hours in seconds
+CACHE_TTL = 21600  # 6 hours in seconds (fresher data)
 
 
 class ModelsHub:

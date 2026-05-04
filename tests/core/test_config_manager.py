@@ -92,9 +92,28 @@ class TestConfigManagerSettings:
 
 class TestConfigManagerApiKey:
     def test_loads_from_env_variable(self):
-        with patch.dict(os.environ, {"GOOGLE_API_KEY": "env-key-123"}):
+        with (
+            patch.dict(os.environ, {"GOOGLE_API_KEY": "env-key-123"}),
+            patch("keyring.get_password", return_value=None),
+        ):
             cm = ConfigManager(_mock_console)
             assert cm.load_api_key() == "env-key-123"
+
+    def test_keyring_overrides_env_variable(self):
+        with (
+            patch.dict(os.environ, {"GOOGLE_API_KEY": "env-key-123"}),
+            patch("keyring.get_password", return_value="keyring-key-789"),
+        ):
+            cm = ConfigManager(_mock_console)
+            # Keyring wins in v2.1+
+            assert cm.load_api_key() == "keyring-key-789"
+
+    def test_detect_provider(self):
+        cm = ConfigManager(_mock_console)
+        assert cm.detect_provider("sk-proj-123") == "openai"
+        assert cm.detect_provider("sk-ant-123") == "anthropic"
+        assert cm.detect_provider("AIzaSy123") == "google"
+        assert cm.detect_provider("random") == "google"
 
     def test_returns_none_when_no_key(self, tmp_path):
         with (

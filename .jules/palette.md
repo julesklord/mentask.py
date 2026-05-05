@@ -14,3 +14,7 @@
 ## 2025-05-17 - Fuzzy Slash Command Matching
 **Learning:** Users often make typos when entering slash commands in a CLI (e.g., `/stat` instead of `/stats`). Providing immediate, fuzzy-matched suggestions (e.g., "Did you mean /stats?") reduces friction and prevents the frustration of "Unknown command" errors by guiding the user back to the correct path.
 **Action:** Implement fuzzy matching (e.g., using `difflib`) for all interactive CLI command parsers to provide helpful suggestions on mismatch.
+
+## 2025-05-20 - Dynamic Artifact Syntax Highlighting
+**Learning:** Hardcoding syntax highlighting (e.g., to Python) for tool artifacts in a multi-language CLI agent creates a poor experience when viewing non-Python files. Dynamically detecting the file path from tool output and mapping extensions to Rich lexers provides a much more pleasant and professional "modular" feel.
+**Action:** Use regex to extract file paths from tool result headers and a mapping-based helper to resolve lexers for `Syntax` components.

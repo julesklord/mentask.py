@@ -387,6 +387,29 @@ class GemStyleRenderer:
             self.console.print(line)
             self.printed_count = len(self.committed_buffer)
 
+    def _get_lexer_for_path(self, path: str) -> str:
+        """Map file extension to Rich lexer name."""
+        ext = path.split(".")[-1].lower() if "." in path else ""
+        mapping = {
+            "py": "python",
+            "js": "javascript",
+            "ts": "typescript",
+            "tsx": "tsx",
+            "jsx": "jsx",
+            "html": "html",
+            "css": "css",
+            "json": "json",
+            "md": "markdown",
+            "yaml": "yaml",
+            "yml": "yaml",
+            "sh": "bash",
+            "bash": "bash",
+            "sql": "sql",
+            "dockerfile": "dockerfile",
+            "toml": "toml",
+        }
+        return mapping.get(ext, "text")
+
     def expand_artifact(self, index: int = -1) -> None:
         if not self.artifacts:
             self.print_warning("No artifacts to expand.")
@@ -402,9 +425,20 @@ class GemStyleRenderer:
             artifact_id = f"#{actual + 1}"
 
             if name in ["read_file", "edit_file", "write_file", "execute_bash", "execute_command", "read_url"]:
+                # Attempt to extract path from common tool output headers
+                path_match = re.search(r"--- Reading '([^']+)'", content)
+                if not path_match:
+                    path_match = re.search(r"Success: (?:Created|Replaced text in) '([^']+)'", content)
+
+                lexer = "python"
+                if path_match:
+                    lexer = self._get_lexer_for_path(path_match.group(1))
+                elif "bash" in name or "command" in name:
+                    lexer = "bash"
+
                 renderable = Syntax(
                     content,
-                    "bash" if "bash" in name or "command" in name else "python",
+                    lexer,
                     theme="monokai",
                     line_numbers=True,
                 )

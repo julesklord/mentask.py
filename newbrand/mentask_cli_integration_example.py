@@ -4,21 +4,19 @@ Ejemplo de cómo integrar el sistema contextual en main.py existente.
 Esto muestra el flujo de inicialización y uso.
 """
 
-from pathlib import Path
 from rich.console import Console
 from rich.panel import Panel
-from rich.prompt import Prompt, Confirm
+from rich.prompt import Confirm, Prompt
 
+from mentask.cli.contextual_prompts import (
+    ContextType,
+    ContextualConfigManager,
+    ContextualOrchestrator,
+    ContextualPromptLibrary,
+    NeonTheme,
+)
 from mentask.core.config_manager import ConfigManager
 from mentask.core.models_hub import hub
-from mentask.cli.contextual_prompts import (
-    ContextualOrchestrator,
-    ContextualConfigManager,
-    ContextType,
-    NeonTheme,
-    ContextualPromptLibrary,
-)
-from mentask.cli.themes import get_theme
 
 
 class MentaskCLI:
@@ -113,10 +111,10 @@ class MentaskCLI:
         # 1. Mostrar contexto actual
         context = self.contextual_config.get_active_context()
         theme_name = self.contextual_config.contexts.get("active_theme", "neon_cyan")
-        
+
         header = self.orchestrator.render_context_header()
         self.console.print(header)
-        
+
         self.console.print(
             f"[{self.orchestrator.renderer.theme.text_secondary}]"
             f"Tema: {theme_name} | Contexto: {context.value}[/]"
@@ -134,25 +132,25 @@ class MentaskCLI:
 
     def get_system_prompt(self, model_id: str) -> str:
         """Obtiene el system prompt adaptado al contexto y modelo."""
-        model_info = hub.get_model(model_id)
+        hub.get_model(model_id)
         model_family = "claude" if "claude" in model_id.lower() else "gpt" if "gpt" in model_id.lower() else "groq"
-        
+
         system_prompt = self.orchestrator.prepare_system_prompt(model_family)
-        
+
         # Log contextual
         context = self.contextual_config.get_active_context()
         self.orchestrator.log_with_context(
             f"Usando prompt contextual para {context.value} + {model_family}",
             level="info"
         )
-        
+
         return system_prompt
 
     def show_context_info(self) -> None:
         """Muestra información del contexto actual."""
         context = self.contextual_config.get_active_context()
         prompt = ContextualPromptLibrary.get(context)
-        
+
         self.console.print()
         self.console.print(
             Panel(
@@ -160,7 +158,7 @@ class MentaskCLI:
                 f"[yellow]Tono:[/yellow] {prompt.tone}\n"
                 f"[yellow]Constraints:[/yellow]\n" +
                 "\n".join(f"  • {c}" for c in prompt.constraints),
-                title=f"[bold]Detalles del Contexto[/bold]",
+                title="[bold]Detalles del Contexto[/bold]",
                 border_style="cyan",
                 padding=(1, 2),
             )
@@ -186,13 +184,13 @@ class MentaskCLI:
             try:
                 # Mostrar contexto actual
                 context = self.contextual_config.get_active_context()
-                theme = self.contextual_config.contexts.get("active_theme")
-                
+                self.contextual_config.contexts.get("active_theme")
+
                 prompt_text = (
                     f"[{self.orchestrator.renderer.theme.brand_primary}]"
                     f"[{context.value}] ❯[/]"
                 )
-                
+
                 user_input = self.console.input(prompt_text)
 
                 if not user_input.strip():
@@ -234,7 +232,7 @@ def run_chatbot():
 # EJEMPLOS DE USO PROGRAMÁTICO
 def example_programmatic_usage():
     """Ejemplo de uso programático del sistema."""
-    
+
     # 1. Crear orchestrator
     contextual_config = ContextualConfigManager()
     console = Console()

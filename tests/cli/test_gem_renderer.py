@@ -1,7 +1,9 @@
+
 import pytest
-from unittest.mock import MagicMock
 from rich.console import Console
+
 from mentask.cli.gem_renderer import GemStyleRenderer
+
 
 @pytest.fixture
 def console():

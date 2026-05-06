@@ -1,5 +1,3 @@
-import pytest
-
 from mentask.core.compression import ContextCompressor
 
 

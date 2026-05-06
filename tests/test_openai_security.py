@@ -6,7 +6,7 @@ from mentask.agent.core.providers.openai import OpenAIProvider
 @pytest.fixture
 def mock_config():
     config = MagicMock()
-    config.load_api_key.return_value = "fake_key"
+    config.load_api_key.return_value = ('fake_key', 'mock_source')
     return config
 
 @pytest.mark.anyio

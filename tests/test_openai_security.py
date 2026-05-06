@@ -9,7 +9,7 @@ from mentask.agent.core.providers.openai import OpenAIProvider
 def mock_config():
     config = MagicMock()
     config.load_api_key.side_effect = lambda provider="google", return_source=False: (
-        ("fake_key", "Keyring") if return_source else "fake_key"
+        ("fake_key", "mocked") if return_source else "fake_key"
     )
     return config
 

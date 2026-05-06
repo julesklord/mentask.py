@@ -36,7 +36,12 @@ def _create_backup(path: str) -> str:
     backup_path = (backup_folder / rel_path).resolve()
     # Ensure backup directory exists
     os.makedirs(os.path.dirname(backup_path), exist_ok=True)
-    shutil.copy2(path, backup_path)
+
+    # Avoid shutil.copy2 error if source and destination are technically the same
+    abs_path = os.path.abspath(path)
+    abs_backup = os.path.abspath(backup_path)
+    if abs_path != abs_backup:
+        shutil.copy2(path, backup_path)
     return str(backup_path)
 
 

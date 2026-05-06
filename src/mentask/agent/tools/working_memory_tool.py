@@ -1,3 +1,4 @@
+import asyncio
 import json
 from pathlib import Path
 
@@ -31,25 +32,31 @@ class WorkingMemoryTool(BaseTool):
     def _ensure_dir(self):
         self.memory_file.parent.mkdir(parents=True, exist_ok=True)
 
-    async def execute(self, action: str, key: str, value: str = "") -> ToolResult:
-        data = {}
+    def _read_memory(self) -> dict:
         if self.memory_file.exists():
             try:
                 with open(self.memory_file, encoding="utf-8") as f:
-                    data = json.load(f)
+                    return json.load(f)
             except Exception:
-                data = {}
+                pass
+        return {}
+
+    def _write_memory(self, data: dict):
+        self._ensure_dir()
+        with open(self.memory_file, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
+
+    async def execute(self, action: str, key: str, value: str = "") -> ToolResult:
+        data = await asyncio.to_thread(self._read_memory)
 
         if action == "read":
             result = data.get(key, f"Key '{key}' not found in working memory.")
             return ToolResult(content=str(result), is_error=False)
 
         elif action == "write":
-            self._ensure_dir()
             data[key] = value
             try:
-                with open(self.memory_file, "w", encoding="utf-8") as f:
-                    json.dump(data, f, indent=2)
+                await asyncio.to_thread(self._write_memory, data)
                 return ToolResult(content=f"Stored '{key}' in working memory.", is_error=False)
             except Exception as e:
                 return ToolResult(content=f"Failed to write: {e}", is_error=True)
@@ -58,8 +65,7 @@ class WorkingMemoryTool(BaseTool):
             if key in data:
                 del data[key]
                 try:
-                    with open(self.memory_file, "w", encoding="utf-8") as f:
-                        json.dump(data, f, indent=2)
+                    await asyncio.to_thread(self._write_memory, data)
                     return ToolResult(content=f"Cleared '{key}' from working memory.", is_error=False)
                 except Exception as e:
                     return ToolResult(content=f"Failed to clear: {e}", is_error=True)

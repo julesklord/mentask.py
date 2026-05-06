@@ -11,6 +11,7 @@ def mock_config():
 
 @pytest.mark.anyio
 async def test_openai_provider_safe_endpoint(mock_config):
+    mock_config.load_api_key.return_value = ('test_key', 'mock_source')
     """Test that a valid global HTTPS endpoint is accepted."""
     provider = OpenAIProvider("fake_provider:model_x", mock_config)
 
@@ -34,6 +35,7 @@ async def test_openai_provider_safe_endpoint(mock_config):
 
 @pytest.mark.anyio
 async def test_openai_provider_rejects_http(mock_config):
+    mock_config.load_api_key.return_value = ('test_key', 'mock_source')
     """Test that an HTTP endpoint is rejected, retaining default api_base."""
     provider = OpenAIProvider("fake_provider:model_x", mock_config)
 
@@ -57,6 +59,7 @@ async def test_openai_provider_rejects_http(mock_config):
 
 @pytest.mark.anyio
 async def test_openai_provider_rejects_unsafe_url(mock_config):
+    mock_config.load_api_key.return_value = ('test_key', 'mock_source')
     """Test that a URL failing is_safe_url (e.g. localhost/SSRF) is rejected."""
     provider = OpenAIProvider("fake_provider:model_x", mock_config)
 

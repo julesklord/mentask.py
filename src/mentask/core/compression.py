@@ -24,11 +24,7 @@ class ContextCompressor:
         lang = language.lower()
 
         # Simple heuristic IF NOT "unknown"
-        if (
-            not lang
-            and "unknown" not in language.lower()
-            and re.search(r"^\s*#", code, re.MULTILINE)
-        ):
+        if not lang and "unknown" not in language.lower() and re.search(r"^\s*#", code, re.MULTILINE):
             # But wait, test_compress_code_unknown_language expects '#' to STAY if lang is empty or unknown
             # Actually, the test says:
             # compressed_empty_lang = ContextCompressor.compress_code(code)

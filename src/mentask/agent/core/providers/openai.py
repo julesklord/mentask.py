@@ -65,10 +65,9 @@ class OpenAIProvider(BaseProvider):
             self.api_key, self.key_source = res
         elif res:
             self.api_key = res
-            self.key_source = 'Unknown'
+            self.key_source = "Unknown"
         else:
             self.api_key, self.key_source = None, None
-
 
         if not self.api_key and active_id != "openai":
             # Fallback to generic openai key if specific one is missing
@@ -77,10 +76,9 @@ class OpenAIProvider(BaseProvider):
                 self.api_key, self.key_source = res2
             elif res2:
                 self.api_key = res2
-                self.key_source = 'Unknown'
+                self.key_source = "Unknown"
             else:
                 self.api_key, self.key_source = None, None
-
 
         if not self.api_key:
             _logger.warning(f"No API key found for {self.model_name} (provider: {active_id})")

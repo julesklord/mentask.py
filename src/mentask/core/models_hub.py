@@ -76,10 +76,9 @@ class ModelsHub:
         except Exception as e:
             _logger.error(f"Failed to save models cache: {e}")
 
-
     def _rebuild_index(self):
         self._flat_models.clear()
-        if not hasattr(self, '_data') or not self._data:
+        if not hasattr(self, "_data") or not self._data:
             return
         for p_id, p_info in self._data.items():
             if not isinstance(p_info, dict):

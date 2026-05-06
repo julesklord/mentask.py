@@ -10,6 +10,7 @@ from .base import BaseTool
 
 _logger = logging.getLogger("mentask")
 
+
 class SandboxProcess:
     """A subprocess that executes Python code in a restricted environment."""
 
@@ -99,7 +100,7 @@ while True:
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
-            bufsize=1
+            bufsize=1,
         )
 
     def execute(self, code: str) -> dict:
@@ -153,19 +154,13 @@ class PythonReplTool(BaseTool):
 
         err = result.get("error")
         if err:
-            return ToolResult(
-                tool_call_id="",
-                content=f"Execution Error:\n{err}",
-                is_error=True
-            )
+            return ToolResult(tool_call_id="", content=f"Execution Error:\n{err}", is_error=True)
 
         stdout = result.get("stdout", "")
         stderr = result.get("stderr", "")
 
         if stderr:
-            return ToolResult(
-                tool_call_id="", content=f"Output:\n{stdout}\n\nErrors/Stderr:\n{stderr}", is_error=True
-            )
+            return ToolResult(tool_call_id="", content=f"Output:\n{stdout}\n\nErrors/Stderr:\n{stderr}", is_error=True)
 
         return ToolResult(
             tool_call_id="", content=stdout if stdout else "Code executed successfully (no output).", is_error=False

@@ -6,11 +6,11 @@ agent tools (plugins) from the user's workspace or global configuration.
 """
 
 import ast
-from pathlib import Path
 import importlib.util
 import inspect
 import logging
 import sys
+from pathlib import Path
 from typing import Any
 
 from ..agent.tools.base import BaseTool

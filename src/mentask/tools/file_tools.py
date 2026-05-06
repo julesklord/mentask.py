@@ -27,10 +27,13 @@ def _create_backup(path: str) -> str:
     # We want to preserve the relative path from CWD to the file in the backup
     try:
         rel_path = os.path.relpath(path, os.getcwd())
+        # Security: Prevent path traversal by ensuring rel_path doesn't escape backup_folder
+        if rel_path.startswith("..") or os.path.isabs(rel_path):
+            rel_path = os.path.basename(path)
     except ValueError:
         # Fallback if path is on a different drive or something weird
         rel_path = os.path.basename(path)
-    backup_path = backup_folder / rel_path
+    backup_path = (backup_folder / rel_path).resolve()
     # Ensure backup directory exists
     os.makedirs(os.path.dirname(backup_path), exist_ok=True)
     shutil.copy2(path, backup_path)

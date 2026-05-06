@@ -10,6 +10,7 @@ Key differences from CliRenderer:
 from __future__ import annotations
 
 import getpass
+import os
 import re
 import time
 
@@ -153,6 +154,26 @@ class GemStyleRenderer:
         self.C_THINK = self.theme.think_color
         self.C_USER = self.theme.text_secondary
         self.C_TOOL = self.theme.warning
+
+    def _get_lexer_for_path(self, path: str | None) -> str:
+        """Determines the Rich syntax lexer based on file extension."""
+        if not path:
+            return "text"
+
+        ext_map = {
+            ".py": "python", ".js": "javascript", ".ts": "typescript", ".jsx": "jsx", ".tsx": "tsx",
+            ".md": "markdown", ".json": "json", ".yaml": "yaml", ".yml": "yaml", ".html": "html",
+            ".css": "css", ".sh": "bash", ".bash": "bash", ".sql": "sql", ".toml": "toml",
+            ".ini": "ini", ".dockerfile": "docker", "dockerfile": "docker", ".diff": "diff",
+            ".patch": "diff", "makefile": "make",
+        }
+
+        filename = os.path.basename(path).lower()
+        if filename in ext_map:
+            return ext_map[filename]
+
+        _, ext = os.path.splitext(filename)
+        return ext_map.get(ext, "text")
 
     def apply_theme(self, name: str) -> None:
         self.theme = get_theme(name)
@@ -351,6 +372,8 @@ class GemStyleRenderer:
         if (ok and len(lines) <= 100 and (is_list or is_diff or len(content) < 2000)) or not ok:
             # Render structured output with more prominence
             border_style = self.C_DIM
+            subtitle = None
+
             if not ok:
                 # Limit error preview to avoid blowing up the terminal
                 error_lines = lines[:30]
@@ -359,6 +382,19 @@ class GemStyleRenderer:
                     error_text += f"\n... ({len(lines) - 30} more lines)"
                 preview_renderable = Text(error_text, style=self.C_ERROR)
                 border_style = self.C_ERROR
+                subtitle = "[dim]Ctrl+O to expand full error[/]"
+            elif tool_name == "read_file" and len(lines) > 1:
+                # Detect filename from the header created in file_tools.py
+                path = None
+                m = re.search(r"--- Reading '(.*?)'", lines[0])
+                if m:
+                    path = m.group(1)
+
+                lexer = self._get_lexer_for_path(path)
+                # Skip the header in the preview if possible
+                body = "\n".join(lines[1:])
+                preview_renderable = Syntax(body, lexer, theme="monokai", background_color="default")
+                subtitle = "[dim]Ctrl+O to expand[/]"
             elif is_diff:
                 preview_renderable = Syntax(content, "diff", theme="monokai", background_color="default")
             else:
@@ -367,7 +403,13 @@ class GemStyleRenderer:
 
             line = Group(
                 Text.from_markup(f"  {icon} [bold]{name_display}[/] [dim]({artifact_id})[/]"),
-                Panel(preview_renderable, border_style=border_style, padding=(0, 2), expand=False),
+                Panel(
+                    preview_renderable,
+                    border_style=border_style,
+                    padding=(0, 2),
+                    expand=False,
+                    subtitle=subtitle,
+                ),
                 Text(""),  # Spacer
             )
         else:
@@ -402,9 +444,26 @@ class GemStyleRenderer:
             artifact_id = f"#{actual + 1}"
 
             if name in ["read_file", "edit_file", "write_file", "execute_bash", "execute_command", "read_url"]:
+                path = None
+                if name == "read_file":
+                    m = re.search(r"--- Reading '(.*?)'", content)
+                    if m:
+                        path = m.group(1)
+                elif name in ("edit_file", "write_file"):
+                    m = re.search(r"in '(.*?)'", content)
+                    if not m:
+                        m = re.search(r"file '(.*?)'", content)
+                    if m:
+                        path = m.group(1)
+
+                if "bash" in name or "command" in name:
+                    lexer = "bash"
+                else:
+                    lexer = self._get_lexer_for_path(path)
+
                 renderable = Syntax(
                     content,
-                    "bash" if "bash" in name or "command" in name else "python",
+                    lexer,
                     theme="monokai",
                     line_numbers=True,
                 )
@@ -528,11 +587,18 @@ class GemStyleRenderer:
 
         self.console.print(f"  [bold]{tool_name}[/] wants to execute with:")
 
+        path_hint = args.get("path") or args.get("filepath") or args.get("destination")
+
         for k, v in args.items():
             val_str = str(v)
             if len(val_str) > 60 or "\n" in val_str:
                 self.console.print(f"    [bold]{k}:[/]")
-                lang = "python" if tool_name in ("write_file", "edit_file") else "text"
+                if tool_name in ("write_file", "edit_file", "read_file"):
+                    lang = self._get_lexer_for_path(path_hint)
+                elif "bash" in tool_name or "command" in tool_name:
+                    lang = "bash"
+                else:
+                    lang = "text"
                 self.console.print(Panel(Syntax(val_str, lang, theme="monokai"), border_style="dim", padding=(0, 1)))
             else:
                 self.console.print(f"    [bold]{k}:[/]  [dim]{val_str}[/]")

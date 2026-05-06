@@ -60,6 +60,7 @@ def test_metrics_summary(clean_tracker):
     assert "Tokens:" in summary
     assert "Cost:" in summary
 
+
 def test_total_tokens(clean_tracker):
     """Verifies that total_tokens returns the sum of prompt and candidate tokens."""
     tracker = clean_tracker

@@ -50,3 +50,24 @@ And some text.
     assert "# comment" not in compressed
     assert "x = 10" in compressed
     assert "Here is some code" in compressed
+
+def test_smart_compress_code_replacer_edge_cases():
+    # Empty code block without language
+    content = "```\n```"
+    assert ContextCompressor.smart_compress(content) == "```\n\n```"
+
+    # Empty code block with language
+    content = "```python\n```"
+    assert ContextCompressor.smart_compress(content) == "```python\n\n```"
+
+    # Unclosed code block
+    content = "```javascript\n// comment\nlet x = 1;"
+    assert ContextCompressor.smart_compress(content) == "```javascript\nlet x = 1;\n```"
+
+    # Only language, no body, no newline
+    content = "```python"
+    assert ContextCompressor.smart_compress(content) == "```python\n\n```"
+
+    # No language, no body, no newline
+    content = "```"
+    assert ContextCompressor.smart_compress(content) == "```\n\n```"

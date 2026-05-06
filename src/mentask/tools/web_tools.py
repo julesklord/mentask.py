@@ -9,7 +9,6 @@ import urllib.request
 
 _logger = logging.getLogger("mentask")
 
-
 # Pre-compiled regex patterns for performance
 RE_DDG_RESULTS = re.compile(
     r'<a class="result__a" href="([^"]+)">([^<]+)</a>.*?<a class="result__snippet"[^>]*>([^<]+)</a>',

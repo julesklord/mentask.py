@@ -358,7 +358,7 @@ class ContextualConfigManager:
         if self.config_path.exists():
             try:
                 return json.loads(self.config_path.read_text())
-            except:
+            except Exception:
                 return self._default_contexts()
         return self._default_contexts()
 

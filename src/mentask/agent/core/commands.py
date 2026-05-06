@@ -25,27 +25,49 @@ COMMAND_METADATA = {
     "/reset": {"desc": "Resets the session and counters", "example": "/reset", "category": "Session"},
     "/undo": {"desc": "Restore last backed-up version of a file", "example": "/undo <path>", "category": "Session"},
     # --- History Management ---
-    "/sessions": {"desc": "List previous chat sessions", "example": "/sessions", "category": "History"},
-    "/load": {"desc": "Load a specific session", "example": "/load <id>", "category": "History"},
+    "/sessions": {"desc": "List previous chat sessions", "category": "History"},
+    "/load": {"desc": "Load a specific session by ID or index", "example": "/load <id>", "category": "History"},
     # --- Configuration & Discovery ---
-    "/model": {"desc": _("cmd.desc.model_list"), "example": "/model [name]", "category": "Config"},
-    "/discover": {"desc": _("cmd.desc.discover"), "example": "/discover [query]", "category": "Config"},
-    "/mode": {"desc": _("cmd.desc.mode_manual"), "example": "/mode auto/manual", "category": "Config"},
-    "/stream": {"desc": "Change streaming display mode", "example": "/stream transient", "category": "Config"},
+    "/model": {
+        "desc": "List models or switch (use '/model configure' to test health)",
+        "example": "/model [name]",
+        "category": "Config",
+    },
+    "/discover": {"desc": "Search models.dev catalog", "example": "/discover [query]", "category": "Config"},
+    "/mode": {
+        "desc": "Toggle between auto/manual tool execution",
+        "example": "/mode auto/manual",
+        "category": "Config",
+    },
+    "/stream": {
+        "desc": "Change streaming mode (continuous/transient)",
+        "example": "/stream [mode]",
+        "category": "Config",
+    },
     "/theme": {"desc": "List or change UI themes", "example": "/theme [name]", "category": "Config"},
-    "/init": {"desc": "Initialize local project isolation and configuration", "example": "/init", "category": "Config"},
+    "/init": {"desc": "Initialize local project configuration directory", "example": "/init", "category": "Config"},
+    "/prompt": {"desc": "Customize prompt style and icons", "example": "/prompt --theme atomic", "category": "Config"},
     # --- Security ---
-    "/auth": {"desc": "Sets the Gemini API Key securely", "example": "/auth <key>", "category": "Security"},
-    "/trust": {"desc": "Authorizes current directory for auto-execution", "example": "/trust", "category": "Security"},
-    "/untrust": {"desc": "Removes authorization from current directory", "example": "/untrust", "category": "Security"},
+    "/auth": {"desc": "Sets API Key for a provider", "example": "/auth <key> [provider]", "category": "Security"},
+    "/trust": {"desc": "Trust current directory for auto-execution", "example": "/trust", "category": "Security"},
+    "/untrust": {"desc": "Remove trust from current directory", "example": "/untrust", "category": "Security"},
     # --- Stats & Tools ---
-    "/usage": {"desc": "Show current and global token usage", "example": "/usage [--reset]", "category": "Stats"},
-    "/stats": {"desc": _("cmd.desc.stats"), "example": "/stats", "category": "Stats"},
-    "/prompt": {"desc": "Customize the interactive prompt", "example": "/prompt --theme atomic", "category": "Config"},
-    "/artifacts": {"desc": "List or expand tool artifacts", "example": "/artifacts [idx]", "category": "Tools"},
+    "/usage": {"desc": "Show historical token usage", "example": "/usage [--reset]", "category": "Stats"},
+    "/stats": {"desc": "Show current session statistics", "example": "/stats", "category": "Stats"},
+    "/artifacts": {"desc": "List or expand tool outputs", "example": "/artifacts [idx]", "category": "Tools"},
     # --- Control ---
     "/stop": {"desc": "Interrupts the current generation", "example": "/stop", "category": "Control"},
     "/exit": {"desc": _("cmd.desc.exit"), "example": "/exit", "category": "Control"},
+}
+
+# Mapping of aliases to primary commands
+COMMAND_ALIASES = {
+    "/q": "/exit",
+    "/quit": "/exit",
+    "/themes": "/theme",
+    "/art": "/artifacts",
+    "/cost": "/stats",
+    "/speed": "/speed",
 }
 
 
@@ -56,23 +78,24 @@ class CommandHandler:
         self.agent = agent
 
     def get_all_commands(self) -> list[str]:
-        """Returns a list of all available slash commands."""
-        return list(COMMAND_METADATA.keys())
+        """Returns a list of all available slash commands including aliases."""
+        return list(COMMAND_METADATA.keys()) + list(COMMAND_ALIASES.keys())
 
     async def execute(self, user_input: str) -> Any | None:
-        """Parses and dispatches a command.
-        Returns:
-            Optional[any]: A Rich renderable (Table/Panel) if the command has output,
-                          or True if handled silently, or None if unknown.
-        """
+        """Parses and dispatches a command."""
         parts = user_input.split()
-        command = parts[0].lower()
+        if not parts:
+            return None
+
+        raw_command = parts[0].lower()
         args = parts[1:] if len(parts) > 1 else []
+
+        # Resolve alias
+        command = COMMAND_ALIASES.get(raw_command, raw_command)
 
         if command == "/":
             return self._cmd_help()
 
-        # Commands that take no arguments usually work better if they match exactly
         if command == "/help":
             return self._cmd_help()
         elif command == "/compact":
@@ -92,9 +115,9 @@ class CommandHandler:
             return self._cmd_usage(args)
         elif command == "/stats":
             return self._cmd_stats()
-        elif command in ("/themes", "/theme"):
+        elif command == "/theme":
             return self._cmd_theme(args)
-        elif command in ("/artifacts", "/art"):
+        elif command == "/artifacts":
             return self._cmd_artifacts(args)
         elif command == "/sessions":
             return self._cmd_sessions()
@@ -116,20 +139,17 @@ class CommandHandler:
             return f"[warning]! Directory removed from trusted list:[/warning] [dim]{cwd}[/dim]\n[dim]Confirmation will be required for all tools.[/dim]"
         elif command == "/undo":
             return self._cmd_undo(args)
-        elif command in ("/exit", "/quit", "/q"):
+        elif command == "/exit":
             self.agent.running = False
             return True
         elif command == "/stop":
-            self.agent.stream_processor.interrupted = True
+            self.agent.interrupted = True
             return True
         elif command == "/reset":
             await self.agent.session.reset_session(self.agent._build_config())
             self.agent.session_messages = 0
             self.agent.session_tools = 0
             return "[bold red]Session reset.[/]"
-        elif command == "/export":
-            # Hidden command: export conversation (stub for future implementation)
-            return await self._cmd_export(args)
         elif command == "/discover":
             return await self._cmd_discover(args)
         elif command == "/prompt":
@@ -137,15 +157,27 @@ class CommandHandler:
         elif command == "/init":
             return await self._cmd_init()
 
-        # Fuzzy matching for unknown commands
-        all_cmds = self.get_all_commands()
-        suggestions = difflib.get_close_matches(command, all_cmds, n=1, cutoff=0.6)
+        # Handle unknown commands with explanation
+        all_cmds = sorted(self.get_all_commands())
+        suggestions = difflib.get_close_matches(raw_command, all_cmds, n=1, cutoff=0.6)
 
-        error_msg = f"[error]{_('cmd.unknown')} {command}[/error]"
+        explanation = Table(title=f"Unknown command: [bold red]{raw_command}[/]", box=None, padding=(0, 2))
+        explanation.add_column("Available Command", style="bold cyan")
+        explanation.add_column("Description", style="dim")
+
+        # Show top relevant or just first few
+        to_show = all_cmds[:8]
         if suggestions:
-            error_msg += f" [dim]Did you mean [bold cyan]{suggestions[0]}[/bold cyan]?[/dim]"
+            explanation.caption = f"Did you mean [bold cyan]{suggestions[0]}[/bold cyan]?"
 
-        return f"{error_msg} {_('cmd.hint_help')}"
+        for cmd in to_show:
+            if cmd in COMMAND_METADATA:
+                explanation.add_row(cmd, COMMAND_METADATA[cmd]["desc"])
+
+        explanation.add_section()
+        explanation.add_row("/help", "Show full command list and usage examples")
+
+        return explanation
 
     def _cmd_help(self) -> Table:
         """Returns the help table as a Rich object."""
@@ -162,7 +194,8 @@ class CommandHandler:
                 table.add_row(f"[bold magenta]{cat}[/]", "", "")
                 current_cat = cat
 
-            table.add_row(f"  {cmd}", meta["desc"], meta["example"])
+            example = meta.get("example", cmd)
+            table.add_row(f"  {cmd}", meta["desc"], example)
 
         # Add global shortcuts
         table.add_section()

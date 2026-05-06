@@ -27,8 +27,12 @@ async def test_command_handler_fuzzy_suggestion(mock_agent):
     handler = CommandHandler(mock_agent)
     # /hel should suggest /help
     res = await handler.execute("/hel")
-    assert "[error]" in res
-    assert "Did you mean [bold cyan]/help[/bold cyan]?" in res
+    # Now returns a Table with the error in the title
+    from rich.table import Table
+
+    assert isinstance(res, Table)
+    assert "/hel" in str(res.title)
+    assert "/help" in str(res.caption)
 
 
 @pytest.mark.asyncio
@@ -44,22 +48,23 @@ async def test_command_handler_help(mock_agent):
 
 @pytest.mark.asyncio
 async def test_command_handler_stop(mock_agent):
-    """Verifies that /stop command sets the interrupted flag on stream processor."""
+    """Verifies that /stop command sets the interrupted flag on agent."""
     handler = CommandHandler(mock_agent)
-    # The command handler sets agent.stream_processor.interrupted
-    mock_agent.stream_processor = MagicMock()
-    mock_agent.stream_processor.interrupted = False
+    # The command handler sets agent.interrupted
+    mock_agent.interrupted = False
     await handler.execute("/stop")
-    assert mock_agent.stream_processor.interrupted is True
+    assert mock_agent.interrupted is True
 
 
 @pytest.mark.asyncio
 async def test_command_handler_unknown(mock_agent):
-    """Verifies that unknown commands return a localized error message."""
+    """Verifies that unknown commands return an explanatory Table."""
     handler = CommandHandler(mock_agent)
     res = await handler.execute("/unknown_cmd_123")
-    assert "[error]" in res
-    assert "/unknown_cmd_123" in res
+    from rich.table import Table
+
+    assert isinstance(res, Table)
+    assert "/unknown_cmd_123" in str(res.title)
 
 
 @pytest.mark.asyncio

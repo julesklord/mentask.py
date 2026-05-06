@@ -10,6 +10,7 @@ from typing import Any
 
 from rich.panel import Panel
 from rich.table import Table
+from rich.text import Text
 
 from ...core.i18n import _
 
@@ -126,9 +127,6 @@ class CommandHandler:
             self.agent.session_messages = 0
             self.agent.session_tools = 0
             return "[bold red]Session reset.[/]"
-        elif command == "/speed":
-            # Hidden command: adjust stream delay
-            return self._cmd_speed(args)
         elif command == "/export":
             # Hidden command: export conversation (stub for future implementation)
             return await self._cmd_export(args)
@@ -178,6 +176,9 @@ class CommandHandler:
         """Lists or switches models for the active provider."""
         from ...core.models_hub import hub
 
+        if args and args[0] == "configure":
+            return await self._cmd_model_configure()
+
         if not args:
             try:
                 # Force a sync check
@@ -192,8 +193,25 @@ class CommandHandler:
                 table.add_column("Context", justify="right")
                 table.add_column("Status")
 
+                health_data = getattr(self.agent, "model_health", {})
+
                 for m_id in models:
-                    status = "[success]● Active[/success]" if m_id == self.agent.model_name else ""
+                    health = health_data.get(m_id, (True, None))
+                    is_ok, error = health
+
+                    model_style = "bold #6366f1" if is_ok else "dim"
+                    if m_id == self.agent.model_name:
+                        model_style = "bold yellow underline"
+
+                    display_name = m_id
+                    if not is_ok:
+                        display_name = f"{m_id} [red]({error})[/]"
+
+                    status = ""
+                    if m_id == self.agent.model_name:
+                        status = "[success]● Active[/success]"
+                    elif not is_ok:
+                        status = "[red]✗ Offline[/red]"
 
                     # Try to get extra info from hub
                     m_info = hub.get_model(m_id)
@@ -203,33 +221,67 @@ class CommandHandler:
                         if ctx:
                             context_str = f"{ctx // 1000}K"
 
-                    table.add_row(m_id, context_str, status)
+                    table.add_row(Text.from_markup(f"[{model_style}]{display_name}[/]"), context_str, status)
+
+                table.caption = "[dim]Run [white]/model configure[/white] to verify reachability of all models.[/dim]"
                 return table
             except Exception as e:
                 return f"[dim]Error listing models: {e}[/dim]"
 
         new_model = args[0]
-
-        # Check if it's an index from the last list (not implemented yet, but good for UX)
-        # For now, just direct name
         self.agent.model_name = new_model
-
-        # Swapping provider if necessary
         await self.agent.session.switch_model(new_model)
-
-        # Persist the change
         self.agent.config.settings["model_name"] = new_model
         self.agent.config.save_settings()
-
         await self.agent.session.reset_session(self.agent._build_config())
         return f"[success]{_('cmd.model.switched')}[/success] [bold]{new_model}[/bold]"
+
+    async def _cmd_model_configure(self) -> str:
+        """Performs a health check on all available models."""
+        import asyncio
+
+        from rich.progress import Progress, SpinnerColumn, TextColumn
+
+        models = await self.agent.session.provider.list_models()
+        if not models:
+            return "[error]No models available to configure.[/error]"
+
+        results = {}
+        self.agent.model_health = results  # Store in agent
+
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=self.agent.active_renderer.console if hasattr(self.agent, "active_renderer") else None,
+            transient=True,
+        ) as progress:
+            task = progress.add_task("[cyan]Verifying models...", total=len(models))
+
+            # Run checks in batches to avoid overwhelming the API
+            batch_size = 5
+            for i in range(0, len(models), batch_size):
+                batch = models[i : i + batch_size]
+                coros = [self.agent.session.provider.check_health(m) for m in batch]
+                batch_results = await asyncio.gather(*coros, return_exceptions=True)
+
+                for m_id, res in zip(batch, batch_results):
+                    if isinstance(res, tuple):
+                        results[m_id] = res
+                    else:
+                        results[m_id] = (False, "ERR")
+                    progress.update(task, advance=1, description=f"[cyan]Checked {m_id}")
+
+        # Refresh autocompletion after health check
+        if hasattr(self.agent, "_update_completer"):
+            await self.agent._update_completer()
+
+        return f"[success]Verification complete.[/success] [bold]{sum(1 for r in results.values() if r[0])}[/bold] models are available."
 
     async def _cmd_discover(self, args: list[str]) -> Table | str:
         """Searches and displays models from models.dev Hub."""
         from ...core.models_hub import hub
 
         query = args[0] if args else ""
-
         hub.sync()  # Ensure it's synced
 
         capability = ""
@@ -238,7 +290,6 @@ class CommandHandler:
             query = ""
 
         results = hub.search(query=query, capability=capability)
-
         if not results:
             return (
                 f"[warning]No models found matching '[bold]{query or capability}[/bold]' in models.dev Hub.[/warning]"
@@ -251,15 +302,12 @@ class CommandHandler:
         table.add_column("Context", justify="right")
         table.add_column("Features")
 
-        # Sort by price (input)
         results.sort(key=lambda x: x.get("cost", {}).get("input", 0))
 
-        for m in results[:20]:  # Limit to top 20
+        for m in results[:20]:
             cost = m.get("cost", {})
             pricing = f"[green]${cost.get('input', 0):.2f}[/] / [blue]${cost.get('output', 0):.2f}[/]"
-
             context = f"{m.get('limit', {}).get('context', 0) // 1000}K"
-
             features = []
             if m.get("attachment"):
                 features.append("👁️")
@@ -267,7 +315,6 @@ class CommandHandler:
                 features.append("🛠️")
             if m.get("reasoning"):
                 features.append("🧠")
-
             table.add_row(m.get("id"), m.get("_provider_name", ""), pricing, context, " ".join(features))
 
         if len(results) > 20:
@@ -295,7 +342,6 @@ class CommandHandler:
         self.agent.config.settings["stream_mode"] = mode
         self.agent.config.save_settings()
 
-        # Update the active renderer if available
         if hasattr(self.agent, "active_renderer"):
             self.agent.active_renderer.stream_mode = mode
 
@@ -311,14 +357,10 @@ class CommandHandler:
             delay = float(args[0])
             if delay < 0.001 or delay > 0.5:
                 return "[error]Speed must be between 0.001 and 0.5 seconds[/error]"
-
             self.agent.config.settings["stream_delay"] = delay
             self.agent.config.save_settings()
-
-            # Update the active renderer if available
             if hasattr(self.agent, "active_renderer"):
                 self.agent.active_renderer._stream_delay = delay
-
             return f"[success]Stream speed updated:[/success] [bold]{delay}s[/bold] ({int(delay * 1000)}ms)\n[dim]This affects how quickly content appears[/dim]"
         except ValueError:
             return "[error]Invalid speed value. Use a number like 0.01 or 0.05[/error]"
@@ -358,7 +400,6 @@ class CommandHandler:
                 theme = args[idx + 1].lower()
                 if theme not in available_styles:
                     return f"[error]Style '{theme}' not found. Available: {', '.join(available_styles)}[/error]"
-
                 self.agent.config.settings["prompt_style"] = theme
                 self.agent.config.save_settings()
                 if hasattr(self.agent, "active_renderer"):
@@ -413,7 +454,6 @@ class CommandHandler:
             table.add_column("Theme", style="bold cyan")
             table.add_column("Status")
             current = self.agent.config.settings.get("theme", "indigo")
-
             for t_name in themes.THEMES:
                 status = "[success]Active[/success]" if t_name == current else ""
                 table.add_row(t_name, status)
@@ -422,18 +462,10 @@ class CommandHandler:
         new_theme = args[0].lower()
         if new_theme not in themes.THEMES:
             return f"[error]Theme '{new_theme}' not found.[/error]"
-
-        # Apply and persist
         self.agent.config.settings["theme"] = new_theme
         self.agent.config.save_settings()
-
-        # We need to tell the renderer to update (it's held in the agent's start loop, but here we don't have its direct ref easily unless we pass it)
-        # However, for the NEXT turn it will be loaded. To apply it NOW we'd need the renderer ref.
-        # But ChatAgent.start holds the renderer in a local variable.
-        # I'll add a 'renderer' attribute to ChatAgent.
         if hasattr(self.agent, "active_renderer"):
             self.agent.active_renderer.apply_theme(new_theme)
-
         return f"[success]Theme switched to:[/success] [bold]{new_theme}[/bold]"
 
     def _cmd_artifacts(self, args: list[str]) -> str | Table | bool:
@@ -442,24 +474,20 @@ class CommandHandler:
             return "[error]No renderer active.[/error]"
 
         renderer = self.agent.active_renderer
-
         if not args:
             if not renderer.artifacts:
                 return "[warning]No artifacts stored.[/warning]"
-
             table = Table(title="Tool Artifacts", box=None)
             table.add_column("#", style="dim", justify="right")
             table.add_column("Tool", style="bold cyan")
             table.add_column("Size", justify="right")
             table.add_column("Preview")
-
             for i, (tool, content) in enumerate(renderer.artifacts, 1):
                 size = f"{len(content):,} chars"
                 preview = content[:60].replace("\n", " ")
                 if len(content) > 60:
                     preview += "..."
                 table.add_row(str(i), tool, size, f"[dim]{preview}[/dim]")
-
             return table
         else:
             try:
@@ -474,44 +502,32 @@ class CommandHandler:
         sessions = self.agent.history.list_sessions()
         if not sessions:
             return "[warning]No sessions found.[/warning]"
-
         table = Table(title="Conversation History", box=None)
         table.add_column("#", style="dim")
         table.add_column("Session ID", style="bold cyan")
-
-        # Newest first
         for i, s_id in enumerate(reversed(sessions)):
-            # Mark the current one
             prefix = "[success]→[/success] " if s_id == self.agent.history.current_session_id else "  "
             table.add_row(str(len(sessions) - i), f"{prefix}{s_id}")
-
         return table
 
     async def _cmd_load(self, args: list[str]) -> str:
         """Loads a session by ID or index."""
         if not args:
             return "[warning]Usage: /load [session_id or index][/warning]"
-
         sessions = self.agent.history.list_sessions()
         target_id = args[0]
-
-        # Handle index
         if target_id.isdigit():
             idx = int(target_id)
             if 1 <= idx <= len(sessions):
                 target_id = sessions[idx - 1]
             else:
                 return f"[error]Index {idx} out of range (1-{len(sessions)}).[/error]"
-
         history = self.agent.history.load_session(target_id)
         if history is None:
             return f"[error]Could not load session '{target_id}'.[/error]"
-
-        # Switch session
         self.agent.history.current_session_id = target_id
         await self.agent.session.reset_session(self.agent._build_config())
         await self.agent.session.ensure_session(self.agent._build_config(), history=history)
-
         return f"[success]Loaded session:[/success] [bold]{target_id}[/bold] ({len(history)} turns restored)"
 
     async def _cmd_auth(self, args: list[str]) -> str:
@@ -525,63 +541,42 @@ class CommandHandler:
             )
 
         new_key = args[0].strip()
-
-        # 1. Detect provider automatically if not specified
         provider_id = args[1].lower() if len(args) > 1 else self.agent.config.detect_provider(new_key)
-
-        # 2. Save the key to the global configuration (keyring)
         success = self.agent.config.save_api_key(new_key, provider=provider_id)
-
         if success:
             try:
-                # 3. Check if we need to switch the active provider family
                 provider_obj = self.agent.session.provider
                 from .providers.gemini import GeminiProvider
 
                 current_is_google = isinstance(provider_obj, GeminiProvider)
                 target_is_google = provider_id == "google"
-
                 if current_is_google != target_is_google:
-                    # On-the-fly switch to a default model for the new provider
                     new_model = "gemini-2.0-flash" if target_is_google else "gpt-4o-mini"
                     await self.agent.session.switch_model(new_model)
                     self.agent.model_name = new_model
-                    #
-                    # Persist the new model choice in global settings
                     self.agent.config.settings["model_name"] = new_model
                     self.agent.config.save_settings()
-
                     msg = f"[success]Provider switched to {provider_id.upper()}![/success]\n"
                     msg += f"[info]New default model active:[/info] [bold]{new_model}[/bold]\n"
                 else:
-                    # Same provider family, just refresh the key
                     await self.agent.session.setup_api()
                     msg = f"[success]{provider_id.upper()} API Key updated and active![/success]\n"
-
-                # Reset the reasoning chat session
                 await self.agent.session.reset_session(self.agent._build_config())
-
                 msg += f"[dim]The new key (***{new_key[-4:]}) is now active. Environment variables are now overridden.[/dim]"
                 return msg
             except Exception as e:
                 return f"[error]Key saved but engine reload failed: {e}[/error]"
-
         return "[error]Failed to save API Key to OS Keyring. Check system permissions.[/error]"
 
     async def _cmd_export(self, args: list[str]) -> str:
         """Exports conversation in formatted style. Hidden command (stub for future implementation)."""
         format_type = args[0].lower() if args else "md"
-
         if format_type not in ("md", "html", "txt", "json"):
             return f"[warning]Unsupported format:[/warning] {format_type}\n[dim]Supported: md, html, txt, json[/dim]"
-
         return f"[info]Export to {format_type.upper()}:[/info] [dim]Coming soon - will export styled conversation[/dim]"
 
     async def _cmd_init(self) -> str:
-        """Initialize local configuration and isolation for the current directory.
-
-        Creates .mentask/ directory with settings, sessions, and identity placeholders.
-        """
+        """Initialize local configuration and isolation for the current directory."""
         import json
         from pathlib import Path
 
@@ -590,33 +585,21 @@ class CommandHandler:
         local_settings = local_dir / "settings.json"
         local_sessions = local_dir / "sessions"
         local_identity = local_dir / "identity.md"
-
         if local_settings.exists():
             return f"[warning]Local project already initialized:[/warning] [dim]{local_dir}[/dim]"
-
         try:
-            # 1. Create structure
             local_dir.mkdir(parents=True, exist_ok=True)
             local_sessions.mkdir(exist_ok=True)
-
-            # 2. Persist current settings
             settings_data = self.agent.config.settings.copy()
-            # Remove keys we don't want to leak into project-level JSON if possible
-            # (though keyring handles the sensitive ones usually)
             with open(local_settings, "w", encoding="utf-8") as f:
                 json.dump(settings_data, f, indent=4)
-
-            # 3. Create identity placeholder
             if not local_identity.exists():
                 local_identity.write_text(
                     f"# mentask Project Identity: {cwd.name}\n\n"
                     "Define project-specific rules, personality, or constraints here.\n",
                     encoding="utf-8",
                 )
-
-            # 4. Add directory to trusted list
             await self.agent.orchestrator.trust.add_trust(str(cwd))
-
             return (
                 f"[success]✓ Local project initialized successfully![/success]\n"
                 f"  - Folder: [dim]{local_dir}[/dim]\n"
@@ -632,7 +615,6 @@ class CommandHandler:
         """Restores the last backed-up version of a file."""
         if not args:
             return "[warning]Usage: /undo <file_path>[/warning]"
-
         import os
         import shutil
         from pathlib import Path
@@ -646,15 +628,12 @@ class CommandHandler:
             target_path = ensure_safe_path(target_path)
         except Exception as e:
             return f"[error]Invalid path: {e}[/error]"
-
         target_file = Path(target_path)
         backup_dir = get_backups_dir()
-
         try:
             rel_path = os.path.relpath(target_path, os.getcwd())
         except ValueError:
             rel_path = os.path.basename(target_path)
-
         found_backups = []
         if backup_dir.exists():
             for ts_folder in backup_dir.iterdir():
@@ -662,13 +641,10 @@ class CommandHandler:
                     potential_backup = ts_folder / rel_path
                     if potential_backup.exists() and potential_backup.is_file():
                         found_backups.append((ts_folder.name, potential_backup))
-
         if not found_backups:
             return f"[error]No backups found for {target_file.name}[/error]"
-
         found_backups.sort(key=lambda x: x[0], reverse=True)
         latest_ts, latest_backup = found_backups[0]
-
         try:
             target_file.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(latest_backup, target_file)

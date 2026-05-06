@@ -35,3 +35,10 @@ class BaseProvider(ABC):
     async def list_models(self) -> list[str]:
         """Returns a list of available models for this provider."""
         return []
+
+    async def check_health(self, model_name: str) -> tuple[bool, str | None]:
+        """Checks if a specific model is reachable and has quota.
+        Returns:
+            tuple: (is_healthy, error_code_or_message)
+        """
+        return True, None

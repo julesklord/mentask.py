@@ -65,10 +65,9 @@ class OpenAIProvider(BaseProvider):
             self.api_key, self.key_source = res
         elif res:
             self.api_key = res
-            self.key_source = 'Unknown'
+            self.key_source = "Unknown"
         else:
             self.api_key, self.key_source = None, None
-
 
         if not self.api_key and active_id != "openai":
             # Fallback to generic openai key if specific one is missing
@@ -77,10 +76,9 @@ class OpenAIProvider(BaseProvider):
                 self.api_key, self.key_source = res2
             elif res2:
                 self.api_key = res2
-                self.key_source = 'Unknown'
+                self.key_source = "Unknown"
             else:
                 self.api_key, self.key_source = None, None
-
 
         if not self.api_key:
             _logger.warning(f"No API key found for {self.model_name} (provider: {active_id})")
@@ -260,3 +258,29 @@ class OpenAIProvider(BaseProvider):
                 model_list.append(m_id)
 
         return sorted(list(set(model_list)))
+
+    async def check_health(self, model_name: str) -> tuple[bool, str | None]:
+        if not self.api_key:
+            return False, "401"
+
+        url = f"{self.api_base}/chat/completions"
+        payload = {
+            "model": model_name,
+            "messages": [{"role": "user", "content": "hi"}],
+            "max_tokens": 1,
+        }
+        data = json.dumps(payload).encode("utf-8")
+        headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
+
+        req = urllib.request.Request(url, data=data, headers=headers, method="POST")
+
+        def _do_request():
+            try:
+                with urllib.request.urlopen(req, timeout=10) as response:
+                    return True, None
+            except urllib.error.HTTPError as e:
+                return False, str(e.code)
+            except Exception as e:
+                return False, "ERR"
+
+        return await asyncio.to_thread(_do_request)

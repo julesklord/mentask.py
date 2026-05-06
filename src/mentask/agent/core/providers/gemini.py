@@ -177,3 +177,23 @@ class GeminiProvider(BaseProvider):
         except Exception as e:
             _logger.error(f"Error listing Gemini models: {e}")
             return []
+
+    async def check_health(self, model_name: str) -> tuple[bool, str | None]:
+        if not self.client:
+            return False, "Not Setup"
+        try:
+            # Minimal call to verify connectivity and quota
+            from google.genai import types
+
+            config = types.GenerateContentConfig(max_output_tokens=1)
+            await self.client.aio.models.generate_content(model=model_name, contents="hi", config=config)
+            return True, None
+        except Exception as e:
+            err_str = str(e)
+            if "429" in err_str:
+                return False, "429"
+            if "401" in err_str or "invalid" in err_str.lower():
+                return False, "401"
+            if "404" in err_str or "not found" in err_str.lower():
+                return False, "404"
+            return False, "ERR"

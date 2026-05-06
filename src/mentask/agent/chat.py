@@ -558,8 +558,22 @@ class ChatAgent:
         # 4. Dynamic model fetching
         try:
             models = await self.session.list_models()
+            health_data = getattr(self, "model_health", {})
+
             if models:
-                completion_dict["/model"] = {m: None for m in models}
+                model_options = {}
+                for m in models:
+                    is_ok, error = health_data.get(m, (True, None))
+                    if is_ok:
+                        # Normal available model
+                        model_options[m] = None
+                    else:
+                        # Greyed out feel for prompt_toolkit isn't direct, but we add the error code
+                        # We use a display string if possible, or just append it to the key
+                        display_name = f"{m} ({error})"
+                        model_options[display_name] = None
+
+                completion_dict["/model"] = model_options
             else:
                 completion_dict["/model"] = {self.model_name: None}
         except Exception:

@@ -5,13 +5,12 @@ Soporta múltiples contextos (coding, music, analysis) con variantes por modelo.
 Integración seamless con el sistema de temas existente.
 """
 
-from enum import Enum
-from typing import Literal
-from dataclasses import dataclass
 import json
+from dataclasses import dataclass
+from enum import Enum
 from pathlib import Path
 
-from .themes import ThemeConfig, Style
+from .themes import ThemeConfig
 
 
 class ContextType(str, Enum):
@@ -299,8 +298,8 @@ class NeonRenderer:
             ContextType.GENERAL: "💬",
         }
         icon = icons.get(context, "💬")
-        
-        line = "─" * (len(text) + 4)
+
+        "─" * (len(text) + 4)
         return f"""[{self.theme.brand_primary}]╭─ {icon} {text} ─╮[/]
 [{self.theme.brand_primary}]│[/]"""
 

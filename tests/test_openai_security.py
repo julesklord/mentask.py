@@ -1,12 +1,14 @@
-import pytest
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from mentask.agent.core.providers.openai import OpenAIProvider
+
 
 @pytest.fixture
 def mock_config():
     config = MagicMock()
-    config.load_api_key.return_value = "fake_key"
+    config.load_api_key.return_value = ("fake_key", "env")
     return config
 
 @pytest.mark.anyio

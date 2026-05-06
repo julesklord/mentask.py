@@ -1,4 +1,3 @@
-import os
 
 from rich.console import Console
 

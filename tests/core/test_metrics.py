@@ -60,6 +60,7 @@ def test_metrics_summary(clean_tracker):
     assert "Tokens:" in summary
     assert "Cost:" in summary
 
+
 @patch("mentask.core.models_hub.hub.get_pricing")
 def test_calculate_cost(mock_get_pricing, clean_tracker):
     """Verifies that calculate_cost works with hub pricing and falls back correctly."""

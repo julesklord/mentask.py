@@ -8,14 +8,7 @@ from mentask.core.mcp_manager import MCPManager
 @pytest.mark.asyncio
 async def test_mcp_manager_initialization():
     config = MagicMock()
-    config.settings = {
-        "mcp_servers": {
-            "test_server": {
-                "command": "node",
-                "args": ["server.js"]
-            }
-        }
-    }
+    config.settings = {"mcp_servers": {"test_server": {"command": "node", "args": ["server.js"]}}}
 
     manager = MCPManager(config)
 
@@ -23,11 +16,13 @@ async def test_mcp_manager_initialization():
         await manager.connect_all()
         mock_connect.assert_called_once_with("test_server", "node", ["server.js"])
 
+
 @pytest.mark.asyncio
 async def test_mcp_manager_call_tool_not_found():
     manager = MCPManager()
     result = await manager.call_tool("unknown_tool", {})
     assert "not found" in result
+
 
 @pytest.mark.asyncio
 async def test_mcp_manager_shutdown():

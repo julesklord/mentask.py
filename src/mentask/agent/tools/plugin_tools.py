@@ -1,4 +1,5 @@
 import ast
+import asyncio
 
 from pydantic import BaseModel, Field
 
@@ -90,9 +91,12 @@ class ForgePluginTool(BaseTool):
         final_code = header + code
 
         # 3. Write the file
-        try:
+        def _write_file():
             with open(file_path, "w", encoding="utf-8") as f:
                 f.write(final_code)
+
+        try:
+            await asyncio.to_thread(_write_file)
         except Exception as e:
             return ToolResult(
                 tool_call_id="",

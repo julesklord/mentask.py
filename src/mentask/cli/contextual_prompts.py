@@ -15,6 +15,7 @@ from .themes import ThemeConfig
 
 class ContextType(str, Enum):
     """Tipos de contexto disponibles para mentask."""
+
     CODING = "coding"
     MUSIC_PRODUCTION = "music"
     ANALYSIS = "analysis"
@@ -25,6 +26,7 @@ class ContextType(str, Enum):
 @dataclass
 class ContextualPrompt:
     """Representa un prompt contextual con variantes por modelo."""
+
     context: ContextType
     system_prompt: str
     task_examples: list[str]
@@ -195,16 +197,16 @@ Be encouraging but honest about risks.""",
     @classmethod
     def get(cls, context: ContextType) -> ContextualPrompt:
         """Obtiene un prompt contextual por tipo."""
-        return cls.PROMPTS.get(context, cls.PROMPTS[ContextType.GENERAL] if ContextType.GENERAL in cls.PROMPTS else cls.PROMPTS[ContextType.CODING])
+        return cls.PROMPTS.get(
+            context,
+            cls.PROMPTS[ContextType.GENERAL] if ContextType.GENERAL in cls.PROMPTS else cls.PROMPTS[ContextType.CODING],
+        )
 
     @classmethod
     def get_adapted(cls, context: ContextType, model_family: str) -> str:
         """Obtiene el prompt adaptado para un modelo específico."""
         prompt = cls.get(context)
-        return prompt.model_variants.get(
-            model_family.lower(),
-            prompt.system_prompt
-        )
+        return prompt.model_variants.get(model_family.lower(), prompt.system_prompt)
 
 
 # TEMAS NEON AVANZADOS
@@ -213,12 +215,12 @@ class NeonTheme:
 
     THEMES = {
         "neon_pink": ThemeConfig(
-            brand_primary="#ff006e",      # Neon Pink
-            brand_secondary="#fb5607",    # Neon Orange
-            success="#00ff00",            # Neon Green
-            warning="#ffbe0b",            # Neon Yellow
-            error="#ff006e",              # Neon Pink
-            info="#00d9ff",               # Neon Cyan
+            brand_primary="#ff006e",  # Neon Pink
+            brand_secondary="#fb5607",  # Neon Orange
+            success="#00ff00",  # Neon Green
+            warning="#ffbe0b",  # Neon Yellow
+            error="#ff006e",  # Neon Pink
+            info="#00d9ff",  # Neon Cyan
             text_primary="#ffffff",
             text_secondary="#00d9ff",
             text_dim="#666666",
@@ -228,12 +230,12 @@ class NeonTheme:
             code_theme="monokai",
         ),
         "neon_cyan": ThemeConfig(
-            brand_primary="#00d9ff",      # Neon Cyan
-            brand_secondary="#00ff00",    # Neon Green
-            success="#00ff00",            # Neon Green
-            warning="#ffff00",            # Neon Yellow
-            error="#ff0080",              # Neon Red
-            info="#00d9ff",               # Neon Cyan
+            brand_primary="#00d9ff",  # Neon Cyan
+            brand_secondary="#00ff00",  # Neon Green
+            success="#00ff00",  # Neon Green
+            warning="#ffff00",  # Neon Yellow
+            error="#ff0080",  # Neon Red
+            info="#00d9ff",  # Neon Cyan
             text_primary="#ffffff",
             text_secondary="#00ff00",
             text_dim="#666666",
@@ -243,12 +245,12 @@ class NeonTheme:
             code_theme="monokai",
         ),
         "neon_purple": ThemeConfig(
-            brand_primary="#b537f2",      # Neon Purple
-            brand_secondary="#ff006e",    # Neon Pink
-            success="#39ff14",            # Neon Green
-            warning="#ffff00",            # Neon Yellow
-            error="#ff006e",              # Neon Pink
-            info="#00d9ff",               # Neon Cyan
+            brand_primary="#b537f2",  # Neon Purple
+            brand_secondary="#ff006e",  # Neon Pink
+            success="#39ff14",  # Neon Green
+            warning="#ffff00",  # Neon Yellow
+            error="#ff006e",  # Neon Pink
+            info="#00d9ff",  # Neon Cyan
             text_primary="#ffffff",
             text_secondary="#b537f2",
             text_dim="#666666",
@@ -258,12 +260,12 @@ class NeonTheme:
             code_theme="monokai",
         ),
         "neon_matrix": ThemeConfig(
-            brand_primary="#00ff00",      # Neon Green (Matrix)
-            brand_secondary="#00aa00",    # Darker Green
-            success="#00ff00",            # Neon Green
-            warning="#ffff00",            # Neon Yellow
-            error="#ff0000",              # Neon Red
-            info="#00ffff",               # Neon Cyan
+            brand_primary="#00ff00",  # Neon Green (Matrix)
+            brand_secondary="#00aa00",  # Darker Green
+            success="#00ff00",  # Neon Green
+            warning="#ffff00",  # Neon Yellow
+            error="#ff0000",  # Neon Red
+            info="#00ffff",  # Neon Cyan
             text_primary="#00ff00",
             text_secondary="#00aa00",
             text_dim="#003300",
@@ -411,8 +413,7 @@ class ContextualOrchestrator:
         self.config_manager = config_manager
         self.console = console
         self.renderer = NeonRenderer(
-            config_manager.get_active_theme(),
-            config_manager.contexts["user_preferences"]["use_nerdfonts"]
+            config_manager.get_active_theme(), config_manager.contexts["user_preferences"]["use_nerdfonts"]
         )
 
     def prepare_system_prompt(self, model_family: str) -> str:
@@ -423,10 +424,7 @@ class ContextualOrchestrator:
     def render_context_header(self) -> str:
         """Renderiza header con contexto actual."""
         context = self.config_manager.get_active_context()
-        return self.renderer.render_header(
-            f"Contexto: {context.value.upper()}",
-            context
-        )
+        return self.renderer.render_header(f"Contexto: {context.value.upper()}", context)
 
     def log_with_context(self, message: str, level: str = "info") -> None:
         """Registra con estilos contextuales."""

@@ -110,10 +110,7 @@ class ChatAgent:
 
         # Neon Contextual System
         self.contextual_config = ContextualConfigManager()
-        self.contextual_orchestrator = ContextualOrchestrator(
-            self.contextual_config,
-            console
-        )
+        self.contextual_orchestrator = ContextualOrchestrator(self.contextual_config, console)
 
         self.messages: list[Message] = []
         self._setup_system_prompt()
@@ -434,23 +431,19 @@ class ChatAgent:
         self.active_renderer.console.print("\n")
         self.active_renderer.console.print(
             Panel(
-                "[bold]Selecciona tu contexto de trabajo[/bold]\n" +
-                "1. 🧑‍💻 Coding (Ingeniería de software)\n" +
-                "2. 🎵 Music Production (Producción musical)\n" +
-                "3. 📊 Analysis (Análisis de datos)\n" +
-                "4. 🎨 Creative (Creativo)\n" +
-                "5. 💬 General (General)",
+                "[bold]Selecciona tu contexto de trabajo[/bold]\n"
+                + "1. 🧑‍💻 Coding (Ingeniería de software)\n"
+                + "2. 🎵 Music Production (Producción musical)\n"
+                + "3. 📊 Analysis (Análisis de datos)\n"
+                + "4. 🎨 Creative (Creativo)\n"
+                + "5. 💬 General (General)",
                 title="[bold cyan]Contextos Disponibles[/bold cyan]",
                 border_style="cyan",
                 padding=(1, 2),
             )
         )
 
-        choice = Prompt.ask(
-            "[cyan]Selecciona contexto[/cyan]",
-            choices=["1", "2", "3", "4", "5"],
-            default="5"
-        )
+        choice = Prompt.ask("[cyan]Selecciona contexto[/cyan]", choices=["1", "2", "3", "4", "5"], default="5")
 
         context_map = {
             "1": ContextType.CODING,
@@ -463,10 +456,7 @@ class ChatAgent:
         selected = context_map[choice]
         self.contextual_config.set_context(selected)
         self._setup_system_prompt()  # Refresh system prompt
-        self.contextual_orchestrator.log_with_context(
-            f"Contexto cambiado a {selected.value}",
-            level="success"
-        )
+        self.contextual_orchestrator.log_with_context(f"Contexto cambiado a {selected.value}", level="success")
 
     def show_theme_menu(self) -> None:
         """Interactive menu to select neon theme."""
@@ -476,22 +466,18 @@ class ChatAgent:
         self.active_renderer.console.print("\n")
         self.active_renderer.console.print(
             Panel(
-                "[bold]Selecciona tu tema Neon[/bold]\n" +
-                "1. 🌺 Neon Pink\n" +
-                "2. 💎 Neon Cyan\n" +
-                "3. 💜 Neon Purple\n" +
-                "4. 🟢 Neon Matrix",
+                "[bold]Selecciona tu tema Neon[/bold]\n"
+                + "1. 🌺 Neon Pink\n"
+                + "2. 💎 Neon Cyan\n"
+                + "3. 💜 Neon Purple\n"
+                + "4. 🟢 Neon Matrix",
                 title="[bold magenta]Temas Disponibles[/bold magenta]",
                 border_style="magenta",
                 padding=(1, 2),
             )
         )
 
-        choice = Prompt.ask(
-            "[magenta]Selecciona tema[/magenta]",
-            choices=["1", "2", "3", "4"],
-            default="2"
-        )
+        choice = Prompt.ask("[magenta]Selecciona tema[/magenta]", choices=["1", "2", "3", "4"], default="2")
 
         theme_map = {
             "1": "neon_pink",
@@ -504,11 +490,8 @@ class ChatAgent:
         self.contextual_config.set_theme(selected)
         new_theme = NeonTheme.get(selected)
         self.contextual_orchestrator.renderer.theme = new_theme
-        self.active_renderer.theme = new_theme # Sync with main renderer
-        self.contextual_orchestrator.log_with_context(
-            f"Tema cambiado a {selected}",
-            level="success"
-        )
+        self.active_renderer.theme = new_theme  # Sync with main renderer
+        self.contextual_orchestrator.log_with_context(f"Tema cambiado a {selected}", level="success")
 
     def show_context_info(self) -> None:
         """Displays current context info."""
@@ -522,8 +505,7 @@ class ChatAgent:
             Panel(
                 f"[bold cyan]{prompt.context.value.upper()}[/bold cyan]\n\n"
                 f"[yellow]Tono:[/yellow] {prompt.tone}\n"
-                f"[yellow]Constraints:[/yellow]\n" +
-                "\n".join(f"  • {c}" for c in prompt.constraints),
+                f"[yellow]Constraints:[/yellow]\n" + "\n".join(f"  • {c}" for c in prompt.constraints),
                 title="[bold]Detalles del Contexto[/bold]",
                 border_style="cyan",
                 padding=(1, 2),

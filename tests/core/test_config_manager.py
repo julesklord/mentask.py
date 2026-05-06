@@ -138,7 +138,6 @@ class TestConfigManagerApiKey:
             mock_set.assert_called_with("mentask", "GOOGLE_API_KEY", "my-test-key")
             assert cm.load_api_key() == "my-test-key"
 
-
     def test_save_api_key_success(self):
         with (
             patch("keyring.set_password") as mock_set,

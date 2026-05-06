@@ -38,6 +38,14 @@ class SessionManager:
         self.compaction_threshold = int(limit * 0.8)
         self._is_compacting = False
 
+    async def list_models(self) -> list[str]:
+        """Lists available models from the active provider."""
+        try:
+            return await self.provider.list_models()
+        except Exception as e:
+            _logger.warning(f"Failed to list models from provider: {e}")
+            return []
+
     async def switch_model(self, new_model_name: str) -> bool:
         """Switches the active model and re-initializes the provider if needed."""
         self.model_name = new_model_name
@@ -87,10 +95,7 @@ class SessionManager:
             return await self.provider.setup()
 
         # Log active provider
-        source = "Keyring/Settings"
-        if os.getenv("GOOGLE_API_KEY") or os.getenv("GEM_API_KEY") or os.getenv("GEMINI_API_KEY"):
-            source = "Environment Variable"
-
+        source = getattr(self.provider, "key_source", "Unknown")
         provider_name = self.provider.__class__.__name__.replace("Provider", "")
         console.print(f"[dim]> Engine: [bold]{provider_name}[/] | Source: {source}[/dim]")
 

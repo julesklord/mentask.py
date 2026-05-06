@@ -18,6 +18,13 @@ if TYPE_CHECKING:
     from ..cli.gem_renderer import GemStyleRenderer as CliRenderer
 
 from ..cli.console import console
+from ..cli.contextual_prompts import (
+    ContextType,
+    ContextualConfigManager,
+    ContextualOrchestrator,
+    ContextualPromptLibrary,
+    NeonTheme,
+)
 from ..core.config_manager import ConfigManager
 from ..core.history_manager import HistoryManager
 from ..core.i18n import _
@@ -101,6 +108,10 @@ class ChatAgent:
 
         self.orchestrator = AgentOrchestrator(self.session, self.tools, self.config)
 
+        # Neon Contextual System
+        self.contextual_config = ContextualConfigManager()
+        self.contextual_orchestrator = ContextualOrchestrator(self.contextual_config, console)
+
         self.messages: list[Message] = []
         self._setup_system_prompt()
 
@@ -116,7 +127,14 @@ class ChatAgent:
         timestamp = now.strftime("%Y-%m-%d %H:%M:%S")
         day_name = now.strftime("%A")
 
+        # Detect model family
+        model_id = self.model_name.lower()
+        model_family = "claude" if "claude" in model_id else "gpt" if "gpt" in model_id else "groq"
+
+        contextual_prompt = self.contextual_orchestrator.prepare_system_prompt(model_family)
+
         self.system_prompt = (
+            f"{contextual_prompt}\n\n"
             f"{base_identity}\n\n"
             f"## KNOWLEDGE HUB INDEX\n"
             f"You have access to the following knowledge modules via 'query_knowledge(module_name=...)'.\n"
@@ -151,9 +169,6 @@ class ChatAgent:
         if self.config.settings.get("web_search_enabled", True):
             registry.register(WebSearchTool(self.config))
             registry.register(WebFetchTool())
-
-        # Load any dynamic plugins created by the agent or user
-        registry.load_dynamic_plugins()
 
         return registry
 
@@ -247,13 +262,15 @@ class ChatAgent:
         self, renderer: "CliRenderer", status: AgentTurnStatus | None, event_type: str | None, event: dict[str, Any]
     ) -> None:
         if status == AgentTurnStatus.THINKING:
-            if hasattr(renderer, "start_thinking"):
-                renderer.start_thinking()
+            renderer.show_thinking()
+            return
+
+        if status == AgentTurnStatus.COMPLETED:
+            renderer.stop_thinking()
             return
 
         if status == AgentTurnStatus.EXECUTING:
-            if hasattr(renderer, "stop_thinking"):
-                renderer.stop_thinking()
+            renderer.stop_thinking()
             if renderer._streaming:
                 renderer.end_stream()
 
@@ -269,24 +286,21 @@ class ChatAgent:
             return
 
         if event_type == "thought":
-            if hasattr(renderer, "stop_thinking"):
-                renderer.stop_thinking()
+            renderer.stop_thinking()
             if renderer._streaming:
                 renderer.end_stream()
             renderer.print_thought(event["content"])
             return
 
         if event_type == "text":
-            if hasattr(renderer, "stop_thinking"):
-                renderer.stop_thinking()
+            renderer.stop_thinking()
             if not renderer._streaming:
                 renderer.start_stream(is_natural=True)
             renderer.update_stream(event["content"])
             return
 
         if event_type == "tool_result":
-            if hasattr(renderer, "stop_thinking"):
-                renderer.stop_thinking()
+            renderer.stop_thinking()
             renderer.print_tool_result(not event["is_error"], event["content"], tool_name=event.get("tool_name"))
             return
 
@@ -298,8 +312,7 @@ class ChatAgent:
             return
 
         if event_type == "error":
-            if hasattr(renderer, "stop_thinking"):
-                renderer.stop_thinking()
+            renderer.stop_thinking()
             renderer.print_error(event["content"])
             return
 
@@ -318,6 +331,36 @@ class ChatAgent:
         if should_init:
             local_ws.mkdir(parents=True, exist_ok=True)
             console.print(f"[success][✓] Workspace initialized at {local_ws}[/success]")
+
+    async def _ensure_trust(self, renderer: Any) -> None:
+        """Prompts the user to trust the current directory if it's untrusted."""
+        trust = self.orchestrator.trust
+        cwd = os.getcwd()
+        if trust.is_trusted(cwd):
+            return
+
+        renderer.console.print("\n  [bold yellow]󰚌 UNTRUSTED DIRECTORY[/bold yellow]")
+        renderer.console.print(f"  The directory [cyan]{cwd}[/] is not trusted.")
+        renderer.console.print("  Trusting allows the agent to execute tools without excessive confirmations.\n")
+
+        choices = "[b]p[/b]ermanent, [b]s[/b]ession, [b]n[/b]o"
+        prompt = f"  Trust this directory? ({choices}) [n]: "
+
+        renderer.console.print(prompt, end="")
+        try:
+            # We use standard input here because prompt_toolkit session isn't ready yet
+            choice = input().strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            choice = "n"
+
+        if choice == "p":
+            await trust.add_trust(cwd)
+            renderer.console.print("  [green]✓ Directory trusted permanently.[/green]\n")
+        elif choice == "s":
+            trust.add_session_trust(cwd)
+            renderer.console.print("  [green]✓ Directory trusted for this session.[/green]\n")
+        else:
+            renderer.console.print("  [dim]Directory remains untrusted.[/dim]\n")
 
     def _restore_last_session(self) -> tuple[list[str], list[Message] | None, bool]:
         """Restores session history.
@@ -349,13 +392,126 @@ class ChatAgent:
         if not user_input.startswith("/"):
             return False
 
-        if user_input.lower() in ("/exit", "/quit", "/q"):
+        cmd = user_input.lower().split()[0]
+
+        if cmd in ("/exit", "/quit", "/q"):
             self.running = False
+            return True
+
+        if cmd == "/context":
+            self.show_context_menu()
+            return True
+
+        if cmd == "/theme":
+            self.show_theme_menu()
+            return True
+
+        if cmd == "/info":
+            self.show_context_info()
+            return True
+
+        if cmd in ("/stats", "/cost"):
+            stats = {
+                "context": self.contextual_config.get_active_context().value,
+                "theme": self.contextual_config.contexts.get("active_theme"),
+                "model": self.model_name,
+            }
+            renderer.console.print(self.contextual_orchestrator.renderer.render_stats(stats))
             return True
 
         result = await self.commands.execute(user_input)
         renderer.print_command_output(result)
         return True
+
+    def show_context_menu(self) -> None:
+        """Interactive menu to select context."""
+        from rich.panel import Panel
+        from rich.prompt import Prompt
+
+        self.active_renderer.console.print("\n")
+        self.active_renderer.console.print(
+            Panel(
+                "[bold]Selecciona tu contexto de trabajo[/bold]\n"
+                + "1. 🧑‍💻 Coding (Ingeniería de software)\n"
+                + "2. 🎵 Music Production (Producción musical)\n"
+                + "3. 📊 Analysis (Análisis de datos)\n"
+                + "4. 🎨 Creative (Creativo)\n"
+                + "5. 💬 General (General)",
+                title="[bold cyan]Contextos Disponibles[/bold cyan]",
+                border_style="cyan",
+                padding=(1, 2),
+            )
+        )
+
+        choice = Prompt.ask("[cyan]Selecciona contexto[/cyan]", choices=["1", "2", "3", "4", "5"], default="5")
+
+        context_map = {
+            "1": ContextType.CODING,
+            "2": ContextType.MUSIC_PRODUCTION,
+            "3": ContextType.ANALYSIS,
+            "4": ContextType.CREATIVE,
+            "5": ContextType.GENERAL,
+        }
+
+        selected = context_map[choice]
+        self.contextual_config.set_context(selected)
+        self._setup_system_prompt()  # Refresh system prompt
+        self.contextual_orchestrator.log_with_context(f"Contexto cambiado a {selected.value}", level="success")
+
+    def show_theme_menu(self) -> None:
+        """Interactive menu to select neon theme."""
+        from rich.panel import Panel
+        from rich.prompt import Prompt
+
+        self.active_renderer.console.print("\n")
+        self.active_renderer.console.print(
+            Panel(
+                "[bold]Selecciona tu tema Neon[/bold]\n"
+                + "1. 🌺 Neon Pink\n"
+                + "2. 💎 Neon Cyan\n"
+                + "3. 💜 Neon Purple\n"
+                + "4. 🟢 Neon Matrix",
+                title="[bold magenta]Temas Disponibles[/bold magenta]",
+                border_style="magenta",
+                padding=(1, 2),
+            )
+        )
+
+        choice = Prompt.ask("[magenta]Selecciona tema[/magenta]", choices=["1", "2", "3", "4"], default="2")
+
+        theme_map = {
+            "1": "neon_pink",
+            "2": "neon_cyan",
+            "3": "neon_purple",
+            "4": "neon_matrix",
+        }
+
+        selected = theme_map[choice]
+        self.contextual_config.set_theme(selected)
+        new_theme = NeonTheme.get(selected)
+        self.contextual_orchestrator.renderer.theme = new_theme
+        self.active_renderer.theme = new_theme  # Sync with main renderer
+        self.contextual_orchestrator.log_with_context(f"Tema cambiado a {selected}", level="success")
+
+    def show_context_info(self) -> None:
+        """Displays current context info."""
+        from rich.panel import Panel
+
+        context = self.contextual_config.get_active_context()
+        prompt = ContextualPromptLibrary.get(context)
+
+        self.active_renderer.console.print()
+        self.active_renderer.console.print(
+            Panel(
+                f"[bold cyan]{prompt.context.value.upper()}[/bold cyan]\n\n"
+                f"[yellow]Tono:[/yellow] {prompt.tone}\n"
+                f"[yellow]Constraints:[/yellow]\n" + "\n".join(f"  • {c}" for c in prompt.constraints),
+                title="[bold]Detalles del Contexto[/bold]",
+                border_style="cyan",
+                padding=(1, 2),
+            )
+        )
+        self.active_renderer.console.print()
 
     async def _handle_user_turn(self, user_input: str, renderer: "CliRenderer") -> None:
         self.session_messages += 1
@@ -383,6 +539,7 @@ class ChatAgent:
         except Exception as exc:
             renderer.print_error(str(exc))
         finally:
+            renderer.stop_thinking()
             renderer.print_turn_divider(model=self.model_name)
 
     async def close(self):
@@ -430,6 +587,7 @@ class ChatAgent:
         await self.session.ensure_session(self._build_config(), history=None)
 
         renderer.print_welcome(__version__, self.model_name, self.edit_mode)
+        await self._ensure_trust(renderer)
 
         if not is_new_session:
             res_id = self.requested_session_id or sessions[-1]
@@ -466,9 +624,12 @@ class ChatAgent:
             styles = {s: None for s in renderer.prompt_engine.STYLES}
             completion_dict["/prompt"] = {"--theme": styles, "--nerdfonts": {"on": None, "off": None}}
 
-            # For /model, we can try to pre-load some popular ones or current ones
-            # For now, let's keep it simple or add the current one
-            completion_dict["/model"] = {self.model_name: None}
+            # For /model, we fetch available models from the provider for autocompletion
+            models = await self.session.list_models()
+            if models:
+                completion_dict["/model"] = {m: None for m in models}
+            else:
+                completion_dict["/model"] = {self.model_name: None}
 
             completer = NestedCompleter.from_nested_dict(completion_dict)
 

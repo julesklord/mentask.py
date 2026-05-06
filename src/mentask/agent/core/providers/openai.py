@@ -1,7 +1,6 @@
 import asyncio
 import json
 import logging
-import urllib.parse
 import urllib.request
 from collections.abc import AsyncGenerator
 from typing import Any
@@ -61,11 +60,11 @@ class OpenAIProvider(BaseProvider):
         # 2. Resolve API Key
         # Priority: Specific provider key via ConfigManager > Generic fallback
         active_id = provider_id or "openai"
-        self.api_key = self.config.load_api_key(active_id)
+        self.api_key, self.key_source = self.config.load_api_key(active_id, return_source=True)
 
         if not self.api_key and active_id != "openai":
             # Fallback to generic openai key if specific one is missing
-            self.api_key = self.config.load_api_key("openai")
+            self.api_key, self.key_source = self.config.load_api_key("openai", return_source=True)
 
         if not self.api_key:
             _logger.warning(f"No API key found for {self.model_name} (provider: {active_id})")
@@ -129,6 +128,8 @@ class OpenAIProvider(BaseProvider):
             response = await asyncio.to_thread(_do_request)
 
             in_thought = False
+            # Buffer for tool calls: index -> {id, name, arguments_str}
+            tool_calls_buffer = {}
 
             for line in response:
                 line = line.decode("utf-8").strip()
@@ -164,16 +165,20 @@ class OpenAIProvider(BaseProvider):
                         yield {"type": "text", "content": content}
 
                 if "tool_calls" in delta:
-                    for tc in delta["tool_calls"]:
-                        if "function" in tc:
-                            yield {
-                                "type": "tool_call",
-                                "content": ToolCall(
-                                    id=tc.get("id", "unknown"),
-                                    name=tc["function"].get("name", ""),
-                                    arguments=json.loads(tc["function"].get("arguments", "{}")),
-                                ),
-                            }
+                    for tc_delta in delta["tool_calls"]:
+                        idx = tc_delta.get("index", 0)
+                        if idx not in tool_calls_buffer:
+                            tool_calls_buffer[idx] = {"id": "", "name": "", "arguments": ""}
+
+                        if "id" in tc_delta:
+                            tool_calls_buffer[idx]["id"] += tc_delta["id"]
+
+                        if "function" in tc_delta:
+                            f = tc_delta["function"]
+                            if "name" in f:
+                                tool_calls_buffer[idx]["name"] += f["name"]
+                            if "arguments" in f:
+                                tool_calls_buffer[idx]["arguments"] += f["arguments"]
 
                 if "usage" in chunk:
                     u = chunk["usage"]
@@ -183,6 +188,23 @@ class OpenAIProvider(BaseProvider):
                             input_tokens=u.get("prompt_tokens", 0), output_tokens=u.get("completion_tokens", 0)
                         ),
                     }
+
+            # Emit all buffered tool calls after the stream ends
+            for idx in sorted(tool_calls_buffer.keys()):
+                tc = tool_calls_buffer[idx]
+                try:
+                    args = json.loads(tc["arguments"]) if tc["arguments"] else {}
+                    yield {
+                        "type": "tool_call",
+                        "content": ToolCall(
+                            id=tc["id"] or "unknown",
+                            name=tc["name"],
+                            arguments=args,
+                        ),
+                    }
+                except json.JSONDecodeError as e:
+                    _logger.error(f"Failed to parse tool call arguments for {tc['name']}: {e}. Raw: {tc['arguments']}")
+
         except Exception as e:
             _logger.error(f"OpenAIProvider error: {e}")
             raise e
@@ -191,6 +213,34 @@ class OpenAIProvider(BaseProvider):
         """Returns models from the Hub that are compatible with this provider."""
         from ....core.models_hub import hub
 
-        # Return top 20 models from the hub as a fallback or models matching current prefix
-        results = hub.search("")
-        return [m["id"] for m in results[:20]]
+        # Determine target provider based on active base URL or model name
+        target_provider = "openai"
+        if ":" in self.model_name:
+            target_provider = self.model_name.split(":")[0]
+        elif "groq" in self.api_base.lower():
+            target_provider = "groq"
+        elif "deepseek" in self.api_base.lower():
+            target_provider = "deepseek"
+
+        # Search the hub for all models from this provider
+        results = hub.search(provider=target_provider)
+
+        # If no results for specific provider, try searching by query
+        if not results and target_provider != "openai":
+            results = hub.search(query=target_provider)
+
+        if not results:
+            # Fallback to general search if still nothing
+            results = hub.search("")
+
+        # Return scoped IDs if they exist, otherwise raw IDs
+        model_list = []
+        for m in results:
+            m_id = m["id"]
+            p_id = m.get("_provider")
+            if p_id and p_id != "openai":
+                model_list.append(f"{p_id}:{m_id}")
+            else:
+                model_list.append(m_id)
+
+        return sorted(list(set(model_list)))

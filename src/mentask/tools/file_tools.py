@@ -117,7 +117,7 @@ def _atomic_write(path: str, content: str) -> None:
             f.write(content)
         if os.path.exists(path):
             shutil.copymode(path, temp_path)
-        os.replace(temp_path, path)
+        shutil.move(temp_path, path)
     except Exception:
         if os.path.exists(temp_path):
             os.remove(temp_path)

@@ -18,6 +18,13 @@ if TYPE_CHECKING:
     from ..cli.gem_renderer import GemStyleRenderer as CliRenderer
 
 from ..cli.console import console
+from ..cli.contextual_prompts import (
+    ContextType,
+    ContextualConfigManager,
+    ContextualOrchestrator,
+    ContextualPromptLibrary,
+    NeonTheme,
+)
 from ..core.config_manager import ConfigManager
 from ..core.history_manager import HistoryManager
 from ..core.i18n import _
@@ -28,13 +35,6 @@ from .core.context import ContextManager
 from .core.session import SessionManager
 from .orchestrator import AgentOrchestrator
 from .schema import AgentTurnStatus, Message, Role
-from ..cli.contextual_prompts import (
-    ContextualOrchestrator,
-    ContextualConfigManager,
-    ContextType,
-    NeonTheme,
-    ContextualPromptLibrary
-)
 from .tools.analysis_tools import AnalyzeTool
 from .tools.base import ToolRegistry
 from .tools.delegation_tools import SubagentTool
@@ -133,7 +133,7 @@ class ChatAgent:
         # Detect model family
         model_id = self.model_name.lower()
         model_family = "claude" if "claude" in model_id else "gpt" if "gpt" in model_id else "groq"
-        
+
         contextual_prompt = self.contextual_orchestrator.prepare_system_prompt(model_family)
 
         self.system_prompt = (
@@ -513,10 +513,10 @@ class ChatAgent:
     def show_context_info(self) -> None:
         """Displays current context info."""
         from rich.panel import Panel
-        
+
         context = self.contextual_config.get_active_context()
         prompt = ContextualPromptLibrary.get(context)
-        
+
         self.active_renderer.console.print()
         self.active_renderer.console.print(
             Panel(
@@ -524,7 +524,7 @@ class ChatAgent:
                 f"[yellow]Tono:[/yellow] {prompt.tone}\n"
                 f"[yellow]Constraints:[/yellow]\n" +
                 "\n".join(f"  • {c}" for c in prompt.constraints),
-                title=f"[bold]Detalles del Contexto[/bold]",
+                title="[bold]Detalles del Contexto[/bold]",
                 border_style="cyan",
                 padding=(1, 2),
             )

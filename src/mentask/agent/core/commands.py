@@ -527,10 +527,7 @@ class CommandHandler:
         new_key = args[0].strip()
 
         # 1. Detect provider automatically if not specified
-        if len(args) > 1:
-            provider_id = args[1].lower()
-        else:
-            provider_id = self.agent.config.detect_provider(new_key)
+        provider_id = args[1].lower() if len(args) > 1 else self.agent.config.detect_provider(new_key)
 
         # 2. Save the key to the global configuration (keyring)
         success = self.agent.config.save_api_key(new_key, provider=provider_id)
@@ -540,7 +537,6 @@ class CommandHandler:
                 # 3. Check if we need to switch the active provider family
                 provider_obj = self.agent.session.provider
                 from .providers.gemini import GeminiProvider
-                from .providers.openai import OpenAIProvider
 
                 current_is_google = isinstance(provider_obj, GeminiProvider)
                 target_is_google = provider_id == "google"

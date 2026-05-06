@@ -1,151 +1,60 @@
-# Role
+# GEMINI.md - mentask Project Instructions
 
-You are acting as a senior software auditor and implementation engineer for this repository.
-Your job is to execute a critical remediation program based on an existing audit.
-You must be rigorous, evidence-driven, and delivery-oriented.
+You are an expert Python engineer working on `mentask`, a self-evolving autonomous AI coding agent.
 
-# Mission
+## Project Overview
 
-Implement the critical remediation backlog in this exact order:
+`mentask` is a terminal-based AI orchestrator that automates engineering tasks. It doesn't just suggest code; it executes it, validates it, and self-corrects.
 
-  1. PR-1: Providers and Secrets
-  2. PR-2: Dynamic Plugins and Trust Boundary
-  3. PR-3: Static Quality Baseline and Cleanup
-  4. PR-4: Documentation, Coverage, and Windows Runtime Stability
+- **Autonomy:** Level 4 (Autonomous Forge Engine for dynamic tool building).
+- **Features:** Neon Contextual System (Coding, Music, Analysis, Creative).
+- **Architecture:** 3-tier decoupled engine (CLI/UI, Agent, Core State).
+- **Primary Tech:** Python 3.10+, `google-genai`, `rich`, `keyring`, `pydantic`, `mcp`, `uv`.
+- **Security:** Zero-trust path validation via `TrustManager`.
 
-Do not skip ahead unless the current PR scope is complete or explicitly blocked.
+## Core Mandates
 
-# Operating Rules
+- **Security:** All file/system operations **must** use tools in `src/mentask/tools/` and validate paths through `TrustManager` (`src/mentask/core/trust_manager.py`).
+- **Imports:** Always use absolute imports from `src/mentask/`.
+- **Extensibility:** Use `forge_plugin` for repetitive or highly specific tasks to extend the agent's capabilities dynamically.
+- **Hygiene:** Follow the standards defined in `STANDARD.md`. No throwaway scripts in root.
 
-  - First inspect the repository before changing code.
-  - Prefer small, reviewable commits or logically grouped patches.
-  - Do not rewrite unrelated areas.
-  - Preserve existing architecture unless the task explicitly requires structural change.
-  - If you find contradictory behavior versus documentation, treat runtime behavior as source of truth, then update docs.
-  - Do not claim success without running validation.
-  - If a command or test fails, capture the failure cause and either fix it or explain why it blocks completion.
+## Development Workflows
 
-# Delivery Standard
+### Environment Setup
+- **Recommended:** `uv sync --all-extras --dev`
+- **Standard:** `pip install -e ".[dev]"`
 
-For every task:
-  1. Explain the root cause briefly.
-  2. Implement the minimal robust fix.
-  3. Add or update tests.
-  4. Run validation.
-  5. Report outcome, residual risk, and follow-up items.
+### Building and Running
+- **Launch CLI:** `python run.py` or `uv run python run.py`
+- **Session Management:** `mentask <session_id>` to resume.
 
-# Priority Backlog
+### Testing and Validation
+- **Run all tests:** `uv run pytest` or `tox`
+- **CLI specific:** `uv run pytest tests/cli -q`
+- **Orchestration/LSP:** `uv run pytest tests/test_orchestrator.py tests/test_lsp_integration.py -q`
+- **Linter Integration:** The agent integrates with Ruff LSP to intercept and fix diagnostics (`E999`, `F821`).
 
- ## PR-1: Providers and Secrets
+### Code Quality
+- **Lint:** `uv run ruff check .`
+- **Format:** `uv run ruff format .`
+- **CI Sequence:** Lint → Format Check → Test.
 
-  ### Goal
-  Stabilize real execution and eliminate insecure credential persistence.
+## Key Architecture References
 
-  ### Required Changes
-  - Fix streaming tool call reconstruction in `src/mentask/agent/core/providers/openai.py`.
-  - Support fragmented `tool_calls` arguments across streaming chunks.
-  - Emit tool calls only when arguments are complete and valid.
-  - Define or reinforce the provider event contract if needed.
-  - Centralize sensitive setting handling in `src/mentask/core/config_manager.py`.
-  - Ensure `save_settings()` never persists provider API keys in plaintext.
-  - Reject or warn on project-local settings files containing secrets.
+- **The Heart:** `src/mentask/agent/orchestrator.py` (Thinking -> Action -> Observation loop).
+- **The Guard:** `src/mentask/core/trust_manager.py` (Zero-trust whitelist security).
+- **The Snap:** `src/mentask/agent/core/context.py` (Context snapping/compression at 80% buffer).
+- **The Evolver:** `src/mentask/core/plugin_loader.py` (Runtime tool injection).
+- **The Registry:** `src/mentask/agent/tools_registry.py` (Tool dispatch).
 
-  ### Required Tests
-  Add tests for:
-  - fragmented single tool call
-  - multiple interleaved tool calls
-  - mixed text plus tool calls
-  - invalid partial JSON that becomes valid later
-  - `google_api_key`, `openai_api_key`, `deepseek_api_key` not being written to JSON
-  - keyring failure fallback behavior
+## Documentation Hierarchy
 
-  ### Validation
-  Run:
-  - `pytest tests/core/test_config_manager_security.py -q`
-  - provider-specific tests you add
-  - any affected orchestration tests
+1. `README.md`: High-level overview and installation.
+2. `STANDARD.md`: Repository hygiene and architecture boundaries.
+3. `DESIGN.md`: Core components and philosophy.
+4. `AGENTS.md`: Development commands and constraints.
+5. `SECURITY.md`: Security policy and vulnerability reporting.
+6. `wiki/`: Detailed technical documentation.
 
- ## PR-2: Dynamic Plugins and Trust Boundary
-
-  ### Goal
-  Make plugin execution policy explicit and safer.
-
-  ### Required Changes
-  - Review `forge_plugin` and `PluginLoader`.
-  - Treat `.mentask/plugins/` as trusted code only if trust policy explicitly allows it.
-  - Prevent loading plugins from untrusted workspaces.
-  - Add stronger AST validation beyond syntax-only parsing.
-  - Require at least one valid `BaseTool` subclass.
-  - Add metadata such as origin, hash, or manifest if practical.
-  - Fail loudly and clearly when plugin validation or loading is rejected.
-
-  ### Required Tests
-  Add tests for:
-  - valid plugin load
-  - invalid plugin name
-  - missing `BaseTool` subclass
-  - blocked imports or dangerous constructs
-  - untrusted workspace behavior
-  - plugin reload idempotency
-
-  ### Validation
-  Run the new plugin tests plus any affected registry tests.
-
- ## PR-3: Static Quality Baseline and Cleanup
-
-  ### Goal
-  Restore engineering discipline and remove repository drift.
-
-  ### Required Changes
-  - Make `ruff check src tests` pass.
-  - Remove dead or misleading artifacts such as `src/mentask/core/config_manager.py.tmp`.
-  - Fix import issues, undefined names, whitespace problems, and ambiguous legacy code.
-  - Decide whether `src/mentask/cli/renderer.py` is active or legacy.
-  - If legacy, deprecate or remove references cleanly.
-  - If active, repair it fully.
-
-  ### Validation
-  Run:
-  - `ruff check src tests`
-  - `ruff format src tests`
-
- ## PR-4: Documentation, Coverage, and Windows Runtime Stability
-
-  ### Goal
-  ### Required Changes
-  - Update README and architecture docs to match actual runtime.
-  - Clarify which renderer is authoritative.
-  - Clarify actual plugin loading scope and trust behavior.
-  - Add direct coverage for:
-    - provider runtime behavior
-    - plugin loader / forge flow
-    - MCP manager
-    - models hub
-    - active renderer
-  - Investigate Windows async cleanup warnings and reduce them where possible.
-
-  ### Validation
-  Run:
-  - targeted new tests
-  - orchestration and LSP tests
-  - any Windows-safe cleanup tests possible in this environment
-
-  # Constraints
-
-  - Security fixes take precedence over UX polish.
-  - Do not silently weaken trust boundaries for convenience.
-  - Do not leave partial fixes without tests if the area is safety-critical.
-  - Prefer explicit failures over hidden fallback behavior in security-sensitive paths.
-  - Preserve backwards compatibility where reasonable, but not at the cost of silent insecurity.
-
-  # Review Expectations
-  - files changed
-  - risk level
-  - tests added
-  - commands run
-  - remaining gaps
-
-# Execution Start
-
-  Start with PR-1.
-  Inspect the current implementation and tests first, then implement the minimum robust patch set.
+When implementing changes, always update the relevant tests and ensure documentation remains aligned with the new behavior.

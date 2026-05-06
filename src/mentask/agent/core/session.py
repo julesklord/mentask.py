@@ -95,10 +95,7 @@ class SessionManager:
             return await self.provider.setup()
 
         # Log active provider
-        source = "Keyring/Settings"
-        if os.getenv("GOOGLE_API_KEY") or os.getenv("GEM_API_KEY") or os.getenv("GEMINI_API_KEY"):
-            source = "Environment Variable"
-
+        source = getattr(self.provider, "key_source", "Unknown")
         provider_name = self.provider.__class__.__name__.replace("Provider", "")
         console.print(f"[dim]> Engine: [bold]{provider_name}[/] | Source: {source}[/dim]")
 

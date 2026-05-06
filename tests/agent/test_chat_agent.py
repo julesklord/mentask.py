@@ -58,7 +58,7 @@ async def test_setup_api(mock_dependencies):
     agent = ChatAgent()
 
     # Case 1: no API key and non-interactive
-    mock_dependencies["config"].load_api_key.return_value = None
+    mock_dependencies["config"].load_api_key.return_value = (None, None)
     assert await agent.setup_api(interactive=False) is False
 
     # Case 2: valid API key

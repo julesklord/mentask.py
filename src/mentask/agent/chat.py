@@ -18,6 +18,13 @@ if TYPE_CHECKING:
     from ..cli.gem_renderer import GemStyleRenderer as CliRenderer
 
 from ..cli.console import console
+from ..cli.contextual_prompts import (
+    ContextType,
+    ContextualConfigManager,
+    ContextualOrchestrator,
+    ContextualPromptLibrary,
+    NeonTheme,
+)
 from ..core.config_manager import ConfigManager
 from ..core.history_manager import HistoryManager
 from ..core.i18n import _
@@ -101,6 +108,10 @@ class ChatAgent:
 
         self.orchestrator = AgentOrchestrator(self.session, self.tools, self.config)
 
+        # Neon Contextual System
+        self.contextual_config = ContextualConfigManager()
+        self.contextual_orchestrator = ContextualOrchestrator(self.contextual_config, console)
+
         self.messages: list[Message] = []
         self._setup_system_prompt()
 
@@ -116,7 +127,14 @@ class ChatAgent:
         timestamp = now.strftime("%Y-%m-%d %H:%M:%S")
         day_name = now.strftime("%A")
 
+        # Detect model family
+        model_id = self.model_name.lower()
+        model_family = "claude" if "claude" in model_id else "gpt" if "gpt" in model_id else "groq"
+
+        contextual_prompt = self.contextual_orchestrator.prepare_system_prompt(model_family)
+
         self.system_prompt = (
+            f"{contextual_prompt}\n\n"
             f"{base_identity}\n\n"
             f"## KNOWLEDGE HUB INDEX\n"
             f"You have access to the following knowledge modules via 'query_knowledge(module_name=...)'.\n"
@@ -374,13 +392,126 @@ class ChatAgent:
         if not user_input.startswith("/"):
             return False
 
-        if user_input.lower() in ("/exit", "/quit", "/q"):
+        cmd = user_input.lower().split()[0]
+
+        if cmd in ("/exit", "/quit", "/q"):
             self.running = False
+            return True
+
+        if cmd == "/context":
+            self.show_context_menu()
+            return True
+
+        if cmd == "/theme":
+            self.show_theme_menu()
+            return True
+
+        if cmd == "/info":
+            self.show_context_info()
+            return True
+
+        if cmd in ("/stats", "/cost"):
+            stats = {
+                "context": self.contextual_config.get_active_context().value,
+                "theme": self.contextual_config.contexts.get("active_theme"),
+                "model": self.model_name,
+            }
+            renderer.console.print(self.contextual_orchestrator.renderer.render_stats(stats))
             return True
 
         result = await self.commands.execute(user_input)
         renderer.print_command_output(result)
         return True
+
+    def show_context_menu(self) -> None:
+        """Interactive menu to select context."""
+        from rich.panel import Panel
+        from rich.prompt import Prompt
+
+        self.active_renderer.console.print("\n")
+        self.active_renderer.console.print(
+            Panel(
+                "[bold]Selecciona tu contexto de trabajo[/bold]\n"
+                + "1. 🧑‍💻 Coding (Ingeniería de software)\n"
+                + "2. 🎵 Music Production (Producción musical)\n"
+                + "3. 📊 Analysis (Análisis de datos)\n"
+                + "4. 🎨 Creative (Creativo)\n"
+                + "5. 💬 General (General)",
+                title="[bold cyan]Contextos Disponibles[/bold cyan]",
+                border_style="cyan",
+                padding=(1, 2),
+            )
+        )
+
+        choice = Prompt.ask("[cyan]Selecciona contexto[/cyan]", choices=["1", "2", "3", "4", "5"], default="5")
+
+        context_map = {
+            "1": ContextType.CODING,
+            "2": ContextType.MUSIC_PRODUCTION,
+            "3": ContextType.ANALYSIS,
+            "4": ContextType.CREATIVE,
+            "5": ContextType.GENERAL,
+        }
+
+        selected = context_map[choice]
+        self.contextual_config.set_context(selected)
+        self._setup_system_prompt()  # Refresh system prompt
+        self.contextual_orchestrator.log_with_context(f"Contexto cambiado a {selected.value}", level="success")
+
+    def show_theme_menu(self) -> None:
+        """Interactive menu to select neon theme."""
+        from rich.panel import Panel
+        from rich.prompt import Prompt
+
+        self.active_renderer.console.print("\n")
+        self.active_renderer.console.print(
+            Panel(
+                "[bold]Selecciona tu tema Neon[/bold]\n"
+                + "1. 🌺 Neon Pink\n"
+                + "2. 💎 Neon Cyan\n"
+                + "3. 💜 Neon Purple\n"
+                + "4. 🟢 Neon Matrix",
+                title="[bold magenta]Temas Disponibles[/bold magenta]",
+                border_style="magenta",
+                padding=(1, 2),
+            )
+        )
+
+        choice = Prompt.ask("[magenta]Selecciona tema[/magenta]", choices=["1", "2", "3", "4"], default="2")
+
+        theme_map = {
+            "1": "neon_pink",
+            "2": "neon_cyan",
+            "3": "neon_purple",
+            "4": "neon_matrix",
+        }
+
+        selected = theme_map[choice]
+        self.contextual_config.set_theme(selected)
+        new_theme = NeonTheme.get(selected)
+        self.contextual_orchestrator.renderer.theme = new_theme
+        self.active_renderer.theme = new_theme  # Sync with main renderer
+        self.contextual_orchestrator.log_with_context(f"Tema cambiado a {selected}", level="success")
+
+    def show_context_info(self) -> None:
+        """Displays current context info."""
+        from rich.panel import Panel
+
+        context = self.contextual_config.get_active_context()
+        prompt = ContextualPromptLibrary.get(context)
+
+        self.active_renderer.console.print()
+        self.active_renderer.console.print(
+            Panel(
+                f"[bold cyan]{prompt.context.value.upper()}[/bold cyan]\n\n"
+                f"[yellow]Tono:[/yellow] {prompt.tone}\n"
+                f"[yellow]Constraints:[/yellow]\n" + "\n".join(f"  • {c}" for c in prompt.constraints),
+                title="[bold]Detalles del Contexto[/bold]",
+                border_style="cyan",
+                padding=(1, 2),
+            )
+        )
+        self.active_renderer.console.print()
 
     async def _handle_user_turn(self, user_input: str, renderer: "CliRenderer") -> None:
         self.session_messages += 1

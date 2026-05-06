@@ -60,11 +60,11 @@ class OpenAIProvider(BaseProvider):
         # 2. Resolve API Key
         # Priority: Specific provider key via ConfigManager > Generic fallback
         active_id = provider_id or "openai"
-        self.api_key = self.config.load_api_key(active_id)
+        self.api_key, self.key_source = self.config.load_api_key(active_id, return_source=True)
 
         if not self.api_key and active_id != "openai":
             # Fallback to generic openai key if specific one is missing
-            self.api_key = self.config.load_api_key("openai")
+            self.api_key, self.key_source = self.config.load_api_key("openai", return_source=True)
 
         if not self.api_key:
             _logger.warning(f"No API key found for {self.model_name} (provider: {active_id})")
@@ -213,6 +213,34 @@ class OpenAIProvider(BaseProvider):
         """Returns models from the Hub that are compatible with this provider."""
         from ....core.models_hub import hub
 
-        # Return top 20 models from the hub as a fallback or models matching current prefix
-        results = hub.search("")
-        return [m["id"] for m in results[:20]]
+        # Determine target provider based on active base URL or model name
+        target_provider = "openai"
+        if ":" in self.model_name:
+            target_provider = self.model_name.split(":")[0]
+        elif "groq" in self.api_base.lower():
+            target_provider = "groq"
+        elif "deepseek" in self.api_base.lower():
+            target_provider = "deepseek"
+
+        # Search the hub for all models from this provider
+        results = hub.search(provider=target_provider)
+
+        # If no results for specific provider, try searching by query
+        if not results and target_provider != "openai":
+            results = hub.search(query=target_provider)
+
+        if not results:
+            # Fallback to general search if still nothing
+            results = hub.search("")
+
+        # Return scoped IDs if they exist, otherwise raw IDs
+        model_list = []
+        for m in results:
+            m_id = m["id"]
+            p_id = m.get("_provider")
+            if p_id and p_id != "openai":
+                model_list.append(f"{p_id}:{m_id}")
+            else:
+                model_list.append(m_id)
+
+        return sorted(list(set(model_list)))

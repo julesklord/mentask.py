@@ -3,6 +3,7 @@ Tests for tools/file_tools.py — read_file and edit_file
 """
 
 import os
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -135,3 +136,33 @@ class TestFileSecurity:
         result = ensure_safe_path(rel_path)
         expected = str(tmp_path / rel_path)
         assert result == expected
+
+
+class TestBackupSecurity:
+    """Tests for path traversal in _create_backup."""
+
+    def test_create_backup_traversal_protection(self, tmp_path, monkeypatch):
+        from mentask.tools.file_tools import _create_backup
+
+        backups_root = tmp_path / "backups"
+        backups_root.mkdir()
+        monkeypatch.setattr("mentask.tools.file_tools.get_backups_dir", lambda: backups_root)
+
+        # File outside CWD
+        outside_file = tmp_path / "outside.txt"
+        outside_file.write_text("content")
+
+        # Mock CWD to something else
+        project_dir = tmp_path / "project"
+        project_dir.mkdir()
+        monkeypatch.chdir(project_dir)
+
+        backup_path_str = _create_backup(str(outside_file))
+        backup_path = Path(backup_path_str)
+
+        # Should be inside backups_root/TIMESTAMP/outside.txt
+        # and NOT contain .. to reach outside.txt
+        assert backup_path.name == "outside.txt"
+        assert str(backups_root) in str(backup_path)
+        # Verify it doesn't have .. in it
+        assert ".." not in str(backup_path.relative_to(backups_root))

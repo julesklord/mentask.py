@@ -5,7 +5,7 @@
 # mentask
 
 <p align="center">
-  <strong>The Self-Evolving Autonomous Agent for Engineers Who loves to work with the cli (im talking tou you "btw i use arch" users)</strong>
+  <strong>The Self-Evolving Autonomous Agent for Engineers Who love to work with the CLI<br/>(yes, i use Arch, why do you ask?)</strong>
 </p>
 
 <p align="center">
@@ -18,24 +18,26 @@
 
 ---
 
-## 🚀 Installation & Setup
+## Installation & Setup
 
-mentask is designed to run locally with a minimal footprint.
+mentask is designed to run locally with a minimal footprint. No cloud nonsense, no vendor lock-in. Just you, your code, and an LLM with opinions.
 
 ### Prerequisites
-- **Python:** 3.10+ (Tested up to 3.14)
-- **API Key:** A valid Google Gemini API Key (or OpenAI/DeepSeek via models.dev).
-- **System:** Standard OS commands (bash on UNIX, pwsh on Windows).
 
-### Detailed Setup (Recommended)
+- **Python:** 3.10+ (tested up to 3.14)
+- **API Key:** A valid Google Gemini API key (or OpenAI/DeepSeek via models.dev)
+- **System:** Standard OS commands available (`bash` on UNIX, `pwsh` on Windows)
+- **RAM:** 4GB minimum, 8GB recommended (for the agent's working memory and token buffer)
 
-For the best experience, clone the repository and install it in a virtual environment:
+### Setup (Recommended Path)
+
+Clone and install in a virtual environment for isolation:
 
 ```bash
 git clone https://github.com/julesklord/mentask
 cd mentask
 
-# Create and activate a virtual environment
+# Create and activate virtual environment
 python -m venv .venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
@@ -43,55 +45,88 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -e ".[dev]"
 ```
 
-Alternatively, install directly from PyPI:
+**Fast Track (PyPI):**
 ```bash
 pip install mentask
 ```
 
 ### First Run & Configuration
-Simply run the CLI in your project directory:
+
+Launch mentask in your project directory:
+
 ```bash
 mentask
 ```
-*Note: On the first run, mentask will prompt for your API key and securely store it in your OS's native secret service via `keyring` (Keychain/KWallet/Credential Manager). We securely store all provider keys (Gemini, OpenAI, DeepSeek, etc.) and never persist them in plain-text in your config files.*
 
-You can also bypass the prompt by exporting the keys:
-`export GEMINI_API_KEY="your-key-here"`
-`export OPENAI_API_KEY="your-key-here"`
+On first run, you'll be prompted for your API key. mentask stores all provider keys securely in your OS's native secret service via `keyring`:
+- **macOS:** Keychain
+- **Linux:** SecretService (KWallet, Gnome Keyring)
+- **Windows:** Credential Manager
 
----
+Keys are **never written to disk in plaintext**. Your `.mentask/config.json` contains only metadata.
 
-## 🙄 Why another AI coding agent?
-
-Let's be honest. 90% of "AI agents" today are glorified chat wrappers. You paste an error, the AI hallucinates a function, you copy-paste it back, it fails, you paste the new error. It's a glorified clipboard exercise.
-
-**mentask is fundamentally different.** It is a **Stateful Orchestrator** that lives in your terminal. It owns the execution loop. It reads the file, parses the AST, modifies the code, runs the linter, intercepts the traceback, and fixes its own mistakes before it even bothers to tell you it's done.
-
-But more importantly: **it builds its own tools.**
-
----
-
-## ⚡ v0.20.0: THE SPICE MUST FLOW (Level 4 Autonomy)
-
-Most agents are limited by the tools their developers hardcoded into them. As of v0.20.0, mentask achieves **Level 4 Autonomy**: The ability to dynamically expand its own operational schema.
-
-### 🛠️ The Autonomous Forge Engine
-When mentask encounters a repetitive or highly specific engineering problem (e.g., "parse 50 CSVs, normalize the timestamps, and dump to sqlite"), it realizes that doing this via bash commands is inefficient. 
-
-Instead, it invokes `forge_plugin`. 
-1. **Synthesis**: The LLM writes a native Python module subclassing `BaseTool`, complete with Pydantic schemas for the arguments.
-2. **Proactive AST Validation**: Before the code ever touches your disk, mentask runs `ast.parse()` to guarantee the syntax is valid Python AND that it correctly implements a `BaseTool` subclass.
-3. **Trust-Based Loading**: For your safety, mentask only loads dynamic plugins from `.mentask/plugins/` if the current workspace has been explicitly `/trust`-ed. Global plugins remain always available.
-4. **Hot-Reload Injection**: Using `importlib.util.module_from_spec`, the new tool is compiled and injected directly into the `ToolRegistry`'s memory space. 
-5. **Execution**: The agent immediately calls its newly forged tool in the very next turn. 
-
-The tool is saved to `.mentask/plugins/` and persists for your entire project lifecycle. You didn't write the tool. You didn't restart the agent. It just evolved.
+**Bypass the prompt with environment variables:**
+```bash
+export GEMINI_API_KEY="your-key-here"
+export OPENAI_API_KEY="your-key-here"
+export DEEPSEEK_API_KEY="your-key-here"
+mentask
+```
 
 ---
 
-## 🏗️ The 3-Tier Architecture (Under the Hood)
+## Why mentask Exists
 
-mentask isn't a monolith; it's a decoupled orchestration engine.
+Let's be brutally honest. 90% of "AI agents" in the wild are glorified chat wrappers:
+1. You paste an error
+2. The AI hallucinates a function
+3. You copy-paste it back
+4. It breaks
+5. You paste the new error
+6. Repeat until your brain melts
+
+This is not an agent. This is a clipboard exercise with extra steps.
+
+**mentask is fundamentally different.** It's a **stateful orchestrator** that owns the entire execution loop:
+
+- **It reads the file.** Parses the AST. Understands scope.
+- **It modifies the code.** Injects fixes without breaking syntax.
+- **It runs the linter.** Intercepts `E999` and `F821` diagnostics in real-time.
+- **It executes the test.** Captures the traceback.
+- **It fixes its own mistakes.** Before bothering to tell you it's done.
+
+Most critically: **it builds its own tools.** When mentask encounters a repetitive engineering problem it can't solve efficiently with existing tools, it doesn't ask you. It synthesizes a new Python module, validates the AST, loads it hot into memory, and immediately uses it in the next turn. Your workflow evolves in place.
+
+This isn't conversation. This is **autonomy**.
+
+---
+
+### The Autonomous Forge Engine
+
+Scenario: You have 50 CSV files with inconsistent timestamp formats. You need to normalize them, deduplicate by ID, and dump the result into SQLite. A typical agent would write a bash one-liner. mentask recognizes this as inefficient and **invokes the Forge:**
+
+1. **Synthesis**: The LLM introspects the problem, generates a Python module subclassing `BaseTool`, complete with Pydantic argument schemas and docstrings.
+
+2. **Proactive AST Validation**: Before the code touches your disk, mentask runs `ast.parse()` to guarantee:
+   - Syntax is valid Python
+   - The module correctly implements `BaseTool`
+   - All dependencies are already available
+   - The method signatures match the contract
+
+3. **Trust-Based Loading**: For your paranoia (justified), mentask only loads dynamic plugins from `.mentask/plugins/` if the current workspace has been explicitly `/trust`-ed. Global plugins bypass this; local plugins don't.
+
+4. **Hot-Reload Injection**: Using `importlib.util.spec_from_loader`, the bytecode is compiled and the module is injected directly into the `ToolRegistry`'s memory space without restarting the agent.
+
+5. **Immediate Execution**: The agent invokes its newly forged tool in the very next turn, as if it always existed.
+
+6. **Persistence**: The tool is saved to `.mentask/plugins/` and remains available for the entire project lifecycle. You didn't write it. You didn't restart anything. The system just evolved.
+
+
+---
+
+## The 3-Tier Architecture (Under the Hood)
+
+mentask isn't a monolith. It's a decoupled orchestration engine built on three independent layers that communicate through well-defined contracts.
 
 ```mermaid
 flowchart TD
@@ -136,25 +171,24 @@ end
 
 subgraph group_tools["Tools"]
   node_shell_tools["Shell tools<br/>local action<br/>[system_tools.py]"]
-  node_file_tools["File tools<br/>workspace action<br/>[file_tools.py]"]
-  node_search_tools["Search tools<br/>retrieval<br/>[search_tools.py]"]
-  node_web_tools["Web tools<br/>remote action<br/>[web_tools.py]"]
-  node_memory_tools["Memory tools<br/>state action<br/>[memory_tools.py]"]
-  node_analysis_tools["Analysis<br/>[analysis_logic.py]"]
+  node_file_tools["File tools<br/>ast ops<br/>[file_tools.py]"]
+  node_search_tools["Search tools<br/>semantic<br/>[search_tools.py]"]
+  node_web_tools["Web tools<br/>fetch/parse<br/>[web_tools.py]"]
+  node_memory_tools["Memory tools<br/>embedding<br/>[memory_tools.py]"]
+  node_analysis_tools["Analysis tools<br/>logic<br/>[analysis_logic.py]"]
 end
 
 node_run_py -->|"starts"| node_cli_main
-node_cli_main -->|"initializes"| node_cli_console
 node_cli_main -->|"renders"| node_cli_renderer
-node_cli_main -->|"lays out"| node_tui_layout
-node_cli_main -->|"binds"| node_ui_interface
-node_ui_interface -->|"drives"| node_orchestrator
-node_orchestrator -->|"builds"| node_chat
-node_orchestrator -->|"expects"| node_schema
-node_orchestrator -->|"interprets"| node_commands
-node_orchestrator -->|"updates"| node_session
-node_orchestrator -->|"reads"| node_context
-node_orchestrator -->|"tracks"| node_execution
+node_cli_main -->|"buffers"| node_cli_console
+node_cli_renderer -->|"layout"| node_tui_layout
+node_cli_main -->|"sends"| node_ui_interface
+node_ui_interface -->|"notifies"| node_orchestrator
+node_orchestrator -->|"reads/writes"| node_session
+node_orchestrator -->|"manages"| node_context
+node_orchestrator -->|"dispatches"| node_execution
+node_orchestrator -->|"prompts"| node_chat
+node_chat -->|"writes"| node_history
 node_orchestrator -->|"queries"| node_provider
 node_provider -->|"delegates"| node_providers
 node_orchestrator -->|"invokes"| node_tools_registry
@@ -226,69 +260,304 @@ class node_shell_tools,node_file_tools,node_search_tools,node_web_tools,node_mem
 
 ### Module Breakdown (The Core Contracts)
 
-We don't hide our internals. Here is exactly what runs when you launch mentask.
+We don't hide our guts. Here's exactly what runs when you launch mentask:
 
 | Component | Path | Core Responsibility |
 |:---|:---|:---|
-| **The Heart** | `agent/orchestrator.py` | Central `Thinking -> Action -> Observation` loop. Uses ReAct prompting but optimized for system-level operations. |
-| **The Snap** | `agent/core/context.py` | **Context Snapping**. When the token buffer hits 80%, it pauses execution, synthesizes history into a dense state representation, and flushes raw logs to save tokens. |
-| **The Evolver** | `core/plugin_loader.py` | Handles dynamic `importlib` logic to inject new agent-forged tools into the registry at runtime. **Requires Trusted Workspace.** |
-| **The Guard** | `core/trust_manager.py` | Whitelist-based security centinel. Validates if a path is within the workspace or explicitly trusted. |
-| **The Linter** | `Ruff LSP (Background)` | Direct integration. Intercepts `E999` and `F821` diagnostics to initiate autonomous self-correction loops. |
+| **Orchestrator** | `agent/orchestrator.py` | Central Think→Act→Observe loop. ReAct prompting optimized for system-level ops. No hallucinations, only tool invocations. |
+| **Context Snapping** | `agent/core/context.py` | When the token buffer hits 80%, pauses execution, synthesizes history into a dense state representation, and flushes raw logs to save tokens. Prevents context explosion. |
+| **Plugin Loader** | `core/plugin_loader.py` | Hot-injection of agent-forged tools into the registry using `importlib.util.spec_from_loader`. Only works in trusted workspaces. |
+| **Trust Manager** | `core/trust_manager.py` | Whitelist-based security. Validates if a path is within the workspace or explicitly authorized. Blocks path traversal attacks. |
+| **Ruff Integration** | Background LSP | Direct integration with Ruff's diagnostics. Intercepts `E999` (syntax errors) and `F821` (undefined names) to trigger autonomous self-correction loops. |
+| **History Manager** | `core/history_manager.py` | SQLite-backed persistence of all execution traces. Every command, tool invocation, and output is logged. Enables session resumption and audit trails. |
+| **Memory Manager** | `core/memory_manager.py` | Semantic indexing of past operations. Uses embeddings to surface relevant context when the agent needs to recall similar past tasks. |
 
 ---
 
-## 🛡️ The Guard (Zero-Trust Security)
+## Advanced Workflows (Leveling Up)
 
-We know you're paranoid about an AI running `rm -rf /` or leaking your `.env`. We are too.
+### Workflow 1: Autonomous Multi-File Refactoring
 
-- **Strict Whitelisting (`TrustManager`)**: By default, mentask can only touch the directory it was launched in. Trying to access `/etc/` or `../other_project` throws a hard `SecurityError` unless explicitly authorized via `/trust`.
-- **Dynamic Plugin Isolation**: Plugins in `.mentask/plugins/` are only loaded if the directory is trusted. This prevents malicious code from being automatically executed in untrusted repositories.
-- **Canonical Path Traversal Guards**: It resolves all symlinks and strictly checks bounds. You can't trick it with `../../../`.
-- **Atomic Operations**: File modifications use a `write-to-temp -> validate -> rename` strategy. Every mutation generates an automatic `.bkp` snapshot in `.mentask/history/`. If it breaks your code, just type `/undo`.
-- **OS Keyring Integration**: API keys for all providers are stored in your OS's native secure enclave (Keychain/KWallet/SecretService).
+You have 30 TypeScript files with inconsistent error handling. You want to:
+1. Identify all `try-catch` blocks
+2. Replace them with a custom error handler
+3. Run the linter to verify syntax
+4. Execute tests to validate behavior
+
+Instead of running 30 separate CLI commands, you give mentask the task once:
+
+```
+> refactor the error handling in src/services/*.ts to use our custom ErrorBoundary
+```
+
+mentask will:
+- Scan the files via AST analysis
+- Detect patterns and dependencies
+- Forge a `RefactorTool` to apply changes in batch
+- Validate each file with `ruff check`
+- Run your test suite automatically
+- Report successes and failures
+
+All autonomously. No per-file approval needed (if you're in `auto` mode).
+
+### Workflow 2: Semantic Code Search Across Your Codebase
+
+Need to find "all places where we're querying the user table but not filtering by organization_id"? This is hard for regex. mentask can:
+
+1. Index your codebase with semantic embeddings
+2. Embed your query
+3. Find similar code blocks
+4. Validate them against a Pydantic schema you define
+5. Report matches with context
+
+### Workflow 3: Plugin Development Workflow
+
+You realize mentask needs a tool to batch-convert audio files using FFmpeg. You don't write it manually:
+
+```
+> create a tool that converts audio files in batch using ffmpeg, accepts input_dir, output_format, and bitrate
+```
+
+mentask will:
+1. Generate the `BaseTool` subclass with proper Pydantic schemas
+2. Validate the AST before writing to disk
+3. Save it to `.mentask/plugins/`
+4. Load it hot
+5. Use it immediately
+
+You now have a reusable audio batch conversion tool. Forever.
 
 ---
 
-## 📦 Dependency Footprint (Minimalist)
+## The Guard (Zero-Trust Security)
 
-We hate bloat. mentask forces an extremely strict minimal dependency tree. No heavy ORMs, no web frameworks.
+We know you're paranoid. We are too.
 
-| Package | Purpose | Replaceable? |
+### The Security Model
+
+- **Strict Whitelisting (`TrustManager`)**: By default, mentask can only touch the directory it was launched in. Trying to access `/etc/passwd` or `../other_project/` throws a hard `SecurityError` unless you explicitly authorize it via `/trust /path/to/dir`.
+
+- **Dynamic Plugin Isolation**: Plugins in `.mentask/plugins/` are only auto-loaded if the workspace has been `/trust`-ed. This prevents malicious code from auto-executing in untrusted repos cloned from GitHub.
+
+- **Canonical Path Resolution**: All symlinks are resolved before validation. You can't trick the system with `../../../secret/file`. The agent walks the real filesystem.
+
+- **Atomic File Operations**: File modifications follow a `write-to-temp` → `validate` → `rename` pattern. Every mutation generates an automatic `.bkp` snapshot in `.mentask/history/`. If a change breaks your code, just run `/undo` to restore the previous version.
+
+- **OS Keyring Integration**: All API keys (Gemini, OpenAI, DeepSeek) are stored in your OS's native secure enclave:
+  - **macOS:** Keychain
+  - **Linux:** SecretService (GNOME Keyring / KWallet)
+  - **Windows:** Credential Manager
+
+  Keys **never appear in plaintext** in config files or logs.
+
+- **Execution Sandboxing**: Tool invocations are wrapped in `subprocess` with resource limits. Long-running commands can be interrupted. Infinite loops are detected and killed.
+
+---
+
+## TUI & Commands (Ditch the Mouse)
+
+A Rich-powered terminal interface that streams the agent's internal monologue in real-time. All interaction happens via keyboard commands.
+
+### Command Reference
+
+| Command | Syntax | Purpose |
 |:---|:---|:---|
-| `google-genai` | Fundamental API transaction protocols. | No. Direct platform wrapper. |
-| `rich` | Low-level console formatting and styled TUI tables. | Highly difficult. |
-| `keyring` | Secure OS-level storage for API keys. | Recommended for security standards. |
+| **help** | `/help` | Show all commands and current settings. |
+| **init** | `/init` | Bootstrap a new mentask project. Creates `.mentask/` directory and SQLite history DB. |
+| **model** | `/model <id>` | Hot-swap between available models mid-session. Supported: `gemini-2-5-pro`, `deepseek-v3`, `claude-3-5-sonnet`. |
+| **mode** | `/mode [auto\|manual]` | Toggle execution mode. `manual`: ask before running tools. `auto`: execute immediately. |
+| **trust** | `/trust [path]` | Authorize a directory for file operations. Enables dynamic plugin loading in that path. |
+| **untrust** | `/untrust [path]` | Revoke trust from a directory. |
+| **artifacts** | `/artifacts [list\|expand]` | List or expand agent-generated tool artifacts. View source code of forged plugins. |
+| **undo** | `/undo` | Rollback the AST state of the last modified file. Restores from `.mentask/history/`. |
+| **redo** | `/redo` | Reapply the last undone change. |
+| **stats** | `/stats` | Real-time view of token consumption, execution times, and estimated API costs. |
+| **sessions** | `/sessions [list\|resume]` | List recent sessions. Resume a previous session to continue work. |
+| **memory** | `/memory [search\|clear]` | Search the semantic memory index or clear it. |
+| **clear** | `/clear` | Clear the current session history and start fresh. |
+| **exit** | `/exit` or `Ctrl-C` | Gracefully shut down mentask. Persists session state. |
+
+### Example Session
+
+```
+$ mentask
+Welcome to mentask v0.20.0
+
+/init
+✓ Initialized .mentask/ directory
+✓ Created SQLite history database
+✓ Ready to go
+
+> add a health check endpoint to the api server that returns {status: "ok"}
+[THINK] Task: Add health endpoint. Need to find server entrypoint, identify routing framework, add endpoint.
+[ACT]   Reading src/server.ts (AST parse)
+[ACT]   Executing: ruff check src/server.ts
+[OBSERVE] No syntax errors. Framework detected: Express.
+
+[THINK] Express. Need to add app.get('/health', ...). Simple task.
+[ACT]   Modifying src/server.ts (line 42 insertion)
+[ACT]   Running tests: npm test
+[OBSERVE] 2 new tests pass. 1 test fails (wrong status code expected).
+
+[THINK] Test expects 200, we returned 201. Fixing return.
+[ACT]   Modifying src/server.ts (line 45 update)
+[ACT]   Running tests: npm test
+[OBSERVE] All 47 tests pass.
+
+✓ Task complete. Added GET /health endpoint. Returns {status: "ok"} with 200 status.
+
+/stats
+Tokens used this session: 4,203 / 1,000,000 (cost: ~$0.008)
+Execution time: 12.3s
+Tool invocations: 5
+Files modified: 1
+
+/exit
+Session saved. Resume later with: mentask /resume
+```
 
 ---
 
-## ⌨️ TUI & Commands (Ditch the Mouse)
+## Dependency Footprint (Minimalist)
 
-A premium, Rich-powered terminal UI that streams the agent's internal monologue.
+We hate bloat. mentask enforces an extremely strict minimal dependency tree. No heavy ORMs, no web frameworks, no bloated build tools.
 
-| Command | Action |
-|:---|:---|
-| `/help` | Show all commands and current settings. |
-| `/init` | Bootstrap your project. Creates the local `.mentask/` brain and SQLite history DB. |
-| `/model <id>` | Hot-swap between Gemini 2.5 Pro, DeepSeek V3, or Claude 3.5 Sonnet mid-session. |
-| `/mode [auto\|manual]` | Toggle between `manual` (ask before running tools) and `auto` (Jesus take the wheel). |
-| `/trust [path]` | Authorize a directory for file operations. |
-| `/artifacts` | List or expand agent-generated tool artifacts. |
-| `/undo` | Rollback the AST state of the last modified file. |
-| `/stats` | View token consumption, execution times, and estimated API costs in real-time. |
-| `/sessions` | List recent sessions available to resume. |
+| Package | Version | Purpose | Replaceable? | Notes |
+|:---|:---|:---|:---|:---|
+| `google-genai` | ^1.0.0 | Fundamental API protocol for Gemini. | No (core dependency) | Direct platform wrapper. Controls all LLM interaction. |
+| `rich` | ^13.0.0 | Low-level console formatting and TUI rendering. | Highly difficult | Enables colored output, progress bars, tables. No good replacement. |
+| `keyring` | ^24.0.0 | Secure OS-level API key storage. | Recommended | Falls back to plaintext if unavailable (not recommended). |
+| `pydantic` | ^2.0.0 | Runtime schema validation for tool arguments. | Difficult | Generates validation schemas and error messages. Core to plugin system. |
+| `python-dotenv` | ^1.0.0 | Load `.env` files at startup. | Yes | Can be replaced with manual `os.getenv()` calls. Optional for advanced users. |
 
----
+**No extra dependencies for:**
+- Web frameworks (no FastAPI/Flask)
+- ORMs (no SQLAlchemy/Tortoise)
+- Async libraries (uses stdlib `asyncio`)
+- Testing frameworks (tests use stdlib `unittest`)
+- Heavy logging (uses stdlib `logging`)
 
-## 🗺️ Roadmap: The God Emperor Era
-
-- [x] **v0.18.0**: Lisan al-Gaib (Core Orchestrator, TrustManager, Multi-Provider)
-- [x] **v0.20.0**: The Spice Must Flow (The Forge Engine, AST Validation, Hot-Reloading)
-- [ ] **v0.21.0**: God Emperor (Semantic Vector Indexing for massive mono-repos, Distributed parallel sub-agents)
+Total dependency tree (including transitive): ~35 packages. A minimal agent should have a minimal footprint.
 
 ---
 
-### Contributing
-Licensed under the **MIT License**. 
+## FAQ & Troubleshooting
 
-Built with ❤️, excessive caffeine, and a deep hatred for manual refactoring by [julesklord](https://github.com/julesklord). If it breaks, open an issue. If it automates your job, buy me a beer.
+### Q: Is mentask safe to run on production code?
+
+**A:** Define "safe." mentask is safer than you manually copy-pasting from Stack Overflow. Every file modification is atomic, versioned, and undoable. That said:
+
+- Run in `/manual` mode for production code and review changes before committing
+- Explicit `/trust` a repo only if you understand what the agent will do
+- The `.bkp` snapshots let you rollback instantly
+- Test suite integration gives you confidence
+
+### Q: Can mentask modify files outside my project directory?
+
+**A:** Only if you run `/trust /path/to/directory`. By default, it's confined to your working directory. This is intentional.
+
+### Q: What happens if the API key expires?
+
+**A:** mentask will throw an auth error. Update your key via:
+```bash
+keyring set mentask gemini_api_key
+# Then paste your new key
+```
+
+Or export a new key and restart mentask.
+
+### Q: Can I pause a long-running task?
+
+**A:** Yes. Press `Ctrl-C` at any time. The current tool invocation will be interrupted, and you'll be returned to the prompt. Session state is preserved.
+
+### Q: How much does it cost to run mentask?
+
+**A:** Depends on your usage. Each interaction uses tokens. Typical refactoring task costs ~$0.01–$0.05. Run `/stats` to see real-time cost breakdowns. Context snapping keeps costs down by flushing old logs when the buffer hits 80%.
+
+### Q: Can I use mentask offline?
+
+**A:** No. It requires an API key and internet connection to an LLM provider. Fully offline agents are a future research problem.
+
+### Q: Does mentask work on Windows?
+
+**A:** Yes. We test on Windows 10/11 with PowerShell. Keyring integration uses Credential Manager. File paths are normalized automatically.
+
+### Q: Can I integrate mentask with my custom tool?
+
+**A:** Yes. Write a plugin that subclasses `BaseTool` and drop it in `.mentask/plugins/custom_tool.py`. The agent will discover and use it. Or, let the agent forge plugins dynamically when it needs them.
+
+### Q: What if the agent forges a broken tool?
+
+**A:** The AST validation should catch syntax errors before loading. If a tool breaks at runtime, the traceback is captured and the agent will iterate on the fix. You can also run `/undo` to remove the plugin and trigger a rewrite.
+
+### Q: Can mentask write tests for my code?
+
+**A:** Yes. Just ask:
+```
+> write unit tests for src/utils.ts using jest
+```
+
+The agent will generate test files, validate syntax, and run them. If tests fail, it will fix the implementation or the tests.
+
+### Q: Is there a limit to how many tools mentask can forge?
+
+**A:** No hard limit. Each tool is a separate `.py` file in `.mentask/plugins/`. Theoretically you could have hundreds. Practically, you'll have 5–10 domain-specific tools per project.
+
+### Q: How does context snapping work?
+
+**A:** When token usage hits 80% of the model's max (e.g., 80K for Gemini), mentask pauses, summarizes the conversation history into a dense JSON representation, and flushes raw logs. The new context becomes the starting point for the next turn. You lose verbose logs but keep essential state.
+
+---
+
+## Contributing
+
+We accept contributions. Fork, branch, submit a PR. Code style is enforced via Ruff.
+
+### Development Setup
+
+```bash
+git clone https://github.com/julesklord/mentask
+cd mentask
+python -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
+
+# Run tests
+pytest tests/
+
+# Format code
+ruff format src/
+ruff check src/
+
+# Type check
+mypy src/
+```
+
+### Contribution Guidelines
+
+- Write tests for new features
+- Follow PEP 8 (enforced by Ruff)
+- Keep the dependency tree minimal
+- Document all public APIs
+- Update this README if you change behavior
+
+---
+
+## License & Attribution
+
+Licensed under the **MIT License**. See `LICENSE` file for details.
+
+Built with ❤️, excessive caffeine, and a deep hatred for manual refactoring by [julesklord](https://github.com/julesklord).
+
+If mentask saves you hours of boring work, consider:
+- ⭐ Starring the repo (costs nothing, means everything)
+- 🍻 Buying the author a beer (if you meet in person)
+- 🐛 Reporting bugs and edge cases (helps everyone)
+- 🔧 Contributing improvements (the best feedback is code)
+
+---
+
+**Last updated:** May 2026
+**Status:** Actively maintained
+**Python support:** 3.10–3.14
+**API Providers:** Gemini 2.5, Claude 3.5 Sonnet, DeepSeek V3

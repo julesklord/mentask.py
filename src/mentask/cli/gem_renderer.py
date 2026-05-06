@@ -161,11 +161,27 @@ class GemStyleRenderer:
             return "text"
 
         ext_map = {
-            ".py": "python", ".js": "javascript", ".ts": "typescript", ".jsx": "jsx", ".tsx": "tsx",
-            ".md": "markdown", ".json": "json", ".yaml": "yaml", ".yml": "yaml", ".html": "html",
-            ".css": "css", ".sh": "bash", ".bash": "bash", ".sql": "sql", ".toml": "toml",
-            ".ini": "ini", ".dockerfile": "docker", "dockerfile": "docker", ".diff": "diff",
-            ".patch": "diff", "makefile": "make",
+            ".py": "python",
+            ".js": "javascript",
+            ".ts": "typescript",
+            ".jsx": "jsx",
+            ".tsx": "tsx",
+            ".md": "markdown",
+            ".json": "json",
+            ".yaml": "yaml",
+            ".yml": "yaml",
+            ".html": "html",
+            ".css": "css",
+            ".sh": "bash",
+            ".bash": "bash",
+            ".sql": "sql",
+            ".toml": "toml",
+            ".ini": "ini",
+            ".dockerfile": "docker",
+            "dockerfile": "docker",
+            ".diff": "diff",
+            ".patch": "diff",
+            "makefile": "make",
         }
 
         filename = os.path.basename(path).lower()
@@ -444,22 +460,20 @@ class GemStyleRenderer:
             artifact_id = f"#{actual + 1}"
 
             if name in ["read_file", "edit_file", "write_file", "execute_bash", "execute_command", "read_url"]:
-                path = None
-                if name == "read_file":
-                    m = re.search(r"--- Reading '(.*?)'", content)
-                    if m:
-                        path = m.group(1)
-                elif name in ("edit_file", "write_file"):
-                    m = re.search(r"in '(.*?)'", content)
-                    if not m:
-                        m = re.search(r"file '(.*?)'", content)
-                    if m:
-                        path = m.group(1)
+                # Attempt to extract path from common tool output headers
+                path_match = re.search(r"--- Reading '([^']+)'", content)
+                if not path_match:
+                    path_match = re.search(r"Success: (?:Created|Replaced text in) '([^']+)'", content)
+                if not path_match:
+                    path_match = re.search(r"in '([^']+)'", content)
+                if not path_match:
+                    path_match = re.search(r"file '([^']+)'", content)
 
-                if "bash" in name or "command" in name:
+                lexer = "python"
+                if path_match:
+                    lexer = self._get_lexer_for_path(path_match.group(1))
+                elif "bash" in name or "command" in name:
                     lexer = "bash"
-                else:
-                    lexer = self._get_lexer_for_path(path)
 
                 renderable = Syntax(
                     content,

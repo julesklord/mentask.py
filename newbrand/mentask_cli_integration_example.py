@@ -26,33 +26,26 @@ class MentaskCLI:
         self.console = Console()
         self.config_manager = ConfigManager(self.console)
         self.contextual_config = ContextualConfigManager()
-        self.orchestrator = ContextualOrchestrator(
-            self.contextual_config,
-            self.console
-        )
+        self.orchestrator = ContextualOrchestrator(self.contextual_config, self.console)
 
     def show_context_menu(self) -> None:
         """Menú interactivo para seleccionar contexto."""
         self.console.print("\n")
         self.console.print(
             Panel(
-                "[bold]Selecciona tu contexto de trabajo[/bold]\n" +
-                "1. 🧑‍💻 Coding (Ingeniería de software)\n" +
-                "2. 🎵 Music Production (Producción musical)\n" +
-                "3. 📊 Analysis (Análisis de datos)\n" +
-                "4. 🎨 Creative (Creativo)\n" +
-                "5. 💬 General (General)",
+                "[bold]Selecciona tu contexto de trabajo[/bold]\n"
+                + "1. 🧑‍💻 Coding (Ingeniería de software)\n"
+                + "2. 🎵 Music Production (Producción musical)\n"
+                + "3. 📊 Analysis (Análisis de datos)\n"
+                + "4. 🎨 Creative (Creativo)\n"
+                + "5. 💬 General (General)",
                 title="[bold cyan]Contextos Disponibles[/bold cyan]",
                 border_style="cyan",
                 padding=(1, 2),
             )
         )
 
-        choice = Prompt.ask(
-            "[cyan]Selecciona contexto[/cyan]",
-            choices=["1", "2", "3", "4", "5"],
-            default="5"
-        )
+        choice = Prompt.ask("[cyan]Selecciona contexto[/cyan]", choices=["1", "2", "3", "4", "5"], default="5")
 
         context_map = {
             "1": ContextType.CODING,
@@ -64,32 +57,25 @@ class MentaskCLI:
 
         selected = context_map[choice]
         self.contextual_config.set_context(selected)
-        self.orchestrator.log_with_context(
-            f"Contexto cambiado a {selected.value}",
-            level="success"
-        )
+        self.orchestrator.log_with_context(f"Contexto cambiado a {selected.value}", level="success")
 
     def show_theme_menu(self) -> None:
         """Menú interactivo para seleccionar tema neon."""
         self.console.print("\n")
         self.console.print(
             Panel(
-                "[bold]Selecciona tu tema Neon[/bold]\n" +
-                "1. 🌺 Neon Pink\n" +
-                "2. 💎 Neon Cyan\n" +
-                "3. 💜 Neon Purple\n" +
-                "4. 🟢 Neon Matrix",
+                "[bold]Selecciona tu tema Neon[/bold]\n"
+                + "1. 🌺 Neon Pink\n"
+                + "2. 💎 Neon Cyan\n"
+                + "3. 💜 Neon Purple\n"
+                + "4. 🟢 Neon Matrix",
                 title="[bold magenta]Temas Disponibles[/bold magenta]",
                 border_style="magenta",
                 padding=(1, 2),
             )
         )
 
-        choice = Prompt.ask(
-            "[magenta]Selecciona tema[/magenta]",
-            choices=["1", "2", "3", "4"],
-            default="2"
-        )
+        choice = Prompt.ask("[magenta]Selecciona tema[/magenta]", choices=["1", "2", "3", "4"], default="2")
 
         theme_map = {
             "1": "neon_pink",
@@ -101,10 +87,7 @@ class MentaskCLI:
         selected = theme_map[choice]
         self.contextual_config.set_theme(selected)
         self.orchestrator.renderer.theme = NeonTheme.get(selected)
-        self.orchestrator.log_with_context(
-            f"Tema cambiado a {selected}",
-            level="success"
-        )
+        self.orchestrator.log_with_context(f"Tema cambiado a {selected}", level="success")
 
     def initialize_session(self) -> None:
         """Inicializa una sesión con contexto y tema."""
@@ -116,8 +99,7 @@ class MentaskCLI:
         self.console.print(header)
 
         self.console.print(
-            f"[{self.orchestrator.renderer.theme.text_secondary}]"
-            f"Tema: {theme_name} | Contexto: {context.value}[/]"
+            f"[{self.orchestrator.renderer.theme.text_secondary}]Tema: {theme_name} | Contexto: {context.value}[/]"
         )
 
         # 2. Opcionalmente cambiar contexto
@@ -140,8 +122,7 @@ class MentaskCLI:
         # Log contextual
         context = self.contextual_config.get_active_context()
         self.orchestrator.log_with_context(
-            f"Usando prompt contextual para {context.value} + {model_family}",
-            level="info"
+            f"Usando prompt contextual para {context.value} + {model_family}", level="info"
         )
 
         return system_prompt
@@ -156,8 +137,7 @@ class MentaskCLI:
             Panel(
                 f"[bold cyan]{prompt.context.value.upper()}[/bold cyan]\n\n"
                 f"[yellow]Tono:[/yellow] {prompt.tone}\n"
-                f"[yellow]Constraints:[/yellow]\n" +
-                "\n".join(f"  • {c}" for c in prompt.constraints),
+                f"[yellow]Constraints:[/yellow]\n" + "\n".join(f"  • {c}" for c in prompt.constraints),
                 title="[bold]Detalles del Contexto[/bold]",
                 border_style="cyan",
                 padding=(1, 2),
@@ -169,8 +149,7 @@ class MentaskCLI:
         """Loop principal del chatbot con contexto."""
         self.console.print(
             Panel(
-                "[bold magenta]mentask v0.22.0[/bold magenta]\n"
-                "[cyan]Multi-API + Contextos + Temas Neon[/cyan]",
+                "[bold magenta]mentask v0.22.0[/bold magenta]\n[cyan]Multi-API + Contextos + Temas Neon[/cyan]",
                 title="[bold]Bienvenido[/bold]",
                 border_style="magenta",
             )
@@ -186,10 +165,7 @@ class MentaskCLI:
                 context = self.contextual_config.get_active_context()
                 self.contextual_config.contexts.get("active_theme")
 
-                prompt_text = (
-                    f"[{self.orchestrator.renderer.theme.brand_primary}]"
-                    f"[{context.value}] ❯[/]"
-                )
+                prompt_text = f"[{self.orchestrator.renderer.theme.brand_primary}][{context.value}] ❯[/]"
 
                 user_input = self.console.input(prompt_text)
 
@@ -211,10 +187,7 @@ class MentaskCLI:
                     break
 
                 # Procesar input normal (placeholder)
-                self.console.print(
-                    f"[{self.orchestrator.renderer.theme.info}]"
-                    f"Procesando: {user_input}[/]"
-                )
+                self.console.print(f"[{self.orchestrator.renderer.theme.info}]Procesando: {user_input}[/]")
 
             except KeyboardInterrupt:
                 self.orchestrator.log_with_context("Sesión interrumpida", level="warning")
@@ -248,10 +221,11 @@ def example_programmatic_usage():
 
     # 4. Renderizar componentes
     console.print(orchestrator.render_context_header())
-    console.print(orchestrator.renderer.render_code_block(
-        "async def fetch_data():\n    return await client.get('/api')",
-        language="python"
-    ))
+    console.print(
+        orchestrator.renderer.render_code_block(
+            "async def fetch_data():\n    return await client.get('/api')", language="python"
+        )
+    )
 
     # 5. Renderizar estadísticas
     stats = {

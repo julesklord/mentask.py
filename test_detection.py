@@ -1,4 +1,3 @@
-
 from rich.console import Console
 
 from mentask.core.config_manager import ConfigManager

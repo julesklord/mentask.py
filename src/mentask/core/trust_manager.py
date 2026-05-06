@@ -29,6 +29,7 @@ class TrustManager:
     async def load_trust(self) -> None:
         """Loads trusted paths from the global config directory."""
         import asyncio
+
         await asyncio.to_thread(self._read_trust_file)
 
     async def save_trust(self) -> None:

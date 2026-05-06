@@ -2,7 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.20.1] - 2026-04-26
+## [0.23.0] - "The Great Consolidation" - 2026-05-06
+
+### Added
+- **Comprehensive Test Coverage**: 
+  - Added unit tests for `ConfigManager.save_settings` and `save_api_key`, including error handling for file I/O and keyring failures.
+  - Added robust test suite for `compress_code` and `smart_compress`, covering Python, JavaScript, TypeScript, C/C++, and Java with various edge cases.
+  - Added unit tests for `metrics.calculate_cost` with hub pricing verification and fallbacks.
+  - Added unit test for `TokenTracker.total_tokens` property.
+  - Added unit tests for `json_serializable` helper in `history_manager.py`.
+  - Added unit test for `get_standard_knowledge_dir` in `paths.py`.
+- **Performance Optimizations**:
+  - Offloaded blocking file I/O in `ForgePluginTool` and `WorkingMemoryTool` to background threads using `asyncio.to_thread`, ensuring a responsive event loop.
+- **UI Enhancements**:
+  - **Dynamic Syntax Highlighting**: Tool artifacts now use language-aware highlighting by detecting file extensions from output headers.
+
+### Fixed
+- **Security Hardening**: Fixed a path traversal vulnerability in `_create_backup` by sanitizing relative paths.
+- **Stability**: Fixed missing `Path` import in `plugin_loader.py` that caused test collection failures.
+- **Mock Consistency**: Updated all test mocks for `load_api_key` to match the new multi-return value signature (`key, source`).
+- **Code Hygiene**: Removed redundant test scripts (`test_detection.py`, `test_priority.py`) from the repository root.
+
+## [0.22.0] - 2026-04-26
 
 ### Fixed
 - **LSP Stability**: Resolved infinite hangs during the Ruff server handshake by implementing timeouts and robust error handling in the background reader loop.

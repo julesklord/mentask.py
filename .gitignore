@@ -3,118 +3,123 @@
 # Comprehensive Python project ignore rules
 # ============================================================
 
-# ---------------------- Virtual Environments ------------------
-.venv/
-venv/
+# ------------------------------------------------------------
+# Virtual Environments
+# ------------------------------------------------------------
+.conda/
 ENV/
 env/
-.conda/
+.venv/
+venv/
 
-# ---------------------- Python Cache --------------------------
+# ------------------------------------------------------------
+# Python Cache & Bytecode
+# ------------------------------------------------------------
 __pycache__/
 *.py[cod]
 *$py.class
-*.pyo
 
-# ---------------------- Build Artifacts -----------------------
+# ------------------------------------------------------------
+# Build, Distribution & Packaging
+# ------------------------------------------------------------
+*.egg
+*.egg-info/
+*.tar.gz
+*.whl
+Artifacts/
 build/
 dist/
-*.egg-info/
-*.egg
+docs/Artifacts/
 MANIFEST
-*.whl
-*.tar.gz
-Artifacts
 
-# ---------------------- Testing & Linting ---------------------
-.pytest_cache/
+# ------------------------------------------------------------
+# Testing, Coverage & Linting
+# ------------------------------------------------------------
 .coverage
-htmlcov/
-.tox/
-.nox/
-.ruff_cache/
 .mypy_cache/
-coverage.xml
+.nox/
+.pytest_cache/
+.ruff_cache/
+.tox/
 *.cover
+coverage.xml
+htmlcov/
 
-# ---------------------- IDE & Editor --------------------------
+# ------------------------------------------------------------
+# IDE & Editor Configuration
+# ------------------------------------------------------------
 .idea/
+.vs/
 .vscode/
 *.code-workspace
-Writerside/
 *.iml
-*.swp
 *.swo
+*.swp
 *~
+Writerside/
 
-# ---------------------- OS Files ------------------------------
+# ------------------------------------------------------------
+# OS-specific files
+# ------------------------------------------------------------
 .DS_Store
-Thumbs.db
 Desktop.ini
+Thumbs.db
 ehthumbs.db
 
-# ---------------------- Secrets & Local Config ----------------
+# ------------------------------------------------------------
+# Secrets, Local Configuration & Sensitive Data
+# ------------------------------------------------------------
 .env
 .env.*
 .gemini_api_key_encrypted
 .gemini_api_key_unencrypted
+*.ini
+claude_audit.md
+gha-creds-*.json
 local_settings.py
 mentask_knowledge.md
-mentask_knowledge.md
-claude_audit.md
-
-# ---------------------- Legacy User Data ----------------------
-.gemini_chatbot_prefs.json
-chat_history_*.json
-
-# ---------------------- Logs & Backups ------------------------
-*.log
-*.bkp
-*.bak
-
-# ---------------------- Third-Party Tool Artifacts ------------
-# External reference code (local study material, not project code)
-_reference_code/
-
-# VS Code extension scratch files
-.promptbooster.yml
-prompt_drafts.md
-
-# Snapshot tools
-.snapshots/
-
-# ---------------------- Docker (not currently used) -----------
-Dockerfile
-docker-compose*.yml
-compose*.yaml
-.dockerignore
-README.Docker.md
-holamundo.md
-identity.md
-.github/agents/debug-python.agent.md
-scripts/cleanup_branches.sh
-.mentask
-.mentask
-docs/Artifacts
-
-.github/codeql/extensions/mentask.py-python/codeql-pack.yml
-codeql-custom-queries-actions/codeql-pack.lock.yml
-codeql-custom-queries-actions/codeql-pack.yml
-codeql-custom-queries-actions/example.ql
-codeql-custom-queries-python/codeql-pack.lock.yml
-codeql-custom-queries-python/codeql-pack.yml
-codeql-custom-queries-python/example.ql
-
-.scratch/*
-FEATURES.md
 openssf_audit.md
 qp_audit.md
-.askgem/usage_log.json
-.scripts/
-.vs/
 
+# ------------------------------------------------------------
+# Logs, Backups & User Data
+# ------------------------------------------------------------
+.askgem/
 .gemini/
-gha-creds-*.json
-*.ini
-.mentask/usage_log.json
+.gemini_chatbot_prefs.json
+.mentask/
+*.bak
+*.bkp
+*.log
+chat_history_*.json
+
+# ------------------------------------------------------------
+# Tooling & Service-specific files
+# ------------------------------------------------------------
+.promptbooster.yml
+.snapshots/
+codeql-custom-queries-actions/
+codeql-custom-queries-python/
+prompt_drafts.md
+
+# ------------------------------------------------------------
+# Project-specific & Generated files
+# ------------------------------------------------------------
+.github/agents/
+.github/codeql/
+.scratch/
 .scripts/
+_reference_code/
+FEATURES.md
+holamundo.md
+identity.md
+scripts/cleanup_branches.sh
+
+# ------------------------------------------------------------
+# Docker (not currently used)
+# ------------------------------------------------------------
+.dockerignore
+Dockerfile
+README.Docker.md
+compose*.yaml
+docker-compose*.yml

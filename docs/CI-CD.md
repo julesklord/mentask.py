@@ -25,36 +25,44 @@ Runs on **every push** and **pull request** to any branch.
 ### Stages
 
 #### 1. Checkout & Setup
+
 ```yaml
 - uses: actions/checkout@v4
 - uses: actions/setup-python@v4
   with:
     python-version: '3.13'
 ```
+
 - Clones the repository
 - Installs Python 3.13 on Ubuntu Linux
 
 #### 2. Lint (Ruff)
+
 ```yaml
 - run: ruff check .
 ```
+
 - **What it checks:** Code style, import ordering, unused imports, complexity
 - **Replacement for:** flake8, isort, black (all in one tool)
 - **Fail condition:** Any style violation stops the workflow
 
 #### 3. Security Audit (pip-audit)
+
 ```yaml
 - run: pip-audit
 ```
+
 - **What it checks:** Known CVEs in dependency tree
 - **Fail condition:** Any critical/high vulnerability detected
 
 #### 4. Test Suite (pytest)
+
 ```yaml
 - run: |
     pip install -e .[dev]
     export PYTHONPATH=$(pwd)/src && pytest tests/
 ```
+
 - **What it checks:** All unit & integration tests
 - **Coverage:** CLI, orchestration, managers, tools, security
 - **Fail condition:** Any test failure
@@ -88,9 +96,11 @@ tox
 Runs on **every push** and **pull request**.
 
 ### Stage: Gitleaks Scan
+
 ```yaml
 - uses: gitleaks/gitleaks-action@v2
 ```
+
 - **What it checks:** Git history for exposed secrets (API keys, tokens, passwords)
 - **Database:** Continuously updated secret patterns
 - **Fail condition:** Any secret detected in staged/committed code
@@ -130,6 +140,7 @@ Runs when a **tag matching `v*`** is pushed (e.g., `git push origin v0.13.4`).
 ### Stages
 
 #### 1. Checkout & Setup
+
 ```yaml
 - uses: actions/checkout@v4
   with:
@@ -140,19 +151,23 @@ Runs when a **tag matching `v*`** is pushed (e.g., `git push origin v0.13.4`).
 ```
 
 #### 2. Build Package
+
 ```yaml
 - run: python -m build
 ```
+
 - Generates `dist/mentask-0.13.4-py3-none-any.whl`
 - Generates `dist/mentask-0.13.4.tar.gz`
 
 #### 3. Create GitHub Release
+
 ```yaml
 - uses: softprops/action-gh-release@v2
   with:
     files: dist/*
     generate_release_notes: true
 ```
+
 - Creates a GitHub Release page
 - Attaches built wheels and source distributions
 - Auto-generates release notes from PR commits

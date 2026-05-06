@@ -82,3 +82,39 @@ class TestHistoryManager:
     def test_load_session_path_traversal(self, manager):
         # load_session uses .resolve() to check for path traversal
         assert manager.load_session("../../../etc/passwd") is None
+
+
+def test_json_serializable():
+    from mentask.core.history_manager import json_serializable
+
+    # Test object with to_dict
+    class ObjWithToDict:
+        def to_dict(self):
+            return {"a": 1}
+
+    assert json_serializable(ObjWithToDict()) == {"a": 1}
+
+    # Test object with __dict__
+    class ObjWithDict:
+        def __init__(self):
+            self.b = 2
+
+    assert json_serializable(ObjWithDict()) == {"b": 2}
+
+    # Test object that can be cast to dict
+    assert json_serializable([("c", 3)]) == {"c": 3}
+
+    # Test object that fails dict casting and falls back to __raw__
+    assert json_serializable(42) == {"__raw__": "42"}
+
+    # Test uncastable object (not a tuple list)
+    class Uncastable:
+        def __repr__(self):
+            return "<Uncastable>"
+
+        # Hide __dict__ just in case
+        @property
+        def __dict__(self):
+            raise AttributeError
+
+    assert json_serializable(Uncastable()) == {"__raw__": "<Uncastable>"}

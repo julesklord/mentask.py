@@ -60,11 +60,27 @@ class OpenAIProvider(BaseProvider):
         # 2. Resolve API Key
         # Priority: Specific provider key via ConfigManager > Generic fallback
         active_id = provider_id or "openai"
-        self.api_key, self.key_source = self.config.load_api_key(active_id, return_source=True)
+        res = self.config.load_api_key(active_id, return_source=True)
+        if isinstance(res, tuple) and len(res) == 2:
+            self.api_key, self.key_source = res
+        elif res:
+            self.api_key = res
+            self.key_source = 'Unknown'
+        else:
+            self.api_key, self.key_source = None, None
+
 
         if not self.api_key and active_id != "openai":
             # Fallback to generic openai key if specific one is missing
-            self.api_key, self.key_source = self.config.load_api_key("openai", return_source=True)
+            res2 = self.config.load_api_key("openai", return_source=True)
+            if isinstance(res2, tuple) and len(res2) == 2:
+                self.api_key, self.key_source = res2
+            elif res2:
+                self.api_key = res2
+                self.key_source = 'Unknown'
+            else:
+                self.api_key, self.key_source = None, None
+
 
         if not self.api_key:
             _logger.warning(f"No API key found for {self.model_name} (provider: {active_id})")

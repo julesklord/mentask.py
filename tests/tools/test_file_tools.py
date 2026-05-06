@@ -56,14 +56,16 @@ class TestReadFile:
 
 
 class TestEditFile:
-    def test_creates_new_file(self, tmp_path):
+    def test_creates_new_file(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
         target = str(tmp_path / "new.txt")
         result = edit_file(target, "", "hello world")
         assert "Success" in result
         with open(target, encoding="utf-8") as f:
             assert f.read() == "hello world"
 
-    def test_replaces_exact_block(self, tmp_path):
+    def test_replaces_exact_block(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
         f = tmp_path / "code.py"
         f.write_text("def foo():\n    return 1\n")
         result = edit_file(str(f), "return 1", "return 42")

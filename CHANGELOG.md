@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.23.1] - 2026-05-06
+
+### Added
+- **Model Health Checks**: New `/model configure` command to verify real-time availability and quota for all provider models.
+- **Dynamic Autocompletion**: Tab-completion for `/model` now updates automatically based on the active provider's healthy models.
+- **UX Refinement**: Simplified trust prompts with single-letter shortcuts (`p`, `s`, `n`) for faster startup.
+- **Theme Unification**: Integrated all neon palettes directly into the standard `/theme` selector.
+
+### Fixed
+- **Authentication Recovery**: Resolved critical auth failures caused by invalid keys persisting in the system keyring.
+- **Command Alias Integrity**: Audited all slash commands to ensure functional parity between primary commands and their aliases (`/q`, `/art`, `/cost`).
+
 ## [0.23.0] - "The Great Consolidation" - 2026-05-06
 
 ### Added

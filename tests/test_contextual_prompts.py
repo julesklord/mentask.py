@@ -5,8 +5,8 @@ from mentask.cli.contextual_prompts import (
     ContextType,
     ContextualConfigManager,
     ContextualPromptLibrary,
-    NeonTheme,
 )
+from mentask.cli.themes import get_theme
 
 
 class TestContextualPrompts:
@@ -21,9 +21,9 @@ class TestContextualPrompts:
         prompt = ContextualPromptLibrary.get_adapted(ContextType.MUSIC_PRODUCTION, "claude")
         assert "producer" in prompt.lower() or "audio" in prompt.lower()
 
-    def test_neon_theme_get(self):
-        """Test obtener tema neon."""
-        theme = NeonTheme.get("neon_pink")
+    def test_integrated_neon_theme_get(self):
+        """Test que los temas neon ahora están integrados en el sistema estándar."""
+        theme = get_theme("neon_pink")
         assert theme.brand_primary == "#ff006e"
 
     def test_contextual_config_persistence(self):

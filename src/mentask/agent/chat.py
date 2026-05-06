@@ -23,7 +23,6 @@ from ..cli.contextual_prompts import (
     ContextualConfigManager,
     ContextualOrchestrator,
     ContextualPromptLibrary,
-    NeonTheme,
 )
 from ..core.config_manager import ConfigManager
 from ..core.history_manager import HistoryManager
@@ -108,7 +107,7 @@ class ChatAgent:
 
         self.orchestrator = AgentOrchestrator(self.session, self.tools, self.config)
 
-        # Neon Contextual System
+        # Contextual System
         self.contextual_config = ContextualConfigManager()
         self.contextual_orchestrator = ContextualOrchestrator(self.contextual_config, console)
 
@@ -349,7 +348,14 @@ class ChatAgent:
         renderer.console.print(prompt, end="")
         try:
             # We use standard input here because prompt_toolkit session isn't ready yet
-            choice = input().strip().lower()
+            raw_choice = input().strip().lower()
+            # Normalize single letter or full word
+            if raw_choice.startswith("p"):
+                choice = "p"
+            elif raw_choice.startswith("s") or raw_choice.startswith("y"):
+                choice = "s"
+            else:
+                choice = "n"
         except (EOFError, KeyboardInterrupt):
             choice = "n"
 
@@ -403,20 +409,24 @@ class ChatAgent:
             return True
 
         if cmd == "/theme":
-            self.show_theme_menu()
-            return True
+            # Pass to CommandHandler for standard theme switching
+            pass
 
         if cmd == "/info":
             self.show_context_info()
             return True
 
         if cmd in ("/stats", "/cost"):
+            # Minimalist stats
             stats = {
                 "context": self.contextual_config.get_active_context().value,
-                "theme": self.contextual_config.contexts.get("active_theme"),
                 "model": self.model_name,
             }
-            renderer.console.print(self.contextual_orchestrator.renderer.render_stats(stats))
+            # Format manually to avoid NeonRenderer dependency
+            renderer.console.print(f"\n  [bold {renderer.C_BRAND}]STATS[/]")
+            renderer.console.print(f"  [dim]Context:[/] {stats['context']}")
+            renderer.console.print(f"  [dim]Model:[/]   {stats['model']}")
+            renderer.console.print()
             return True
 
         result = await self.commands.execute(user_input)
@@ -456,42 +466,8 @@ class ChatAgent:
         selected = context_map[choice]
         self.contextual_config.set_context(selected)
         self._setup_system_prompt()  # Refresh system prompt
-        self.contextual_orchestrator.log_with_context(f"Contexto cambiado a {selected.value}", level="success")
-
-    def show_theme_menu(self) -> None:
-        """Interactive menu to select neon theme."""
-        from rich.panel import Panel
-        from rich.prompt import Prompt
-
-        self.active_renderer.console.print("\n")
-        self.active_renderer.console.print(
-            Panel(
-                "[bold]Selecciona tu tema Neon[/bold]\n"
-                + "1. 🌺 Neon Pink\n"
-                + "2. 💎 Neon Cyan\n"
-                + "3. 💜 Neon Purple\n"
-                + "4. 🟢 Neon Matrix",
-                title="[bold magenta]Temas Disponibles[/bold magenta]",
-                border_style="magenta",
-                padding=(1, 2),
-            )
-        )
-
-        choice = Prompt.ask("[magenta]Selecciona tema[/magenta]", choices=["1", "2", "3", "4"], default="2")
-
-        theme_map = {
-            "1": "neon_pink",
-            "2": "neon_cyan",
-            "3": "neon_purple",
-            "4": "neon_matrix",
-        }
-
-        selected = theme_map[choice]
-        self.contextual_config.set_theme(selected)
-        new_theme = NeonTheme.get(selected)
-        self.contextual_orchestrator.renderer.theme = new_theme
-        self.active_renderer.theme = new_theme  # Sync with main renderer
-        self.contextual_orchestrator.log_with_context(f"Tema cambiado a {selected}", level="success")
+        renderer = self.active_renderer
+        renderer.console.print(f"\n  [bold {renderer.C_SUCCESS}]✓[/] Context changed to {selected.value}\n")
 
     def show_context_info(self) -> None:
         """Displays current context info."""

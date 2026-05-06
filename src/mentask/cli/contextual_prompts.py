@@ -1,8 +1,7 @@
 # mentask/cli/contextual_prompts.py
 """
-Sistema de prompts contextuales para mentask v0.22.0.
+Sistema de prompts contextuales para mentask v0.23.0.
 Soporta múltiples contextos (coding, music, analysis) con variantes por modelo.
-Integración seamless con el sistema de temas existente.
 """
 
 import json
@@ -209,140 +208,6 @@ Be encouraging but honest about risks.""",
         return prompt.model_variants.get(model_family.lower(), prompt.system_prompt)
 
 
-# TEMAS NEON AVANZADOS
-class NeonTheme:
-    """Tema neon con soporte para animaciones y efectos visuales."""
-
-    THEMES = {
-        "neon_pink": ThemeConfig(
-            brand_primary="#ff006e",  # Neon Pink
-            brand_secondary="#fb5607",  # Neon Orange
-            success="#00ff00",  # Neon Green
-            warning="#ffbe0b",  # Neon Yellow
-            error="#ff006e",  # Neon Pink
-            info="#00d9ff",  # Neon Cyan
-            text_primary="#ffffff",
-            text_secondary="#00d9ff",
-            text_dim="#666666",
-            border="#ff006e",
-            background="#0a0e27",
-            think_color="#ff006e",
-            code_theme="monokai",
-        ),
-        "neon_cyan": ThemeConfig(
-            brand_primary="#00d9ff",  # Neon Cyan
-            brand_secondary="#00ff00",  # Neon Green
-            success="#00ff00",  # Neon Green
-            warning="#ffff00",  # Neon Yellow
-            error="#ff0080",  # Neon Red
-            info="#00d9ff",  # Neon Cyan
-            text_primary="#ffffff",
-            text_secondary="#00ff00",
-            text_dim="#666666",
-            border="#00d9ff",
-            background="#0a0e27",
-            think_color="#00d9ff",
-            code_theme="monokai",
-        ),
-        "neon_purple": ThemeConfig(
-            brand_primary="#b537f2",  # Neon Purple
-            brand_secondary="#ff006e",  # Neon Pink
-            success="#39ff14",  # Neon Green
-            warning="#ffff00",  # Neon Yellow
-            error="#ff006e",  # Neon Pink
-            info="#00d9ff",  # Neon Cyan
-            text_primary="#ffffff",
-            text_secondary="#b537f2",
-            text_dim="#666666",
-            border="#b537f2",
-            background="#0a0e27",
-            think_color="#b537f2",
-            code_theme="monokai",
-        ),
-        "neon_matrix": ThemeConfig(
-            brand_primary="#00ff00",  # Neon Green (Matrix)
-            brand_secondary="#00aa00",  # Darker Green
-            success="#00ff00",  # Neon Green
-            warning="#ffff00",  # Neon Yellow
-            error="#ff0000",  # Neon Red
-            info="#00ffff",  # Neon Cyan
-            text_primary="#00ff00",
-            text_secondary="#00aa00",
-            text_dim="#003300",
-            border="#00ff00",
-            background="#000000",
-            think_color="#00aa00",
-            code_theme="monokai",
-        ),
-    }
-
-    @classmethod
-    def get(cls, name: str) -> ThemeConfig:
-        """Obtiene un tema neon por nombre."""
-        return cls.THEMES.get(name, cls.THEMES["neon_cyan"])
-
-
-# RENDERIZACIÓN AVANZADA CON RICH
-class NeonRenderer:
-    """Renderizador avanzado para mentask con efectos neon."""
-
-    def __init__(self, theme: ThemeConfig, use_nerdfonts: bool = True):
-        self.theme = theme
-        self.use_nerdfonts = use_nerdfonts
-
-    def render_header(self, text: str, context: ContextType) -> str:
-        """Renderiza un header con contexto visual."""
-        icons_map = {
-            ContextType.CODING: "󰅩" if self.use_nerdfonts else "⚙",
-            ContextType.MUSIC_PRODUCTION: "🎵",
-            ContextType.ANALYSIS: "📊",
-            ContextType.CREATIVE: "🎨",
-            ContextType.GENERAL: "💬",
-        }
-        icon = icons_map.get(context, "💬")
-
-        "─" * (len(text) + 4)
-        return f"[{self.theme.brand_primary}]╭─ {icon} {text} ─╮[/]\n[{self.theme.brand_primary}]│[/]"
-
-    def render_divider(self) -> str:
-        """Renderiza un divisor neon."""
-        return f"[{self.theme.brand_primary}]───────────────────────────────────[/]"
-
-    def render_thinking(self, text: str) -> str:
-        """Renderiza thinking process con styling neon."""
-        return f"[{self.theme.think_color} dim]✦ Pensando...[/]\n[{self.theme.text_secondary}]{text}[/]"
-
-    def render_code_block(self, code: str, language: str = "python") -> str:
-        """Renderiza un bloque de código con syntax highlighting neon."""
-        header = f"[{self.theme.brand_secondary}]┌─ {language.upper()} ─[/]\n"
-        footer = f"\n[{self.theme.brand_secondary}]└──────────────────[/]"
-        return f"{header}[{self.theme.info}]{code}[/]{footer}"
-
-    def render_success(self, message: str) -> str:
-        """Renderiza mensaje de éxito."""
-        return f"[{self.theme.success}]✓ {message}[/]"
-
-    def render_warning(self, message: str) -> str:
-        """Renderiza advertencia."""
-        return f"[{self.theme.warning}]⚠ {message}[/]"
-
-    def render_error(self, message: str) -> str:
-        """Renderiza error."""
-        return f"[{self.theme.error}]✗ {message}[/]"
-
-    def render_stats(self, stats: dict) -> str:
-        """Renderiza estadísticas en grid neon."""
-        lines = [f"[{self.theme.brand_primary}]┌─ STATS ─[/]"]
-        for key, value in stats.items():
-            lines.append(
-                f"[{self.theme.brand_primary}]│[/] "
-                f"[{self.theme.text_secondary}]{key}:[/] "
-                f"[{self.theme.brand_primary}]{value}[/]"
-            )
-        lines.append(f"[{self.theme.brand_primary}]└──────────[/]")
-        return "\n".join(lines)
-
-
 # INTEGRACIÓN CON CONFIGMANAGER
 class ContextualConfigManager:
     """Administrador de configuración contextual persistente."""
@@ -368,7 +233,7 @@ class ContextualConfigManager:
         """Contextos por defecto."""
         return {
             "active_context": ContextType.GENERAL.value,
-            "active_theme": "neon_cyan",
+            "active_theme": "indigo",
             "model_context_map": {
                 "claude-opus": ContextType.CODING.value,
                 "gpt-4o": ContextType.ANALYSIS.value,
@@ -391,18 +256,13 @@ class ContextualConfigManager:
         self.save_contexts()
 
     def set_theme(self, theme: str) -> None:
-        """Cambia el tema neon activo."""
+        """Cambia el tema activo."""
         self.contexts["active_theme"] = theme
         self.save_contexts()
 
     def get_active_context(self) -> ContextType:
         """Obtiene el contexto activo."""
         return ContextType(self.contexts.get("active_context", ContextType.GENERAL.value))
-
-    def get_active_theme(self) -> ThemeConfig:
-        """Obtiene el tema activo."""
-        theme_name = self.contexts.get("active_theme", "neon_cyan")
-        return NeonTheme.get(theme_name)
 
 
 # ORQUESTADOR CONTEXTUAL
@@ -412,27 +272,8 @@ class ContextualOrchestrator:
     def __init__(self, config_manager, console):
         self.config_manager = config_manager
         self.console = console
-        self.renderer = NeonRenderer(
-            config_manager.get_active_theme(), config_manager.contexts["user_preferences"]["use_nerdfonts"]
-        )
 
     def prepare_system_prompt(self, model_family: str) -> str:
         """Prepara el system prompt adaptado al contexto y modelo."""
         context = self.config_manager.get_active_context()
         return ContextualPromptLibrary.get_adapted(context, model_family)
-
-    def render_context_header(self) -> str:
-        """Renderiza header con contexto actual."""
-        context = self.config_manager.get_active_context()
-        return self.renderer.render_header(f"Contexto: {context.value.upper()}", context)
-
-    def log_with_context(self, message: str, level: str = "info") -> None:
-        """Registra con estilos contextuales."""
-        if level == "success":
-            self.console.print(self.renderer.render_success(message))
-        elif level == "warning":
-            self.console.print(self.renderer.render_warning(message))
-        elif level == "error":
-            self.console.print(self.renderer.render_error(message))
-        else:
-            self.console.print(f"[{self.renderer.theme.info}]ℹ {message}[/]")

@@ -51,6 +51,7 @@ And some text.
     assert "x = 10" in compressed
     assert "Here is some code" in compressed
 
+
 def test_smart_compress_code_replacer_edge_cases():
     # Empty code block without language
     content = "```\n```"

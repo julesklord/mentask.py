@@ -98,6 +98,7 @@ def test_get_heartbeat_path(mock_home):
     expected_path = str(mock_home / ".mentask" / "heartbeat.md")
     assert heartbeat_path == expected_path
 
+
 def test_get_standard_knowledge_dir():
     knowledge_dir = get_standard_knowledge_dir()
 

@@ -1,7 +1,9 @@
-import pytest
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from mentask.agent.core.providers.openai import OpenAIProvider
+
 
 @pytest.fixture
 def mock_config():

@@ -10,6 +10,7 @@ from mentask.core.paths import (
     get_heartbeat_path,
     get_history_dir,
     get_memory_path,
+    get_standard_knowledge_dir,
 )
 
 
@@ -96,3 +97,14 @@ def test_get_heartbeat_path(mock_home):
     # Check that the path is correct
     expected_path = str(mock_home / ".mentask" / "heartbeat.md")
     assert heartbeat_path == expected_path
+
+def test_get_standard_knowledge_dir():
+    knowledge_dir = get_standard_knowledge_dir()
+
+    # Check that it returns a Path object
+    assert isinstance(knowledge_dir, Path)
+
+    # Verify that the returned path correctly resolves to .../mentask/agent/standard
+    assert knowledge_dir.name == "standard"
+    assert knowledge_dir.parent.name == "agent"
+    assert knowledge_dir.parent.parent.name == "mentask"

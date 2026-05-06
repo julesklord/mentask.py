@@ -1,12 +1,12 @@
-import pytest
+import tempfile
+from pathlib import Path
+
 from mentask.cli.contextual_prompts import (
     ContextType,
+    ContextualConfigManager,
     ContextualPromptLibrary,
     NeonTheme,
-    ContextualConfigManager,
 )
-from pathlib import Path
-import tempfile
 
 
 class TestContextualPrompts:
@@ -34,7 +34,7 @@ class TestContextualPrompts:
         with tempfile.TemporaryDirectory() as tmpdir:
             config = ContextualConfigManager(Path(tmpdir))
             config.set_context(ContextType.MUSIC_PRODUCTION)
-            
+
             # Crear nueva instancia, debe cargar cambio
             config2 = ContextualConfigManager(Path(tmpdir))
             assert config2.get_active_context() == ContextType.MUSIC_PRODUCTION

@@ -18,10 +18,7 @@ class TestContextualPrompts:
 
     def test_get_adapted_prompt(self):
         """Test adaptación por modelo."""
-        prompt = ContextualPromptLibrary.get_adapted(
-            ContextType.MUSIC_PRODUCTION,
-            "claude"
-        )
+        prompt = ContextualPromptLibrary.get_adapted(ContextType.MUSIC_PRODUCTION, "claude")
         assert "producer" in prompt.lower() or "audio" in prompt.lower()
 
     def test_neon_theme_get(self):

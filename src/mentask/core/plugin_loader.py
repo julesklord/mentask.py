@@ -1,4 +1,3 @@
-
 """
 Dynamic Plugin Loader for mentask.
 

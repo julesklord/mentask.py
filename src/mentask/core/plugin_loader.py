@@ -6,6 +6,7 @@ agent tools (plugins) from the user's workspace or global configuration.
 """
 
 import ast
+from pathlib import Path
 import importlib.util
 import inspect
 import logging

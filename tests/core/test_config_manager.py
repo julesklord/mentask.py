@@ -150,7 +150,9 @@ class TestConfigManagerApiKey:
                 cm.save_settings()
 
             # Ensure error is printed
-            error_calls = [call for call in _mock_console.print.call_args_list if "[error][X] Error saving settings" in str(call)]
+            error_calls = [
+                call for call in _mock_console.print.call_args_list if "[error][X] Error saving settings" in str(call)
+            ]
             assert len(error_calls) == 1
 
     def test_save_settings_handles_keyring_error_on_sensitive_key(self, tmp_path):
@@ -169,11 +171,16 @@ class TestConfigManagerApiKey:
                 cm.save_settings()
 
             # Ensure error is printed
-            error_calls = [call for call in _mock_console.print.call_args_list if "[error][X] Error saving google_api_key to keyring" in str(call)]
+            error_calls = [
+                call
+                for call in _mock_console.print.call_args_list
+                if "[error][X] Error saving google_api_key to keyring" in str(call)
+            ]
             assert len(error_calls) == 1
 
             # Verify the json file does not have the plaintext key
             import json
+
             with open(settings_file) as f:
                 saved_data = json.load(f)
 
@@ -192,6 +199,7 @@ class TestConfigManagerApiKey:
             cm.save_settings()
 
             import json
+
             with open(settings_file) as f:
                 saved_data = json.load(f)
 

@@ -145,6 +145,7 @@ class ChatAgent:
 
         self.session_messages = 0
         self.session_tools = 0
+        self.session_files = 0
         self.interrupted = False
 
     def _build_tool_registry(self) -> ToolRegistry:
@@ -301,7 +302,12 @@ class ChatAgent:
 
         if event_type == "tool_result":
             renderer.stop_thinking()
-            renderer.print_tool_result(not event["is_error"], event["content"], tool_name=event.get("tool_name"))
+            is_success = not event.get("is_error", False)
+            tool_name = event.get("tool_name")
+            renderer.print_tool_result(is_success, event["content"], tool_name=tool_name)
+
+            if is_success and tool_name in ("write_file", "edit_file"):
+                self.session_files += 1
             return
 
         if event_type == "metrics":

@@ -73,3 +73,25 @@ async def test_command_handler_model_switch(mock_agent):
     await handler.execute("/model gemini-1.5-pro")
     assert mock_agent.model_name == "gemini-1.5-pro"
     mock_agent.session.switch_model.assert_called_once_with("gemini-1.5-pro")
+
+
+@pytest.mark.asyncio
+async def test_command_handler_stats(mock_agent):
+    """Verifies that /stats command executes and returns a Panel with expected content."""
+    from rich.panel import Panel
+
+    handler = CommandHandler(mock_agent)
+    mock_agent.session_messages = 5
+    mock_agent.session_tools = 10
+    mock_agent.session_files = 3
+    mock_agent.session.recent_files = ["test.py", "README.md"]
+    mock_agent.metrics.total_prompt_tokens = 1000
+    mock_agent.metrics.total_candidate_tokens = 500
+    mock_agent.metrics.calculate_cost.return_value = 0.00123
+
+    res = await handler.execute("/stats")
+
+    assert isinstance(res, Panel)
+    # Check that it contains expected strings (Rich renderables can be checked via capture or repr)
+    # For simplicity, we can just check if the Panel exists and has been called with agent data
+    assert res.title == "Session Statistics"

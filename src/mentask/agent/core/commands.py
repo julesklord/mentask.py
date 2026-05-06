@@ -8,7 +8,9 @@ import difflib
 import logging
 from typing import Any
 
+from rich.console import Group
 from rich.panel import Panel
+from rich.progress_bar import ProgressBar
 from rich.table import Table
 from rich.text import Text
 
@@ -453,6 +455,8 @@ class CommandHandler:
 
     def _cmd_stats(self) -> Panel:
         """Displays session stats."""
+        from ...core.compression import ContextSnapper
+
         table = Table(box=None, show_header=False, padding=(0, 1))
         table.add_column("Key", style="bold #6366f1")
         table.add_column("Value")
@@ -464,11 +468,32 @@ class CommandHandler:
         table.add_row("🤖 Model", f"[bold yellow]{self.agent.model_name}[/bold yellow]")
         table.add_row("💬 Messages", _("cmd.stats.messages", count=self.agent.session_messages))
         table.add_row("🛠️ Tools", _("cmd.stats.tools", count=self.agent.session_tools))
-        table.add_row("📂 Recent Files", f"[bold]{len(self.agent.session.recent_files)}[/bold]")
+        table.add_row("📝 Files", _("cmd.stats.files", count=self.agent.session_files))
+
+        if self.agent.session.recent_files:
+            recent = ", ".join([f"[cyan]{f}[/]" for f in self.agent.session.recent_files])
+            table.add_row("📂 Recent", recent)
+
         table.add_section()
+
+        # Token & Context Usage
+        snapper = ContextSnapper(self.agent.model_name)
+        total_tokens = self.agent.metrics.total_prompt_tokens + self.agent.metrics.total_candidate_tokens
+        status = snapper.get_token_status(total_tokens)
+
+        progress = ProgressBar(total=100, completed=status["percentage"], width=30, pulse=False)
+        usage_color = "red" if status["is_dangerous"] else "yellow" if status["percentage"] > 50 else "green"
+
         table.add_row(
             "🪙 Tokens",
-            f"[cyan]{self.agent.metrics.total_prompt_tokens + self.agent.metrics.total_candidate_tokens:,}[/] [dim](In: {self.agent.metrics.total_prompt_tokens:,} | Out: {self.agent.metrics.total_candidate_tokens:,})[/dim]",
+            f"[cyan]{total_tokens:,}[/] [dim](In: {self.agent.metrics.total_prompt_tokens:,} | Out: {self.agent.metrics.total_candidate_tokens:,})[/dim]",
+        )
+        table.add_row(
+            "🧠 Context",
+            Group(
+                Text.from_markup(f"[{usage_color}]{status['percentage']}%[/] [dim]of {status['limit'] // 1000}K[/dim]"),
+                progress,
+            ),
         )
         table.add_row("💳 Est. Cost", f"[bold green]${cost:.5f}[/bold green]")
 

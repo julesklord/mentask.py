@@ -118,7 +118,7 @@ def _atomic_write(path: str, content: str) -> None:
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as f:
             f.write(content)
-        if os.path.exists(path):
+        if os.path.exists(path) and not os.path.samefile(path, temp_path):
             shutil.copymode(path, temp_path)
         shutil.move(temp_path, path)
     except Exception:

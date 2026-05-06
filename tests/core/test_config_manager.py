@@ -137,3 +137,33 @@ class TestConfigManagerApiKey:
             cm.save_api_key("my-test-key")
             mock_set.assert_called_with("mentask", "GOOGLE_API_KEY", "my-test-key")
             assert cm.load_api_key() == "my-test-key"
+
+
+    def test_save_api_key_success(self):
+        with (
+            patch("keyring.set_password") as mock_set,
+        ):
+            cm = ConfigManager(_mock_console)
+            # Need to mock console.print to check if it's called properly
+            cm.console = MagicMock()
+
+            result = cm.save_api_key("  test-key-xyz  ", "OpenAI")
+
+            assert result is True
+            mock_set.assert_called_once_with("mentask", "OPENAI_API_KEY", "test-key-xyz")
+            cm.console.print.assert_called_once()
+            assert "[success]" in str(cm.console.print.call_args)
+
+    def test_save_api_key_failure(self):
+        with (
+            patch("keyring.set_password", side_effect=Exception("Keyring error")) as mock_set,
+        ):
+            cm = ConfigManager(_mock_console)
+            cm.console = MagicMock()
+
+            result = cm.save_api_key("test-key-xyz", "Anthropic")
+
+            assert result is False
+            mock_set.assert_called_once_with("mentask", "ANTHROPIC_API_KEY", "test-key-xyz")
+            cm.console.print.assert_called_once()
+            assert "[error]" in str(cm.console.print.call_args)

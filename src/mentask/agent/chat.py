@@ -118,6 +118,9 @@ class ChatAgent:
         self.turn_tokens_prompt = 0
         self.turn_tokens_candidate = 0
 
+        # Autocompletion
+        self._completer = None
+
     def _setup_system_prompt(self):
         """Injects the core identity, knowledge index, project context, and behavioral rules."""
         base_identity = self.identity.read_identity()
@@ -431,6 +434,11 @@ class ChatAgent:
 
         result = await self.commands.execute(user_input)
         renderer.print_command_output(result)
+
+        # After a command, refresh autocompletion in case provider/model changed
+        if cmd in ("/model", "/auth"):
+            await self._update_completer()
+
         return True
 
     def show_context_menu(self) -> None:
@@ -527,6 +535,47 @@ class ChatAgent:
         await self.session.close()
         await self.mcp.shutdown()
 
+    async def _update_completer(self):
+        """Dynamically updates the autocompletion NestedCompleter."""
+        from prompt_toolkit.completion import NestedCompleter
+
+        from ..cli import themes
+
+        # 1. Build basic completion map
+        completion_dict = {cmd: None for cmd in self.commands.get_all_commands()}
+
+        # 2. Add sub-commands
+        completion_dict["/theme"] = {t: None for t in themes.THEMES}
+        completion_dict["/mode"] = {"auto": None, "manual": None}
+        completion_dict["/usage"] = {"--reset": None, "-r": None}
+        completion_dict["/stream"] = {"transient": None, "continuous": None}
+
+        # 3. Dynamic prompt styles
+        if hasattr(self, "active_renderer") and hasattr(self.active_renderer, "prompt_engine"):
+            styles = {s: None for s in self.active_renderer.prompt_engine.STYLES}
+            completion_dict["/prompt"] = {"--theme": styles, "--nerdfonts": {"on": None, "off": None}}
+
+        # 4. Dynamic model fetching
+        try:
+            models = await self.session.list_models()
+            if models:
+                completion_dict["/model"] = {m: None for m in models}
+            else:
+                completion_dict["/model"] = {self.model_name: None}
+        except Exception:
+            completion_dict["/model"] = {self.model_name: None}
+
+        # 5. Update the completer object
+        new_completer = NestedCompleter.from_nested_dict(completion_dict)
+        if self._completer:
+            # We overwrite the instance, PromptSession will use the same reference if passed
+            # or we need to update it on the session object.
+            self._completer.options = new_completer.options
+        else:
+            self._completer = new_completer
+
+        return self._completer
+
     async def start(self) -> None:
         """Rich CLI entry point — streaming renderer with code blocks and think panels."""
         from rich.prompt import Confirm
@@ -583,33 +632,10 @@ class ChatAgent:
                 with patch_stdout(raw=True):
                     renderer.expand_artifact(-1)
 
-            from prompt_toolkit.completion import NestedCompleter
+            # Initialize completer with dynamic data
+            await self._update_completer()
 
-            from ..cli import themes
-
-            # Build nested completion map
-            completion_dict = {cmd: None for cmd in self.commands.get_all_commands()}
-
-            # Add specific sub-commands
-            completion_dict["/theme"] = {t: None for t in themes.THEMES}
-            completion_dict["/mode"] = {"auto": None, "manual": None}
-            completion_dict["/usage"] = {"--reset": None, "-r": None}
-            completion_dict["/stream"] = {"transient": None, "continuous": None}
-
-            # Dynamic prompt styles from engine
-            styles = {s: None for s in renderer.prompt_engine.STYLES}
-            completion_dict["/prompt"] = {"--theme": styles, "--nerdfonts": {"on": None, "off": None}}
-
-            # For /model, we fetch available models from the provider for autocompletion
-            models = await self.session.list_models()
-            if models:
-                completion_dict["/model"] = {m: None for m in models}
-            else:
-                completion_dict["/model"] = {self.model_name: None}
-
-            completer = NestedCompleter.from_nested_dict(completion_dict)
-
-            session = PromptSession(key_bindings=kb, completer=completer)
+            session = PromptSession(key_bindings=kb, completer=self._completer)
         else:
             renderer.print_warning(
                 "Interactive features (Ctrl+O) disabled.\n"

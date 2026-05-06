@@ -22,7 +22,12 @@ class ConfigManager:
         "openai_api_key",
         "deepseek_api_key",
         "anthropic_api_key",
+        "mistral_api_key",
+        "groq_api_key",
+        "together_api_key",
+        "perplexity_api_key",
         "google_search_api_key",
+        "google_cx_id",
     ]
 
     def __init__(self, console):
@@ -113,6 +118,7 @@ class ConfigManager:
                     self.console.print(f"[error][X] Error saving {key} to keyring: {e}[/error]")
                     # Ensure the plaintext key is NOT saved to the JSON file on failure
                     settings_to_save[key] = ""
+                    self.settings[key] = ""  # Clear from memory to prevent retry/leak
 
         path = get_config_path(self.SETTINGS_FILE)
         try:

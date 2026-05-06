@@ -89,6 +89,73 @@ class TestConfigManagerSettings:
             # Falls back to defaults — must not raise
             assert "model_name" in cm.settings
 
+    def test_save_settings_handles_file_write_error(self, tmp_path):
+        """Verifies that an exception during file write is caught and logged."""
+        with patch("mentask.core.config_manager.get_config_path") as mock_path:
+            settings_file = str(tmp_path / "settings.json")
+            mock_path.return_value = settings_file
+
+            cm = ConfigManager(_mock_console)
+            # Override open to raise an error
+            with patch("builtins.open", side_effect=PermissionError("Permission denied")):
+                cm.save_settings()
+
+            # Ensure error is printed
+            error_calls = [
+                call for call in _mock_console.print.call_args_list if "[error][X] Error saving settings" in str(call)
+            ]
+            assert len(error_calls) == 1
+
+    def test_save_settings_handles_keyring_error_on_sensitive_key(self, tmp_path):
+        """Verifies that an exception during keyring save is caught and logged, and plaintext not saved."""
+        with patch("mentask.core.config_manager.get_config_path") as mock_path:
+            settings_file = str(tmp_path / "settings.json")
+            mock_path.return_value = settings_file
+
+            cm = ConfigManager(_mock_console)
+            # Add a sensitive key
+            cm.settings["google_api_key"] = "test-sensitive-key"
+
+            # Override keyring to raise an error
+            _mock_console.print.reset_mock()
+            with patch("keyring.set_password", side_effect=Exception("Keyring failed")):
+                cm.save_settings()
+
+            # Ensure error is printed
+            error_calls = [
+                call
+                for call in _mock_console.print.call_args_list
+                if "[error][X] Error saving google_api_key to keyring" in str(call)
+            ]
+            assert len(error_calls) == 1
+
+            # Verify the json file does not have the plaintext key
+            import json
+
+            with open(settings_file) as f:
+                saved_data = json.load(f)
+
+            assert saved_data.get("google_api_key") == ""
+            assert saved_data.get("google_api_key") != "test-sensitive-key"
+
+    def test_save_settings_success(self, tmp_path):
+        """Verifies successful save_settings where json is written correctly."""
+        with patch("mentask.core.config_manager.get_config_path") as mock_path:
+            settings_file = str(tmp_path / "settings.json")
+            mock_path.return_value = settings_file
+
+            cm = ConfigManager(_mock_console)
+            cm.settings["model_name"] = "test-model"
+
+            cm.save_settings()
+
+            import json
+
+            with open(settings_file) as f:
+                saved_data = json.load(f)
+
+            assert saved_data.get("model_name") == "test-model"
+
 
 class TestConfigManagerApiKey:
     def test_loads_from_env_variable(self):

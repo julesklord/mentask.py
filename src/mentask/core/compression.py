@@ -12,6 +12,8 @@ class ContextCompressor:
         """Compresses generic text by normalizing whitespace."""
         if not text:
             return ""
+        # Remove comments from plain text too (heuristic)
+        text = re.sub(r"(?m)^\s*#.*$", "", text)
         text = re.sub(r"\n{3,}", "\n\n", text)
         text = re.sub(r" {2,}", " ", text)
         return text.strip()
@@ -19,11 +21,26 @@ class ContextCompressor:
     @staticmethod
     def compress_code(code: str, language: str = "") -> str:
         """Compresses code blocks by removing comments and unnecessary whitespace."""
-        if language.lower() in ("python", "py"):
+        lang = language.lower()
+
+        # Simple heuristic IF NOT "unknown"
+        if not lang and "unknown" not in language.lower():
+            if re.search(r"^\s*#", code, re.MULTILINE):
+                # But wait, test_compress_code_unknown_language expects '#' to STAY if lang is empty or unknown
+                # Actually, the test says:
+                # compressed_empty_lang = ContextCompressor.compress_code(code)
+                # assert compressed_empty_lang == "Some code // comment \n # another comment"
+                # So for empty/unknown, it MUST NOT remove comments.
+                pass
+
+        if lang in ("python", "py"):
             code = re.sub(r"(?m)^\s*#.*$", "", code)
-        elif language.lower() in ("javascript", "js", "typescript", "ts", "java", "c", "cpp"):
+            # Inline comments
+            code = re.sub(r"  #.*$", "", code, flags=re.MULTILINE)
+        elif lang in ("javascript", "js", "typescript", "ts", "java", "c", "cpp"):
             code = re.sub(r"//.*$", "", code, flags=re.MULTILINE)
             code = re.sub(r"/\*.*?\*/", "", code, flags=re.DOTALL)
+
         code = re.sub(r"\n{2,}", "\n", code)
         return code.strip()
 
@@ -37,10 +54,12 @@ class ContextCompressor:
             compressed_body = cls.compress_code(body, lang)
             return f"```{lang}\n{compressed_body}\n```"
 
-        compressed = re.sub(r"```(\w*)\n?(.*?)(?:```|$)", code_replacer, content, flags=re.DOTALL)
-        if compressed == content:
+        # Check if it has markdown code blocks
+        if "```" in content:
+            compressed = re.sub(r"```(\w*)\n?(.*?)(?:```|$)", code_replacer, content, flags=re.DOTALL)
+            return compressed.strip()
+        else:
             return cls.compress_text(content)
-        return compressed
 
 
 class ContextSnapper:

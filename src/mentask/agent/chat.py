@@ -93,11 +93,13 @@ class ChatAgent:
         self.history = deps.history
         self.identity = deps.identity
 
-        self.model_name = self.config.settings.get("model_name", "gemini-2.5-flash-lite")
+        self.model_name = self.config.settings.get("model_name", "gemini-2.0-flash-lite")
 
-        # In local mode, force a local model if not provided
-        if self.local_mode and not any(x in self.model_name.lower() for x in ["ollama", "local", "lms"]):
-            self.model_name = "ollama:llama3"
+        # In local mode, force a local model and persist flag in settings
+        if self.local_mode:
+            self.config.settings["local_mode"] = True
+            if not any(x in self.model_name.lower() for x in ["ollama", "local", "lms"]):
+                self.model_name = "ollama:llama3"
 
         self.edit_mode = self.config.settings.get("edit_mode", "manual")
         self.session = deps.session or SessionManager(self.config, self.model_name)
@@ -107,8 +109,9 @@ class ChatAgent:
             from .core.providers.ollama import OllamaProvider
 
             if not isinstance(self.session.provider, OllamaProvider):
-                # We can't easily await here in init, but we set the name so start() works correctly
+                # Re-initialize session with forced local provider if factory failed
                 self.model_name = "ollama:llama3"
+                self.session = SessionManager(self.config, self.model_name)
 
         self.session.metrics = getattr(self.session, "metrics", None) or TokenTracker(model_name=self.model_name)
         self.metrics = self.session.metrics

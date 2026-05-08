@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.24.2] - 2026-05-08
+
+### Changed
+- **Local Mode Enforcement**: Hardened the `--local` flag to strictly enforce Ollama usage and prevent accidental cloud API calls.
+- **Provider Factory**: Updated `get_provider` to force `OllamaProvider` when `local_mode` is enabled, regardless of the requested model name.
+- **Initialization**: `ChatAgent` now ensures local-only providers during startup if the `--local` flag is provided.
+
 ## [0.24.1] - 2026-05-08
 
 ### Added

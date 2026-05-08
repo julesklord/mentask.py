@@ -13,6 +13,12 @@ def get_provider(model_name: str, config: Any) -> BaseProvider:
     Factory function to instantiate the correct provider.
     Consults models.dev via ModelsHub for dynamic dispatch.
     """
+    # 0. Check for local mode enforcement
+    # ChatAgent passes local_mode through dependencies or we check config/settings
+    is_local_mode = False
+    if hasattr(config, "settings"):
+        is_local_mode = config.settings.get("local_mode", False)
+
     # 1. Check if it's a models.dev scoped ID (provider:model)
     provider_prefix = None
     pure_model_name = model_name
@@ -22,7 +28,8 @@ def get_provider(model_name: str, config: Any) -> BaseProvider:
         provider_prefix = provider_prefix.lower()
 
     # 2. Local/Specialized detect logic
-    if provider_prefix == "ollama" or "ollama" in pure_model_name.lower():
+    if is_local_mode or provider_prefix == "ollama" or "ollama" in pure_model_name.lower():
+        # Force OllamaProvider in local mode
         return OllamaProvider(model_name, config)
 
     # 3. Consult models.dev Hub for metadata

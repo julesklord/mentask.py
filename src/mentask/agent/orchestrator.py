@@ -166,11 +166,11 @@ class AgentOrchestrator:
                 break
 
             # Redundancy detection: check if the same tool calls with same args are being repeated
-            current_calls = [(tc.name, tc.args) for tc in assistant_msg.tool_calls]
+            current_calls = [(tc.name, tc.arguments) for tc in assistant_msg.tool_calls]
             previous_calls = []
             for m in reversed(history[:-1]):
                 if m.role == Role.ASSISTANT and m.tool_calls:
-                    previous_calls = [(tc.name, tc.args) for tc in m.tool_calls]
+                    previous_calls = [(tc.name, tc.arguments) for tc in m.tool_calls]
                     break
             
             if current_calls == previous_calls:

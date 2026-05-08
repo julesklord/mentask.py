@@ -110,7 +110,7 @@ class ChatAgent:
                 # We can't easily await here in init, but we set the name so start() works correctly
                 self.model_name = "ollama:llama3"
 
-        self.session.metrics = self.session.metrics or TokenTracker(model_name=self.model_name)
+        self.session.metrics = getattr(self.session, "metrics", None) or TokenTracker(model_name=self.model_name)
         self.metrics = self.session.metrics
         self.context = deps.context
         self.commands = CommandHandler(self)
@@ -582,7 +582,9 @@ class ChatAgent:
         from ..cli import themes
 
         # 1. Build basic completion map
-        completion_dict: dict[str, Any] = {cmd: None for cmd in self.commands.get_all_commands()}
+        completion_dict: dict[str, Any] = {}
+        for cmd in self.commands.get_all_commands():
+            completion_dict[cmd] = None
 
         # 2. Add sub-commands
         completion_dict["/theme"] = {t: None for t in themes.THEMES}
@@ -601,15 +603,12 @@ class ChatAgent:
             health_data = getattr(self, "model_health", {})
 
             if models:
-                model_options = {}
+                model_options: dict[str, Any] = {}
                 for m in models:
                     is_ok, error = health_data.get(m, (True, None))
                     if is_ok:
-                        # Normal available model
                         model_options[m] = None
                     else:
-                        # Greyed out feel for prompt_toolkit isn't direct, but we add the error code
-                        # We use a display string if possible, or just append it to the key
                         display_name = f"{m} ({error})"
                         model_options[display_name] = None
 
@@ -622,8 +621,6 @@ class ChatAgent:
         # 5. Update the completer object
         new_completer = NestedCompleter.from_nested_dict(completion_dict)
         if self._completer:
-            # We overwrite the instance, PromptSession will use the same reference if passed
-            # or we need to update it on the session object.
             self._completer.options = new_completer.options
         else:
             self._completer = new_completer

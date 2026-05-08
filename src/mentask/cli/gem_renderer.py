@@ -244,6 +244,19 @@ class GemStyleRenderer:
     def _build_view(self, show_cursor: bool = True) -> Group:
         """Construct a Group with only the UNPRINTED committed content + live text."""
         items = list(self.committed_buffer[self.printed_count :])
+        
+        # Natural message inline header logic
+        if hasattr(self, "_active_header") and self._active_header and self.printed_count == 0 and not items:
+            from rich.table import Table
+            grid = Table.grid(padding=(0, 1))
+            grid.add_column()
+            grid.add_column()
+            
+            cursor = f" {icons.brand}" if show_cursor else ""
+            # We use Text for the live stream part to avoid Markdown jitter
+            grid.add_row(self._active_header, Text(self.live_text + cursor, style=f"bold {self.C_BRAND}"))
+            return Group(grid)
+
         if self.live_text:
             cursor = f" {icons.brand}" if show_cursor else ""
             items.append(Text(self.live_text + cursor, style=f"bold {self.C_BRAND}"))
@@ -546,9 +559,11 @@ class GemStyleRenderer:
         # Extra spacing for natural messages to separate from previous tool activity
         if is_natural:
             self.console.print("\n")
+            self._active_header = header
         else:
             self.console.print()
-        self.console.print(header, end=" " if is_natural else "\n")
+            self.console.print(header)
+            self._active_header = None
 
     def print_thought(self, text: str) -> None:
         if not text.strip():

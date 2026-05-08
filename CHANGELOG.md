@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.24.1] - 2026-05-08
+
+### Added
+- **Inline Agent Header**: Refined the natural message layout to render the agent header inline with the response text, matching the user prompt's visual hierarchy.
+
+### Fixed
+- **Diagnostics**: Resolved 24 static analysis errors in `ChatAgent`, `SessionManager`, and `OpenAIProvider`.
+- **Runtime Errors**: Fixed a `TypeError` in `ToolCall` attribute access (`args` vs `arguments`) and provider metadata handling.
+- **Async Compatibility**: Standardized `generate_stream` across providers to ensure consistent async generator behavior.
+
 ## [0.24.0] - 2026-05-08
 
 ### Added

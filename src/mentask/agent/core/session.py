@@ -53,7 +53,7 @@ class SessionManager:
         self.provider = get_provider(new_model_name, self.config)
 
         # Update metrics to use the new model's pricing
-        if hasattr(self, "metrics") and self.metrics:
+        if self.metrics:
             self.metrics.model_name = new_model_name
 
         from ...core.compression import ContextSnapper

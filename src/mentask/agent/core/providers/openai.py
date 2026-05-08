@@ -247,7 +247,9 @@ class OpenAIProvider(BaseProvider):
         model_list = []
         for m in results:
             m_id = m["id"]
-            p_id = m.get("_provider")
+            provider_meta = m.get("_provider")
+            p_id = provider_meta.get("id") if isinstance(provider_meta, dict) else provider_meta
+            
             if p_id and p_id != "openai":
                 model_list.append(f"{p_id}:{m_id}")
             else:
@@ -272,9 +274,10 @@ class OpenAIProvider(BaseProvider):
 
         def _do_request():
             try:
+                from urllib.error import HTTPError
                 with urllib.request.urlopen(req, timeout=10) as response:
                     return True, None
-            except urllib.error.HTTPError as e:
+            except HTTPError as e:
                 return False, str(e.code)
             except Exception as e:
                 return False, "ERR"

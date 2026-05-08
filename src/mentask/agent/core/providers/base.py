@@ -20,7 +20,7 @@ class BaseProvider(ABC):
         pass
 
     @abstractmethod
-    def generate_stream(
+    async def generate_stream(
         self,
         history: list[Message],
         tools_schema: list[dict[str, Any]],
@@ -30,7 +30,7 @@ class BaseProvider(ABC):
         Streams a response from the model.
         Yields chunks of type: text, thought, tool_call, metrics.
         """
-        pass
+        yield {}  # Dummy yield to make it an async generator
 
     async def list_models(self) -> list[str]:
         """Returns a list of available models for this provider."""

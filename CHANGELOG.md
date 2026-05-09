@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.25.0] - 2026-05-08
+
+### Added
+- **CLI Bridging Architecture**: MentAsk can now be orchestrated by external CLI agents (like `gemini-cli`, `codex`, `opencode`) using the new `CLIProvider`.
+- **Auto-Discovery**: `ModelsHub` automatically detects supported CLI agents in the user's `PATH` and exposes them via the `cli:` provider prefix (e.g., `/model cli:gemini-cli`).
+- **Prompt Translation**: Implemented dynamic translation of MentAsk's internal tool schemas into a strict JSON-enforced instruction manual for external agents.
+
 ## [0.24.4] - 2026-05-08
 
 ### Fixed

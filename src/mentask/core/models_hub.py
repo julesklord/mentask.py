@@ -116,15 +116,18 @@ class ModelsHub:
             self._flat_models[f"ollama:{m_id}"] = m_info
 
     def sync_local(self, endpoint: str = "http://localhost:11434/api/tags"):
-        """Discovers models from a local Ollama instance."""
+        """Discovers models from a local Ollama instance and local CLI binaries."""
         _logger.debug(f"Syncing local models from {endpoint}...")
+
+        new_local = {}
+
+        # 1. Discover Ollama models
         try:
             req = urllib.request.Request(endpoint)
             with urllib.request.urlopen(req, timeout=2) as response:
                 data = json.load(response)
                 models = data.get("models", [])
 
-                new_local = {}
                 for m in models:
                     name = m.get("name")
                     if not name:
@@ -144,12 +147,39 @@ class ModelsHub:
                         },
                     }
 
-                self._local_models = new_local
-                self._rebuild_index()
                 _logger.info(f"Discovered {len(new_local)} local Ollama models.")
         except Exception as e:
             # Silent fail for local discovery (e.g. Ollama not running)
             _logger.debug(f"Local Ollama sync skipped: {e}")
+
+        # 2. Discover supported CLI agents
+        import shutil
+
+        known_clis = {"gemini-cli": "Gemini CLI", "codex": "Codex CLI", "opencode": "OpenCode CLI"}
+
+        cli_count = 0
+        for bin_name, display_name in known_clis.items():
+            if shutil.which(bin_name):
+                # Use cli: as the provider prefix to map to CLIProvider
+                new_local[bin_name] = {
+                    "id": bin_name,
+                    "name": display_name,
+                    "cost": {"input": 0, "output": 0},
+                    "limit": {"context": 1048576, "output": 8192},  # Assume large contexts for modern CLIs
+                    "_provider": {
+                        "id": "cli",
+                        "name": "CLI Bridge",
+                        "api": "local",
+                        "env": [],
+                    },
+                }
+                cli_count += 1
+
+        if cli_count > 0:
+            _logger.info(f"Discovered {cli_count} local CLI bridges.")
+
+        self._local_models = new_local
+        self._rebuild_index()
 
     def sync(self, force: bool = False, skip_local: bool = False):
         """

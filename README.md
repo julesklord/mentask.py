@@ -335,6 +335,15 @@ mentask will:
 
 You now have a reusable audio batch conversion tool. Forever.
 
+### Workflow 4: Orchestration via External CLI Agents (CLI Bridging)
+
+MentAsk can act as the execution "body" while being orchestrated by another CLI agent (the "brain"). If you have tools like `gemini-cli` or `codex` installed in your PATH, MentAsk will auto-discover them.
+
+```bash
+/model cli:gemini-cli
+```
+MentAsk will seamlessly translate its internal tool schemas and conversation history into a structured prompt, execute the external binary, and parse its standard output to execute tools on its behalf.
+
 ---
 
 ## The Guard (Zero-Trust Security)

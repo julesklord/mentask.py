@@ -114,3 +114,29 @@ def test_smart_compress_code_replacer_edge_cases():
     # No language, no body, no newline
     content = "```"
     assert ContextCompressor.smart_compress(content) == "```\n\n```"
+
+
+def test_compress_code_exhaustive():
+    # Test consecutive newlines normalization
+    code_with_newlines = "def foo():\n\n\n\n    return 1\n\n"
+    assert ContextCompressor.compress_code(code_with_newlines, "python") == "def foo():\n    return 1"
+
+    # Test Python inline comments removal
+    python_code = "x = 1  # inline comment\n# Full line comment\ny = 2"
+    assert ContextCompressor.compress_code(python_code, "python") == "x = 1\ny = 2"
+
+    # Test Javascript multiline comments removal
+    js_code = "/* block \n comment */\nfunction test() {\n    // line comment\n    return true;\n}"
+    assert ContextCompressor.compress_code(js_code, "javascript") == "function test() {\n    \n    return true;\n}"
+
+    # Test Javascript consecutive newlines
+    js_code_newlines = "let x = 1;\n\n\n\nlet y = 2;\n"
+    assert ContextCompressor.compress_code(js_code_newlines, "javascript") == "let x = 1;\nlet y = 2;"
+
+    # Test stripping leading/trailing whitespace
+    padded_code = "   \n\n  def test():\n    pass  \n\n   "
+    assert ContextCompressor.compress_code(padded_code, "python") == "def test():\n    pass"
+
+    # Test Python without language specified - shouldn't touch comments
+    python_no_lang = "# comment\nprint('hello')  # inline"
+    assert ContextCompressor.compress_code(python_no_lang) == "# comment\nprint('hello')  # inline"

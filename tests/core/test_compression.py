@@ -114,3 +114,25 @@ def test_smart_compress_code_replacer_edge_cases():
     # No language, no body, no newline
     content = "```"
     assert ContextCompressor.smart_compress(content) == "```\n\n```"
+
+
+def test_code_replacer_happy_path():
+    class MockMatch:
+        def group(self, index):
+            if index == 1:
+                return "python"
+            if index == 2:
+                return "x = 10\n# comment"
+            return None
+
+    result = ContextCompressor._code_replacer(MockMatch())
+    assert result == "```python\nx = 10\n```"
+
+
+def test_code_replacer_none_groups():
+    class MockMatch:
+        def group(self, index):
+            return None
+
+    result = ContextCompressor._code_replacer(MockMatch())
+    assert result == "```\n\n```"

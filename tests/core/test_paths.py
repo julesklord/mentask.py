@@ -109,3 +109,16 @@ def test_get_standard_knowledge_dir():
     assert knowledge_dir.name == "standard"
     assert knowledge_dir.parent.name == "agent"
     assert knowledge_dir.parent.parent.name == "mentask"
+
+
+def test_get_global_memory_path(mock_home):
+    from mentask.core.paths import get_global_memory_path
+
+    memory_path = get_global_memory_path()
+
+    # Check that it returns a string
+    assert isinstance(memory_path, str)
+
+    # Check that the path is correct
+    expected_path = str(mock_home / ".mentask" / "memory.md")
+    assert memory_path == expected_path

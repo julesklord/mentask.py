@@ -59,7 +59,7 @@ class PromptEngine:
         if not segments:
             return res
 
-        for i, seg in enumerate(segments):
+        for _i, seg in enumerate(segments):
             content = f"{seg.icon} {seg.text}" if seg.icon else seg.text
             res.append(self.L_HALF, style=seg.bg or seg.fg)
             res.append(f" {content} ", style=f"{seg.fg} on {seg.bg}" if seg.bg else seg.fg)

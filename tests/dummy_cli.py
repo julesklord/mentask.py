@@ -8,7 +8,7 @@ def main():
         print("Usage: dummy_cli.py <prompt>")
         sys.exit(1)
 
-    prompt = sys.argv[1]
+    sys.argv[1]
 
     # Simulate processing delay
     time.sleep(1)

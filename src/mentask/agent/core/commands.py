@@ -299,7 +299,7 @@ class CommandHandler:
                 coros = [self.agent.session.provider.check_health(m) for m in batch]
                 batch_results = await asyncio.gather(*coros, return_exceptions=True)
 
-                for m_id, res in zip(batch, batch_results):
+                for m_id, res in zip(batch, batch_results, strict=False):
                     if isinstance(res, tuple):
                         results[m_id] = res
                     else:

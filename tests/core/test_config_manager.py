@@ -233,3 +233,27 @@ class TestConfigManagerApiKey:
             mock_set.assert_called_once_with("mentask", "ANTHROPIC_API_KEY", "test-key-xyz")
             cm.console.print.assert_called_once()
             assert "[error]" in str(cm.console.print.call_args)
+
+
+    def test_save_api_key_default_provider(self):
+        with patch("keyring.set_password") as mock_set:
+            cm = ConfigManager(_mock_console)
+            cm.console = MagicMock()
+
+            result = cm.save_api_key("default-key-123")
+
+            assert result is True
+            mock_set.assert_called_once_with("mentask", "GOOGLE_API_KEY", "default-key-123")
+            cm.console.print.assert_called_once()
+            assert "[success]" in str(cm.console.print.call_args)
+
+
+    def test_save_api_key_strips_whitespace(self):
+        with patch("keyring.set_password") as mock_set:
+            cm = ConfigManager(_mock_console)
+            cm.console = MagicMock()
+
+            result = cm.save_api_key("  spaced-key-123  \n", "OpenAI")
+
+            assert result is True
+            mock_set.assert_called_once_with("mentask", "OPENAI_API_KEY", "spaced-key-123")

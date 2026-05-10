@@ -132,7 +132,7 @@ def read_file(path: str, start_line: int = None, end_line: int = None, char_limi
 
         info_header = f"--- Reading '{path}' (Lines {start} to {end} of {total_lines}) ---\n"
         if constraint["strategy"] == "chunked" and end < total_lines:
-            info_header += f"[!] Note: File is large. Read next chunk with start_line={end+1}\n"
+            info_header += f"[!] Note: File is large. Read next chunk with start_line={end + 1}\n"
 
         return info_header + content
 
@@ -166,7 +166,7 @@ def edit_file(path: str, find_text: str, replace_text: str) -> str:
     """
     Finds an exact block of text in a local file and replaces it.
     Uses atomic writing (temporary file + rename) and creates a `.bkp` backup
-    to prevent data loss and corruption.
+    to prevent data loss and corruption. Includes proactive AST validation for Python.
 
     Args:
         path: Path to the file to modify.
@@ -186,6 +186,15 @@ def edit_file(path: str, find_text: str, replace_text: str) -> str:
             # In that case, find_text should be empty.
             if find_text:
                 return f"Error: File '{path}' does not exist, so we cannot search for text. To create a new file, leave 'find_text' empty."
+
+            # AST Check for new Python files
+            if path.endswith(".py"):
+                import ast
+
+                try:
+                    ast.parse(replace_text)
+                except SyntaxError as e:
+                    return f"Error: New file '{path}' contains syntax errors: {e}"
 
             _atomic_write(path, replace_text)
 
@@ -213,11 +222,28 @@ def edit_file(path: str, find_text: str, replace_text: str) -> str:
                 f"to uniquely identify the target block."
             )
 
+        # Proactive AST Validation for Python files
+        if path.endswith(".py"):
+            import ast
+
+            # 1. Verify original is valid
+            try:
+                ast.parse(content)
+            except SyntaxError as e:
+                # If already broken, we warn but allow edit if it aims to fix it
+                pass
+
+            # 2. Verify result is valid
+            new_content = content.replace(find_text, replace_text, 1)
+            try:
+                ast.parse(new_content)
+            except SyntaxError as e:
+                return f"Error: Proposed change would introduce a syntax error in '{path}': {e}. Refusing to apply."
+        else:
+            new_content = content.replace(find_text, replace_text, 1)
+
         # Create a backup before proceeding in the centralized store
         backup_path = _create_backup(path)
-
-        # Apply replacement (safe: exactly one occurrence guaranteed above)
-        new_content = content.replace(find_text, replace_text, 1)
 
         # Atomic write: write to a temporary file in the same directory and then rename
         # This prevents file corruption if the process is interrupted during writing.

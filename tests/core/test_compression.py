@@ -1,4 +1,4 @@
-from mentask.core.compression import ContextCompressor
+from mentask.core.compression import ContextCompressor, ContextSnapper
 
 
 def test_smart_compress_basic():
@@ -114,3 +114,36 @@ def test_smart_compress_code_replacer_edge_cases():
     # No language, no body, no newline
     content = "```"
     assert ContextCompressor.smart_compress(content) == "```\n\n```"
+
+
+def test_should_snap():
+    # ContextSnapper sets limit for "default" model to 128_000.
+    # At 0.5 threshold, the threshold token count is 64_000.
+    snapper = ContextSnapper("default", threshold_pct=0.5)
+
+    # Below threshold
+    assert not snapper.should_snap(63_999)
+    # Exactly threshold
+    assert snapper.should_snap(64_000)
+    # Above threshold
+    assert snapper.should_snap(64_001)
+
+
+def test_get_token_status():
+    # ContextSnapper sets limit for "default" model to 128_000.
+    snapper = ContextSnapper("default")
+
+    # Safe count (e.g. 50% of 128_000)
+    status_safe = snapper.get_token_status(64_000)
+    assert status_safe["tokens"] == 64_000
+    assert status_safe["limit"] == 128_000
+    assert status_safe["percentage"] == 50.0
+    assert not status_safe["is_dangerous"]
+
+    # Dangerous count (> 90% of 128_000, i.e., > 115_200)
+    status_danger = snapper.get_token_status(115_201)
+    assert status_danger["tokens"] == 115_201
+    assert status_danger["limit"] == 128_000
+    # percentage will be round(115201/128000*100, 2)
+    assert status_danger["percentage"] >= 90.0
+    assert status_danger["is_dangerous"]

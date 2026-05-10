@@ -646,17 +646,22 @@ class CommandHandler:
         if local_settings.exists():
             return f"[warning]Local project already initialized:[/warning] [dim]{local_dir}[/dim]"
         try:
-            local_dir.mkdir(parents=True, exist_ok=True)
-            local_sessions.mkdir(exist_ok=True)
             settings_data = self.agent.config.settings.copy()
-            with open(local_settings, "w", encoding="utf-8") as f:
-                json.dump(settings_data, f, indent=4)
-            if not local_identity.exists():
-                local_identity.write_text(
-                    f"# mentask Project Identity: {cwd.name}\n\n"
-                    "Define project-specific rules, personality, or constraints here.\n",
-                    encoding="utf-8",
-                )
+            import asyncio
+
+            def _write_files():
+                local_dir.mkdir(parents=True, exist_ok=True)
+                local_sessions.mkdir(exist_ok=True)
+                with open(local_settings, "w", encoding="utf-8") as f:
+                    json.dump(settings_data, f, indent=4)
+                if not local_identity.exists():
+                    local_identity.write_text(
+                        f"# mentask Project Identity: {cwd.name}\n\n"
+                        "Define project-specific rules, personality, or constraints here.\n",
+                        encoding="utf-8",
+                    )
+
+            await asyncio.to_thread(_write_files)
             await self.agent.orchestrator.trust.add_trust(str(cwd))
             return (
                 f"[success]✓ Local project initialized successfully![/success]\n"

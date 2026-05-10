@@ -233,3 +233,38 @@ class TestConfigManagerApiKey:
             mock_set.assert_called_once_with("mentask", "ANTHROPIC_API_KEY", "test-key-xyz")
             cm.console.print.assert_called_once()
             assert "[error]" in str(cm.console.print.call_args)
+
+    def test_save_api_key_default_provider(self):
+        with patch("keyring.set_password") as mock_set:
+            cm = ConfigManager(_mock_console)
+            cm.console = MagicMock()
+            result = cm.save_api_key("default-key")
+            assert result is True
+            mock_set.assert_called_once_with("mentask", "GOOGLE_API_KEY", "default-key")
+
+    def test_load_api_key_return_source(self):
+        with (
+            patch.dict(os.environ, {"GOOGLE_API_KEY": "env-key"}, clear=True),
+            patch("keyring.get_password", return_value="keyring-key"),
+            patch("mentask.core.config_manager.ConfigManager.load_settings"),
+        ):
+            cm = ConfigManager(_mock_console)
+            # Clear settings so we don't accidentally get Local Settings
+            cm.settings = {}
+            result = cm.load_api_key(return_source=True)
+            assert result == ("keyring-key", "Keyring")
+
+    def test_load_api_key_keyring_exception(self):
+        with (
+            patch.dict(os.environ, {"GOOGLE_API_KEY": "env-key"}, clear=True),
+            patch("keyring.get_password", side_effect=Exception("Keyring failed")),
+            patch("mentask.core.config_manager.ConfigManager.load_settings"),
+        ):
+            cm = ConfigManager(_mock_console)
+            cm.settings = {}
+            cm.console = MagicMock()
+            result = cm.load_api_key(return_source=True)
+            # Should fall back to environment variable
+            assert result == ("env-key", "Environment Variable")
+            cm.console.print.assert_called_once()
+            assert "[error]" in str(cm.console.print.call_args)

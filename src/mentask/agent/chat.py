@@ -48,6 +48,7 @@ from .tools.shell_tools import ShellTool
 from .tools.user_tool import AskUserTool
 from .tools.web_tool import WebFetchTool, WebSearchTool
 from .tools.working_memory_tool import WorkingMemoryTool
+from .tools.worktree_tools import EnterWorktreeTool, ExitWorktreeTool
 
 _logger = logging.getLogger("mentask")
 
@@ -195,6 +196,8 @@ class ChatAgent:
         registry.register(AnalyzeTool())
         registry.register(ForgePluginTool(registry))
         registry.register(SubagentTool(self.session, registry, self.config))
+        registry.register(EnterWorktreeTool())
+        registry.register(ExitWorktreeTool())
 
         if self.config.settings.get("web_search_enabled", True):
             registry.register(WebSearchTool(self.config))

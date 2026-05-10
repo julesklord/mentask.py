@@ -77,15 +77,15 @@ class TestEditFile:
         monkeypatch.setattr("mentask.tools.file_tools.get_backups_dir", lambda: tmp_path / "backups")
         monkeypatch.chdir(tmp_path)
         f = tmp_path / "code.py"
-        f.write_text("original content")
-        edit_file(str(f), "original content", "new content")
+        f.write_text("x = 10\n")
+        edit_file(str(f), "x = 10", "x = 20")
 
         import glob
 
         bkp_list = glob.glob(str(tmp_path / "backups" / "**" / "code.py"), recursive=True)
         assert len(bkp_list) > 0
         with open(bkp_list[0], encoding="utf-8") as f:
-            assert f.read() == "original content"
+            assert f.read() == "x = 10\n"
 
     def test_find_text_not_found_returns_error(self, tmp_path):
         f = tmp_path / "code.py"

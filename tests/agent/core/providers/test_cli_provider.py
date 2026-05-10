@@ -10,8 +10,8 @@ async def test_cli_provider_stream():
     config = ConfigManager(Console())
     p = get_provider("cli:python", config)
 
-    # We will use 'python tests/dummy_cli.py' as the binary to test.
-    p.cli_command = "python tests/dummy_cli.py"  # type: ignore
+    # We will use 'python tests/agent/core/providers/dummy_cli.py' as the binary to test.
+    p.cli_command = "python tests/agent/core/providers/dummy_cli.py"  # type: ignore
 
     events = []
     async for chunk in p.generate_stream([], [], {"system_instruction": "Test"}):

@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.27.0] - 2026-05-09
+
+### Added
+- **Agentic Delegation**: Introduced the `SubagentTool` to allow MentAsk to spawn isolated sub-agents for specific tasks.
+- **Generalist Blueprint**: Added a `generalist` sub-agent profile that has full access to the workspace for complex, multi-step problem solving.
+- **Enhanced Loop Protection**: The `AgentOrchestrator` now intercepts identical text outputs and tool calls across turns to break infinite loops effectively.
+
 ## [0.26.1] - 2026-05-09
 
 ### Fixed

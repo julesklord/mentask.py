@@ -10,7 +10,7 @@ from ..core.retry_strategy import TimeoutRecoveryManager
 from ..core.summarizer import Summarizer
 from .core.execution import ExecutionManager
 from .core.provider import ProviderManager
-from .schema import AgentTurnStatus, Message, Role
+from .schema import AgentTurnStatus, AssistantMessage, Message, Role
 from .tools.base import ToolRegistry
 
 _logger = logging.getLogger("mentask")
@@ -216,22 +216,39 @@ class AgentOrchestrator:
                 yield {"status": AgentTurnStatus.COMPLETED}
                 break
 
-            # Redundancy detection: check if the same tool calls with same args are being repeated
+            # Redundancy detection: check if the same tool calls OR text are being repeated
             current_calls = [(tc.name, tc.arguments) for tc in assistant_msg.tool_calls]
+            current_text = str(assistant_msg.content).strip()
+
             previous_calls = []
+            previous_text = ""
             for m in reversed(history[:-1]):
-                if m.role == Role.ASSISTANT and m.tool_calls:
-                    previous_calls = [(tc.name, tc.arguments) for tc in m.tool_calls]
+                if isinstance(m, AssistantMessage):
+                    if m.tool_calls:
+                        previous_calls = [(tc.name, tc.arguments) for tc in m.tool_calls]
+                    if m.content:
+                        previous_text = str(m.content).strip()
                     break
 
-            if current_calls == previous_calls:
-                _logger.warning("Redundant tool calls detected. Forcing critique.")
+            # Loop detection: check for identical tool calls or identical text
+            is_loop = False
+            loop_reason = ""
+
+            if current_calls and current_calls == previous_calls:
+                is_loop = True
+                loop_reason = "Repeated tool calls"
+            elif not current_calls and current_text and current_text == previous_text:
+                # Only flag text loop if no tools are involved, to allow tool-using agents to talk
+                is_loop = True
+                loop_reason = "Repeated text response"
+
+            if is_loop:
+                _logger.warning(f"Loop detected ({loop_reason}). Forcing critique.")
                 critique_prompt = (
-                    "SYSTEM ALERT: You are repeating the exact same tool calls as the previous turn. "
-                    "This indicates you are stuck in a loop. STOP and rethink your strategy.\n"
-                    "1. Why did the previous call not achieve the desired state?\n"
-                    "2. What different approach can you take?\n"
-                    "DO NOT repeat the same failed command again."
+                    f"SYSTEM ALERT: Potential loop detected. Details: {loop_reason}.\n"
+                    "Please take a step back and confirm you're making forward progress. "
+                    "If not, take a step back, analyze your previous actions and rethink how you're approaching the problem. "
+                    "Avoid repeating the same tool calls or responses without new results."
                 )
                 history.append(Message(role=Role.SYSTEM, content=critique_prompt))
                 yield {"status": AgentTurnStatus.THINKING}

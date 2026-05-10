@@ -140,3 +140,45 @@ def test_reset_historical_file_not_exists(mock_get_log_path, mock_exists, mock_r
     assert clean_tracker.total_saved_tokens == 0
     assert clean_tracker.total_prompt_tokens == 0
     assert clean_tracker.total_candidate_tokens == 0
+
+
+@patch.object(TokenTracker, "calculate_cost", side_effect=[10.0, 2.0])
+def test_get_historical_report(mock_calculate_cost, clean_tracker):
+    """Verifies that get_historical_report returns correct stats."""
+    clean_tracker.historical_prompt = 5000
+    clean_tracker.historical_candidate = 2000
+    clean_tracker.total_saved_tokens = 1000
+
+    report = clean_tracker.get_historical_report()
+
+    assert mock_calculate_cost.call_count == 2
+    mock_calculate_cost.assert_any_call(5000, 2000)
+    mock_calculate_cost.assert_any_call(1000, 0)
+
+    assert report == {
+        "prompt": 5000,
+        "candidate": 2000,
+        "total": 7000,
+        "cost": 10.0,
+        "saved_tokens": 1000,
+        "saved_cost": 2.0,
+    }
+
+
+@patch.object(TokenTracker, "calculate_cost", return_value=0.0)
+def test_get_historical_report_default_state(mock_calculate_cost, clean_tracker):
+    """Verifies that get_historical_report handles zero values correctly."""
+    clean_tracker.historical_prompt = 0
+    clean_tracker.historical_candidate = 0
+    clean_tracker.total_saved_tokens = 0
+
+    report = clean_tracker.get_historical_report()
+
+    assert report == {
+        "prompt": 0,
+        "candidate": 0,
+        "total": 0,
+        "cost": 0.0,
+        "saved_tokens": 0,
+        "saved_cost": 0.0,
+    }

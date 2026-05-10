@@ -173,6 +173,15 @@ class ChatAgent:
             f"CURRENT_TIME: {timestamp} ({day_name})\n"
         )
 
+        if self.config.settings.get("readonly_mode", False):
+            self.system_prompt += (
+                "\n## READ-ONLY MODE ACTIVE\n"
+                "You are currently in a restricted READ-ONLY mode. Your primary goal is to analyze, read, and explore.\n"
+                "- DO NOT modify, delete, or overwrite any existing files or directories.\n"
+                "- You ARE permitted to create NEW files if they are necessary for your analysis or to provide the requested output (e.g., creating a report, a scratchpad, or a new script as requested).\n"
+                "- If you need to suggest changes to existing code, provide them in your response or in a new file, but DO NOT apply them to the original files.\n"
+            )
+
         self.session_messages = 0
         self.session_tools = 0
         self.session_files = 0
@@ -499,19 +508,19 @@ class ChatAgent:
         self.active_renderer.console.print("\n")
         self.active_renderer.console.print(
             Panel(
-                "[bold]Selecciona tu contexto de trabajo[/bold]\n"
-                + "1. 🧑‍💻 Coding (Ingeniería de software)\n"
-                + "2. 🎵 Music Production (Producción musical)\n"
-                + "3. 📊 Analysis (Análisis de datos)\n"
-                + "4. 🎨 Creative (Creativo)\n"
+                "[bold]Select your working context[/bold]\n"
+                + "1. 🧑‍💻 Coding (Software engineering)\n"
+                + "2. 🎵 Music Production (Music production)\n"
+                + "3. 📊 Analysis (Data analysis)\n"
+                + "4. 🎨 Creative (Creative)\n"
                 + "5. 💬 General (General)",
-                title="[bold cyan]Contextos Disponibles[/bold cyan]",
+                title="[bold cyan]Available Contexts[/bold cyan]",
                 border_style="cyan",
                 padding=(1, 2),
             )
         )
 
-        choice = Prompt.ask("[cyan]Selecciona contexto[/cyan]", choices=["1", "2", "3", "4", "5"], default="5")
+        choice = Prompt.ask("[cyan]Select context[/cyan]", choices=["1", "2", "3", "4", "5"], default="5")
 
         context_map = {
             "1": ContextType.CODING,
@@ -538,9 +547,9 @@ class ChatAgent:
         self.active_renderer.console.print(
             Panel(
                 f"[bold cyan]{prompt.context.value.upper()}[/bold cyan]\n\n"
-                f"[yellow]Tono:[/yellow] {prompt.tone}\n"
+                f"[yellow]Tone:[/yellow] {prompt.tone}\n"
                 f"[yellow]Constraints:[/yellow]\n" + "\n".join(f"  • {c}" for c in prompt.constraints),
-                title="[bold]Detalles del Contexto[/bold]",
+                title="[bold]Context Details[/bold]",
                 border_style="cyan",
                 padding=(1, 2),
             )
@@ -599,6 +608,8 @@ class ChatAgent:
         # 2. Add sub-commands
         completion_dict["/theme"] = {t: None for t in themes.THEMES}
         completion_dict["/mode"] = {"auto": None, "manual": None}
+        completion_dict["/multiline"] = {"true": None, "false": None}
+        completion_dict["/readonly"] = {"true": None, "false": None}
         completion_dict["/usage"] = {"--reset": None, "-r": None}
         completion_dict["/stream"] = {"transient": None, "continuous": None}
 
@@ -680,6 +691,7 @@ class ChatAgent:
         sessions, history_data, is_new_session = self._restore_last_session()
 
         await self.session.ensure_session(self._build_config(), history=None)
+        await self.orchestrator.executor.initialize()
 
         renderer.print_welcome(__version__, self.model_name, self.edit_mode)
         await self._ensure_trust(renderer)
@@ -758,7 +770,8 @@ class ChatAgent:
 
                     with patch_stdout():
                         try:
-                            user_input = (await session.prompt_async(prompt_msg)).strip()
+                            is_multiline = self.config.settings.get("multiline_prompt", False)
+                            user_input = (await session.prompt_async(prompt_msg, multiline=is_multiline)).strip()
                         except (EOFError, KeyboardInterrupt):
                             break
                 else:

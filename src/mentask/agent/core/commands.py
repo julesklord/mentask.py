@@ -47,12 +47,18 @@ COMMAND_METADATA = {
         "category": "Config",
     },
     "/theme": {"desc": "List or change UI themes", "example": "/theme [name]", "category": "Config"},
+    "/multiline": {"desc": "Toggle multiline prompt mode", "example": "/multiline [true|false]", "category": "Config"},
     "/init": {"desc": "Initialize local project configuration directory", "example": "/init", "category": "Config"},
     "/prompt": {"desc": "Customize prompt style and icons", "example": "/prompt --theme atomic", "category": "Config"},
     # --- Security ---
     "/auth": {"desc": "Sets API Key for a provider", "example": "/auth <key> [provider]", "category": "Security"},
     "/trust": {"desc": "Trust current directory for auto-execution", "example": "/trust", "category": "Security"},
     "/untrust": {"desc": "Remove trust from current directory", "example": "/untrust", "category": "Security"},
+    "/readonly": {
+        "desc": "Restrict agent to read-only operations on existing files",
+        "example": "/readonly [true|false]",
+        "category": "Security",
+    },
     # --- Stats & Tools ---
     "/usage": {"desc": "Show historical token usage", "example": "/usage [--reset]", "category": "Stats"},
     "/stats": {"desc": "Show current session statistics", "example": "/stats", "category": "Stats"},
@@ -119,6 +125,8 @@ class CommandHandler:
             return self._cmd_stats()
         elif command == "/theme":
             return self._cmd_theme(args)
+        elif command == "/multiline":
+            return self._cmd_multiline(args)
         elif command == "/artifacts":
             return self._cmd_artifacts(args)
         elif command == "/sessions":
@@ -139,6 +147,8 @@ class CommandHandler:
             cwd = os.getcwd()
             await self.agent.orchestrator.trust.remove_trust(cwd)
             return f"[warning]! Directory removed from trusted list:[/warning] [dim]{cwd}[/dim]\n[dim]Confirmation will be required for all tools.[/dim]"
+        elif command == "/readonly":
+            return self._cmd_readonly(args)
         elif command == "/undo":
             return self._cmd_undo(args)
         elif command == "/exit":
@@ -525,6 +535,56 @@ class CommandHandler:
         if hasattr(self.agent, "active_renderer"):
             self.agent.active_renderer.apply_theme(new_theme)
         return f"[success]Theme switched to:[/success] [bold]{new_theme}[/bold]"
+
+    def _cmd_multiline(self, args: list[str]) -> str:
+        """Toggles multiline input mode for the prompt."""
+        if not args:
+            current = self.agent.config.settings.get("multiline_prompt", False)
+            state = "ON" if current else "OFF"
+            return f"[info]Multiline prompt is currently [bold]{state}[/bold][/info]\n[dim]Usage: /multiline true | /multiline false[/dim]"
+
+        val_str = args[0].lower()
+        if val_str in ("true", "on", "yes", "1"):
+            is_multiline = True
+        elif val_str in ("false", "off", "no", "0"):
+            is_multiline = False
+        else:
+            return "[error]Invalid argument. Use 'true' or 'false'.[/error]"
+
+        self.agent.config.settings["multiline_prompt"] = is_multiline
+        self.agent.config.save_settings()
+
+        if hasattr(self.agent, "_update_completer"):
+            import asyncio
+
+            asyncio.create_task(self.agent._update_completer())
+
+        state = "ON" if is_multiline else "OFF"
+        extra = "\n[dim](Press Esc+Enter or Alt+Enter to submit)[/dim]" if is_multiline else ""
+        return f"[success]Multiline prompt turned [bold]{state}[/bold][/success]{extra}"
+
+    def _cmd_readonly(self, args: list[str]) -> str:
+        """Toggles read-only mode for the agent."""
+        if not args:
+            current = self.agent.config.settings.get("readonly_mode", False)
+            state = "ON" if current else "OFF"
+            return f"[info]Read-only mode is currently [bold]{state}[/bold][/info]\n[dim]Usage: /readonly true | /readonly false[/dim]"
+
+        val_str = args[0].lower()
+        if val_str in ("true", "on", "yes", "1"):
+            is_readonly = True
+        elif val_str in ("false", "off", "no", "0"):
+            is_readonly = False
+        else:
+            return "[error]Invalid argument. Use 'true' or 'false'.[/error]"
+
+        self.agent.config.settings["readonly_mode"] = is_readonly
+        self.agent.config.save_settings()
+        self.agent._setup_system_prompt()  # Refresh prompt to include/exclude RO instructions
+
+        state = "ON" if is_readonly else "OFF"
+        return f"[success]Read-only mode turned [bold]{state}[/bold][/success]"
+
 
     def _cmd_artifacts(self, args: list[str]) -> str | Table | bool:
         """Lists or expands tool artifacts."""

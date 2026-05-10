@@ -33,7 +33,9 @@ class GracefulShutdown:
         ):
             ops = self.agent.orchestrator.executor.operation_mgr.active_operations
             for op_id in list(ops.keys()):
-                logger.info(f"Cancelando operación: {op_id}")
+                logger.info(f"Canceling operation: {op_id}")
+                await tracker.kill(op_id)
+            sys.exit(130)
 
         if hasattr(self.agent, "save_checkpoint"):
             self.agent.save_checkpoint()
@@ -42,7 +44,7 @@ class GracefulShutdown:
 
     def _handle_suspend(self, signum, frame):
         logger = logging.getLogger("mentask")
-        logger.info("\nSIGTSTP recibido - suspendiendo agente...")
+        logger.info("\nSIGTSTP received - suspending agent...")
         if hasattr(self.agent, "pause"):
             self.agent.pause()
         signal.signal(signal.SIGTSTP, signal.SIG_DFL)
@@ -110,7 +112,7 @@ def run_chatbot() -> None:
     """Main entry point for the mentask CLI."""
     args = _parse_args()
 
-    # Si se pide listado, no arrancamos el chatbot
+    # If listing is requested, do not start the chatbot
     if args.list:
         from ..cli.console import console
         from ..core.audit_manager import AuditManager

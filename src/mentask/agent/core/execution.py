@@ -45,7 +45,16 @@ class ExecutionManager:
                 ensure_safe_path(str(resolved_path))
 
                 # 2. Check for Critical Asset Modification (Intelligent Safety)
-                if tool_call.name in ("write_file", "edit_file", "replace"):
+                if tool_call.name in ("write_file", "edit_file", "replace", "delete_file", "move_file"):
+                    # Check Read-Only Mode
+                    if self.config and self.config.settings.get("readonly_mode", False):
+                        if tool_call.name in ("delete_file", "move_file"):
+                            return f"READ-ONLY MODE: Modification tool '{tool_call.name}' is forbidden."
+
+                        # For write/edit, only allow if the file DOES NOT exist
+                        if resolved_path.exists():
+                            return f"READ-ONLY MODE: Modification of existing file '{resolved_path.name}' is forbidden."
+
                     report = analyze_path_safety(str(resolved_path))
                     if report.level != SafetyLevel.SAFE:
                         return f"SECURITY RISK ({report.category}): {report.description}"

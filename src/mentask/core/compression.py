@@ -44,18 +44,18 @@ class ContextCompressor:
         return code.strip()
 
     @classmethod
+    def code_replacer(cls, match) -> str:
+        lang = match.group(1) or ""
+        body = match.group(2) or ""
+        compressed_body = cls.compress_code(body, lang)
+        return f"```{lang}\n{compressed_body}\n```"
+
+    @classmethod
     def smart_compress(cls, content: str) -> str:
         """Detects if content is code or text and compresses accordingly."""
-
-        def code_replacer(match):
-            lang = match.group(1) or ""
-            body = match.group(2) or ""
-            compressed_body = cls.compress_code(body, lang)
-            return f"```{lang}\n{compressed_body}\n```"
-
         # Check if it has markdown code blocks
         if "```" in content:
-            compressed = re.sub(r"```(\w*)\n?(.*?)(?:```|$)", code_replacer, content, flags=re.DOTALL)
+            compressed = re.sub(r"```(\w*)\n?(.*?)(?:```|$)", cls.code_replacer, content, flags=re.DOTALL)
             return compressed.strip()
         else:
             return cls.compress_text(content)

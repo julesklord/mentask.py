@@ -114,3 +114,28 @@ def test_smart_compress_code_replacer_edge_cases():
     # No language, no body, no newline
     content = "```"
     assert ContextCompressor.smart_compress(content) == "```\n\n```"
+
+def test_code_replacer_direct():
+    import re
+    # Create a mock match object
+    text = "```python\n# comment\nx = 1\n```"
+    match = re.search(r"```(\w*)\n?(.*?)(?:```|$)", text, flags=re.DOTALL)
+
+    result = ContextCompressor.code_replacer(match)
+    assert result == "```python\nx = 1\n```"
+
+def test_code_replacer_empty_lang():
+    import re
+    text = "```\n// comment\nx = 1\n```"
+    match = re.search(r"```(\w*)\n?(.*?)(?:```|$)", text, flags=re.DOTALL)
+
+    result = ContextCompressor.code_replacer(match)
+    assert result == "```\n// comment\nx = 1\n```"
+
+def test_code_replacer_empty_body():
+    import re
+    text = "```python\n```"
+    match = re.search(r"```(\w*)\n?(.*?)(?:```|$)", text, flags=re.DOTALL)
+
+    result = ContextCompressor.code_replacer(match)
+    assert result == "```python\n\n```"

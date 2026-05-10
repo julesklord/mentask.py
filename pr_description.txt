@@ -1,0 +1,5 @@
+🎯 **What:** The `should_snap` and `get_token_status` methods in `ContextSnapper` were untested. This adds unit tests for those methods to improve code reliability.
+
+📊 **Coverage:** The tests cover the `should_snap` threshold boundary conditions (below, exact, and above), and the `get_token_status` token calculation for safe and dangerous thresholds.
+
+✨ **Result:** Test coverage for `mentask.core.compression` has been improved, ensuring edge cases around context tokens and snap behavior are validated.

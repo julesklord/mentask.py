@@ -238,6 +238,7 @@ class TestConfigManagerApiKey:
         with patch("keyring.set_password") as mock_set:
             cm = ConfigManager(_mock_console)
             cm.console = MagicMock()
+<<<<<<< HEAD
             result = cm.save_api_key("default-key")
             assert result is True
             mock_set.assert_called_once_with("mentask", "GOOGLE_API_KEY", "default-key")
@@ -324,3 +325,13 @@ class TestConfigManagerApiKey:
             cm = ConfigManager(_mock_console)
             cm.settings["google_api_key"] = ""
             assert cm.load_api_key() is None
+
+    def test_save_api_key_strips_whitespace(self):
+        with patch("keyring.set_password") as mock_set:
+            cm = ConfigManager(_mock_console)
+            cm.console = MagicMock()
+
+            result = cm.save_api_key("  dummy_val  \n", "OpenAI")
+
+            assert result is True
+            mock_set.assert_called_once_with("mentask", "OPENAI_API_KEY", "dummy_val")

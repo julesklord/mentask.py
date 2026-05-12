@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.27.8] - 2026-05-12
+
+### Added
+- **Thought Process Toggle**: Introduced the `/thinking [true|false]` command to show or hide the agent's internal reasoning loop.
+- **Unified Status Line**: Merged the session status bar and turn divider into a single, cohesive line that matches the user's prompt theme.
+
+### Fixed
+- **CLI Bridge Robustness**: Refactored `CLIProvider` to use `stdin` for prompt delivery, bypassing OS command-line length limits on Windows.
+- **Improved Diagnostics**: Implemented parallel reading of `stdout` and `stderr` for CLI providers, enabling the capture of system warnings and errors.
+- **UI Layout**: Removed aggressive grid-based padding in agent responses for a more natural conversational flow.
+- **Error Filtering**: Automatically suppress repetitive system warnings (e.g., Windows 10 detected, Ripgrep missing) in CLI output.
+
 ## [0.27.7] - 2026-05-12
 
 ### Fixed

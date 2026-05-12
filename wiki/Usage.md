@@ -8,14 +8,20 @@ mentask
 
 ## Console Output Examples
 
-### 1. Startup & Welcome (v0.27.2)
+### 1. Startup & Welcome (v0.27.8)
 
 When you launch mentask, you'll see the premium header indicating your active provider, security mode, and the newly standard **Engineering Level**:
 
 ```text
- ✦ mentask v0.27.2  ·  ollama:qwen3.5  ·  manual mode
+ ✦ mentask v0.27.8  ·  ollama:qwen3.5  ·  manual mode
  ⚡ Engineering Level: L1_PRAGMATIC
-   Type /help for commands · Ctrl+O to expand last result · Ctrl+C to exit
+   Type /help for commands · Ctrl+C to exit
+```
+
+After each turn, a unified status line summarizes the session state in a single elegant line that matches your prompt theme:
+
+```text
+  󱚣 AUTO   󰚩 cli:gemini   󰊢 main   󰠠 $0.001  󰮄 5,111   ── 04:47:03 ──
 ```
 
 ### 2. Dynamic Engineering Levels (DEL)
@@ -117,6 +123,7 @@ Connect to any Model Context Protocol server. mentask will automatically introsp
 | `/help` | Show all commands and current settings. |
 | `/init` | Initialize local project isolation (Workspaces). |
 | `/model <name>` | Swap providers/models (Gemini, DeepSeek, Claude). |
+| `/thinking [true\|false]` | Toggle visibility of agent's thought process. |
 | `/mode [auto\|manual]` | Toggle between full autonomy and safety confirmation. |
 | `/trust [path]` | Authorize a directory for recursive file operations. |
 | `/artifacts` | List or expand agent-generated tool artifacts. |

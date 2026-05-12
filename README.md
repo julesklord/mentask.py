@@ -114,7 +114,7 @@ This isn't conversation. This is **autonomy**.
 
 ### Dynamic Engineering Levels (DEL)
 
-mentask v0.27.2 introduces the **Task Classifier**, which pre-flights every prompt to set the correct engineering rigor:
+mentask v0.27.8 introduces the **Task Classifier**, which pre-flights every prompt to set the correct engineering rigor:
 
 - **L0_INQUIRY**: Informational mode. Zero tool noise. Direct answers.
 - **L1_PRAGMATIC**: Speed mode. Uses direct shell commands (`cat`, `sed`, `echo`) and avoids deep mapping.
@@ -400,6 +400,7 @@ A Rich-powered terminal interface that streams the agent's internal monologue in
 | **help** | `/help` | Show all commands and current settings. |
 | **init** | `/init` | Bootstrap a new mentask project. Creates `.mentask/` directory and SQLite history DB. |
 | **model** | `/model <id>` | Hot-swap between available models mid-session. Supported: `gemini-2-5-pro`, `deepseek-v3`, `claude-3-5-sonnet`. |
+| **thinking** | `/thinking [true\|false]` | Toggle visibility of agent's thought process. |
 | **mode** | `/mode [auto\|manual]` | Toggle execution mode. `manual`: ask before running tools. `auto`: execute immediately. |
 | **trust** | `/trust [path]` | Authorize a directory for file operations. Enables dynamic plugin loading in that path. |
 | **untrust** | `/untrust [path]` | Revoke trust from a directory. |

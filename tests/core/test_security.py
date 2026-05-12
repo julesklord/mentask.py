@@ -5,7 +5,7 @@ Verifies command safety analysis and pattern matching.
 
 import pytest
 
-from mentask.core.security import SafetyLevel, analyze_command_safety, ensure_safe_path
+from mentask.core.security import SafetyLevel, analyze_command_safety, ensure_safe_path, is_command_safe
 
 
 @pytest.mark.parametrize(
@@ -109,3 +109,9 @@ def test_whitelist_fallback_paths():
     report = analyze_command_safety("my_custom_script.sh")
     assert report.level == SafetyLevel.NOTICE
     assert report.category == "GENERIC_COMMAND"
+
+
+def test_is_command_safe():
+    """Verifies that is_command_safe correctly identifies safe and dangerous commands."""
+    assert is_command_safe("ls -la") is True
+    assert is_command_safe("rm -rf /") is False

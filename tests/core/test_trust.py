@@ -72,3 +72,15 @@ async def test_remove_trust(mock_global_config):
 
     await tm.remove_trust(path)
     assert not tm.is_trusted(path)
+
+
+@pytest.mark.asyncio
+async def test_corrupt_trust_file_logs_error(mock_global_config, caplog):
+    """Verifies that a malformed trust file logs an error instead of failing silently."""
+    tm = TrustManager()
+    trust_file = mock_global_config / "trusted.json"
+    trust_file.write_text("{malformed json", encoding="utf-8")
+
+    await tm.load_trust()
+
+    assert "Failed to load trust config:" in caplog.text

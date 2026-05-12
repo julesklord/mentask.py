@@ -16,15 +16,23 @@ pip install -e ".[dev]"
 
 ## Testing Protocol
 
-Tests are mapped inside `tests/` leveraging `pytest` and the **Simulation Layer** introduced in **v0.10.0**.
+Tests are mapped inside `tests/` leveraging `pytest` and the **Simulation Layer**.
 
+### Local LLM Testing (Standard)
+
+As of **v0.25.0**, all tests involving local models **MUST** use **Ollama** with the **qwen3.5** model. 
+
+The test suite includes a session-wide fixture (`tests/conftest.py`) that:
+1. Automatically starts the Ollama server if it's not running.
+2. Pulls the mandated `qwen3.5` model.
+3. Shuts down the server after the tests finish.
+
+To run tests locally:
 ```bash
 pytest tests/
 ```
 
-mentask utilizes a `SimulationManager` to allow deterministic testing of agentic loops without incurring API costs. See `tests/integration/test_full_agent_loop.py` for reference.
-
-Coverage ensures logic for:
+### Coverage ensures logic for:
 
 * **Core Managers:** `test_session_manager.py`, `test_context_manager.py`, `test_stream_processor.py`.
 * **Security:** `test_security.py` (Risk analysis and pattern matching).

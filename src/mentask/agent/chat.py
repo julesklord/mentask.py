@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from ..cli.gem_renderer import GemStyleRenderer as CliRenderer
+    from ..cli.gem_renderer import GemStyleRenderer
 
 from ..cli.console import console
 from ..cli.contextual_prompts import (
@@ -48,6 +48,7 @@ from .tools.shell_tools import ShellTool
 from .tools.user_tool import AskUserTool
 from .tools.web_tool import WebFetchTool, WebSearchTool
 from .tools.working_memory_tool import WorkingMemoryTool
+from .tools.worktree_tools import EnterWorktreeTool, ExitWorktreeTool
 
 _logger = logging.getLogger("mentask")
 
@@ -99,7 +100,7 @@ class ChatAgent:
         if self.local_mode:
             self.config.settings["local_mode"] = True
             if not any(x in self.model_name.lower() for x in ["ollama", "local", "lms"]):
-                self.model_name = "ollama:llama3"
+                self.model_name = "ollama:qwen3.5"
 
         self.edit_mode = self.config.settings.get("edit_mode", "manual")
         self.session = deps.session or SessionManager(self.config, self.model_name)
@@ -110,7 +111,7 @@ class ChatAgent:
 
             if not isinstance(self.session.provider, OllamaProvider):
                 # Re-initialize session with forced local provider if factory failed
-                self.model_name = "ollama:llama3"
+                self.model_name = "ollama:qwen3.5"
                 self.session = SessionManager(self.config, self.model_name)
 
         self.session.metrics = getattr(self.session, "metrics", None) or TokenTracker(model_name=self.model_name)
@@ -172,6 +173,15 @@ class ChatAgent:
             f"CURRENT_TIME: {timestamp} ({day_name})\n"
         )
 
+        if self.config.settings.get("readonly_mode", False):
+            self.system_prompt += (
+                "\n## READ-ONLY MODE ACTIVE\n"
+                "You are currently in a restricted READ-ONLY mode. Your primary goal is to analyze, read, and explore.\n"
+                "- DO NOT modify, delete, or overwrite any existing files or directories.\n"
+                "- You ARE permitted to create NEW files if they are necessary for your analysis or to provide the requested output (e.g., creating a report, a scratchpad, or a new script as requested).\n"
+                "- If you need to suggest changes to existing code, provide them in your response or in a new file, but DO NOT apply them to the original files.\n"
+            )
+
         self.session_messages = 0
         self.session_tools = 0
         self.session_files = 0
@@ -195,6 +205,8 @@ class ChatAgent:
         registry.register(AnalyzeTool())
         registry.register(ForgePluginTool(registry))
         registry.register(SubagentTool(self.session, registry, self.config))
+        registry.register(EnterWorktreeTool())
+        registry.register(ExitWorktreeTool())
 
         if self.config.settings.get("web_search_enabled", True):
             registry.register(WebSearchTool(self.config))
@@ -275,7 +287,7 @@ class ChatAgent:
                 ]
         return user_input
 
-    async def _stream_response(self, user_input: str, renderer: "CliRenderer") -> None:
+    async def _stream_response(self, user_input: str, renderer: "GemStyleRenderer") -> None:
         """Core logic: feeds input to orchestrator and updates UI."""
         renderer.reset_turn()
         processed_input = self._process_input(user_input)
@@ -289,7 +301,11 @@ class ChatAgent:
             self._handle_stream_event(renderer, status, event_type, event)
 
     def _handle_stream_event(
-        self, renderer: "CliRenderer", status: AgentTurnStatus | None, event_type: str | None, event: dict[str, Any]
+        self,
+        renderer: "GemStyleRenderer",
+        status: AgentTurnStatus | None,
+        event_type: str | None,
+        event: dict[str, Any],
     ) -> None:
         if status == AgentTurnStatus.THINKING:
             renderer.show_thinking()
@@ -430,7 +446,7 @@ class ChatAgent:
 
         return sessions, history_data, is_new
 
-    async def _handle_command_input(self, user_input: str, renderer: "CliRenderer") -> bool:
+    async def _handle_command_input(self, user_input: str, renderer: "GemStyleRenderer") -> bool:
         if not user_input.startswith("/"):
             return False
 
@@ -492,19 +508,19 @@ class ChatAgent:
         self.active_renderer.console.print("\n")
         self.active_renderer.console.print(
             Panel(
-                "[bold]Selecciona tu contexto de trabajo[/bold]\n"
-                + "1. 🧑‍💻 Coding (Ingeniería de software)\n"
-                + "2. 🎵 Music Production (Producción musical)\n"
-                + "3. 📊 Analysis (Análisis de datos)\n"
-                + "4. 🎨 Creative (Creativo)\n"
+                "[bold]Select your working context[/bold]\n"
+                + "1. 🧑‍💻 Coding (Software engineering)\n"
+                + "2. 🎵 Music Production (Music production)\n"
+                + "3. 📊 Analysis (Data analysis)\n"
+                + "4. 🎨 Creative (Creative)\n"
                 + "5. 💬 General (General)",
-                title="[bold cyan]Contextos Disponibles[/bold cyan]",
+                title="[bold cyan]Available Contexts[/bold cyan]",
                 border_style="cyan",
                 padding=(1, 2),
             )
         )
 
-        choice = Prompt.ask("[cyan]Selecciona contexto[/cyan]", choices=["1", "2", "3", "4", "5"], default="5")
+        choice = Prompt.ask("[cyan]Select context[/cyan]", choices=["1", "2", "3", "4", "5"], default="5")
 
         context_map = {
             "1": ContextType.CODING,
@@ -531,16 +547,16 @@ class ChatAgent:
         self.active_renderer.console.print(
             Panel(
                 f"[bold cyan]{prompt.context.value.upper()}[/bold cyan]\n\n"
-                f"[yellow]Tono:[/yellow] {prompt.tone}\n"
+                f"[yellow]Tone:[/yellow] {prompt.tone}\n"
                 f"[yellow]Constraints:[/yellow]\n" + "\n".join(f"  • {c}" for c in prompt.constraints),
-                title="[bold]Detalles del Contexto[/bold]",
+                title="[bold]Context Details[/bold]",
                 border_style="cyan",
                 padding=(1, 2),
             )
         )
         self.active_renderer.console.print()
 
-    async def _handle_user_turn(self, user_input: str, renderer: "CliRenderer") -> None:
+    async def _handle_user_turn(self, user_input: str, renderer: "GemStyleRenderer") -> None:
         self.session_messages += 1
         renderer.reset_turn()
 
@@ -550,7 +566,9 @@ class ChatAgent:
 
         try:
             await self._stream_response(user_input, renderer)
-            if hasattr(renderer, "end_stream"):
+            # Guard against double end_stream: _handle_stream_event may have already
+            # called it (e.g. on EXECUTING transition mid-turn).
+            if hasattr(renderer, "end_stream") and renderer._streaming:
                 renderer.end_stream()
 
             # Compact turn metrics
@@ -592,6 +610,8 @@ class ChatAgent:
         # 2. Add sub-commands
         completion_dict["/theme"] = {t: None for t in themes.THEMES}
         completion_dict["/mode"] = {"auto": None, "manual": None}
+        completion_dict["/multiline"] = {"true": None, "false": None}
+        completion_dict["/readonly"] = {"true": None, "false": None}
         completion_dict["/usage"] = {"--reset": None, "-r": None}
         completion_dict["/stream"] = {"transient": None, "continuous": None}
 
@@ -673,6 +693,7 @@ class ChatAgent:
         sessions, history_data, is_new_session = self._restore_last_session()
 
         await self.session.ensure_session(self._build_config(), history=None)
+        await self.orchestrator.executor.initialize()
 
         renderer.print_welcome(__version__, self.model_name, self.edit_mode)
         await self._ensure_trust(renderer)
@@ -751,7 +772,8 @@ class ChatAgent:
 
                     with patch_stdout():
                         try:
-                            user_input = (await session.prompt_async(prompt_msg)).strip()
+                            is_multiline = self.config.settings.get("multiline_prompt", False)
+                            user_input = (await session.prompt_async(prompt_msg, multiline=is_multiline)).strip()
                         except (EOFError, KeyboardInterrupt):
                             break
                 else:

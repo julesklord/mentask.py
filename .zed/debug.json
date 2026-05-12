@@ -1,0 +1,44 @@
+[
+    {
+        "label": "Python: Debug All Tests (pytest)",
+        "adapter": "debugpy",
+        "request": "launch",
+        "module": "pytest",
+        "args": ["tests/", "-v"],
+        "python": "${ZED_WORKTREE_ROOT}/.venv/Scripts/python.exe",
+        "cwd": "${ZED_WORKTREE_ROOT}",
+    },
+    {
+        "label": "Python: Debug Current File",
+        "adapter": "debugpy",
+        "request": "launch",
+        "program": "${file}",
+        "python": "${ZED_WORKTREE_ROOT}/.venv/Scripts/python.exe",
+        "cwd": "${ZED_WORKTREE_ROOT}",
+    },
+    {
+        "label": "Python: Debug MentAsk CLI",
+        "adapter": "debugpy",
+        "request": "launch",
+        "program": "src/mentask/cli/main.py",
+        "python": "${ZED_WORKTREE_ROOT}/.venv/Scripts/python.exe",
+        "cwd": "${ZED_WORKTREE_ROOT}",
+    },
+    {
+        "label": "Python: Debug Core Logic",
+        "adapter": "debugpy",
+        "request": "launch",
+        "program": "src/mentask/agent/chat.py",
+        "python": "${ZED_WORKTREE_ROOT}/.venv/Scripts/python.exe",
+        "cwd": "${ZED_WORKTREE_ROOT}",
+    },
+    {
+        "label": "Python: Attach to Process",
+        "adapter": "debugpy",
+        "request": "attach",
+        "connect": {
+            "host": "localhost",
+            "port": 5678,
+        },
+    },
+]

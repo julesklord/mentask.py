@@ -99,21 +99,21 @@ def grep_search(pattern: str, path: str = ".", is_regex: bool = False, case_sens
 
 
 def glob_find(pattern: str, path: str = ".") -> str:
-    """Finds files matching a glob pattern recursively.
+    """Finds files and directories matching a glob pattern recursively.
 
     Args:
-        pattern (str): The glob pattern (e.g., '*.py', '**/tests/*.md').
+        pattern (str): The glob pattern (e.g., '*.py', '**/tests/*.md', 'src/*').
         path (str): The root directory to search. Defaults to ".".
 
     Returns:
-        str: A newline-separated list of found file paths.
+        str: A newline-separated list of found file and directory paths.
     """
     root = Path(path)
     if not root.is_dir():
         return f"[!] Error: '{path}' is not a valid directory."
 
     results = []
-    exclude_dirs = {".git", "node_modules", "__pycache__", ".venv"}
+    exclude_dirs = {".git", "node_modules", "__pycache__", ".venv", ".mentask"}
 
     try:
         # Optimized with os.walk for early directory pruning to avoid scanning ignored paths
@@ -121,9 +121,19 @@ def glob_find(pattern: str, path: str = ".") -> str:
             # Prune directories in-place
             dirs[:] = [d for d in dirs if d not in exclude_dirs]
 
+            # Check directories
+            for dir_name in dirs:
+                p = Path(current_root) / dir_name
+                # Use Path.match for glob-style pattern matching
+                if p.match(pattern):
+                    try:
+                        results.append(p.relative_to(root).as_posix() + "/")
+                    except ValueError:
+                        results.append(p.as_posix() + "/")
+
+            # Check files
             for file in files:
                 p = Path(current_root) / file
-                # Use Path.match for glob-style pattern matching
                 if p.match(pattern):
                     try:
                         results.append(p.relative_to(root).as_posix())
@@ -133,6 +143,6 @@ def glob_find(pattern: str, path: str = ".") -> str:
         return f"[!] Error during glob: {e}"
 
     if not results:
-        return f"No files found matching '{pattern}' in '{path}'."
+        return f"No files or directories found matching '{pattern}' in '{path}'."
 
     return "\n".join(sorted(results))

@@ -52,7 +52,7 @@ Respect these boundaries to maintain code clarity:
 
 ### 1. Understand the Architecture
 
-Read [AGENTS.md](../AGENTS.md) for a quick overview of the 4-layer architecture:
+Read [README.md](../README.md) for a quick overview of the 4-layer architecture:
 - **CLI** (`src/mentask/cli/`) — Terminal UI
 - **Orchestration** (`src/mentask/agent/`) — Thinking → Action → Observation loop
 - **Managers** (`src/mentask/agent/core/`) — Session, Context, Stream
@@ -110,7 +110,7 @@ ruff format src/ tests/
 
 ### Writing Tests
 
-**Testing standard** (see [AGENTS.md](../AGENTS.md#testing-standard)):
+**Testing standard**:
 
 - **CLI entrypoints:** Have contract tests (see `tests/cli/test_cli_main.py`)
 - **Orchestration flows:** Focused unit tests (see `tests/test_orchestrator.py`)
@@ -276,7 +276,7 @@ Release schedule: See [ROADMAP.md](../ROADMAP.md) for milestones.
 
 ## Need Help?
 
-- **Architecture questions?** Ask in an issue or PR comment; reference [AGENTS.md](../AGENTS.md)
+- **Architecture questions?** Ask in an issue or PR comment; reference [README.md](../README.md)
 - **Testing patterns?** See `tests/` examples or ask in a discussion
 - **Security concerns?** Email the maintainer; don't open public issues
 

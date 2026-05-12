@@ -11,8 +11,11 @@ import shutil
 import tempfile
 from datetime import datetime
 
+from ..core.constraints import FileReadingSession, ReadFileConstraint
 from ..core.paths import get_backups_dir
 from ..core.security import ensure_safe_path
+
+FILE_SESSIONS: dict[str, FileReadingSession] = {}
 
 
 def _create_backup(path: str) -> str:
@@ -73,11 +76,29 @@ def read_file(path: str, start_line: int = None, end_line: int = None, char_limi
         if total_lines == 0:
             return f"The file '{path}' is completely empty."
 
+        path_abs = os.path.abspath(path)
+        session = FILE_SESSIONS.get(path_abs)
+        if not session:
+            session = FileReadingSession(path_abs, total_lines)
+            FILE_SESSIONS[path_abs] = session
+
+        constraint = ReadFileConstraint.check_request(total_lines, session.current_offset)
+
+        if start_line is None and end_line is None and constraint["strategy"] == "chunked":
+            start_line = session.current_offset
+            end_line = start_line + constraint["chunk_size"] - 1
+
         start = max(1, start_line) if start_line is not None else 1
         end = min(total_lines, end_line) if end_line is not None else total_lines
 
         if start > total_lines or start > end:
             return f"Error: Invalid line range [{start}-{end}]. File only has {total_lines} lines."
+
+        # Loop detection pre-check
+        if session.chunks_read and session.chunks_read[-1][0] == start and session.chunks_read[-1][1] == end:
+            session.mark_attempt()
+            if not session.should_retry():
+                return f"Error: Infinite loop detected. You are repeatedly reading lines {start}-{end}. Please adjust start_line and end_line to progress."
 
         # Extract selected lines using streaming
         selected_lines = []
@@ -91,6 +112,16 @@ def read_file(path: str, start_line: int = None, end_line: int = None, char_limi
 
         content = "".join(selected_lines)
 
+        # Content loop check
+        if content and content == session.last_chunk_content():
+            # If the user explicitly requested this exact chunk, it might not be a loop,
+            # but if it's identical, there's no new information.
+            session.mark_attempt()
+            if not session.should_retry():
+                return "Error: Infinite loop detected. The content is identical to the last read. Please change start_line and end_line."
+        else:
+            session.add_chunk(start, end, content)
+
         # Safety cap: prevent context window explosion on large files
         if len(content) > char_limit:
             content = (
@@ -99,6 +130,9 @@ def read_file(path: str, start_line: int = None, end_line: int = None, char_limi
             )
 
         info_header = f"--- Reading '{path}' (Lines {start} to {end} of {total_lines}) ---\n"
+        if constraint["strategy"] == "chunked" and end < total_lines:
+            info_header += f"[!] Note: File is large. Read next chunk with start_line={end + 1}\n"
+
         return info_header + content
 
     except UnicodeDecodeError:
@@ -131,7 +165,7 @@ def edit_file(path: str, find_text: str, replace_text: str) -> str:
     """
     Finds an exact block of text in a local file and replaces it.
     Uses atomic writing (temporary file + rename) and creates a `.bkp` backup
-    to prevent data loss and corruption.
+    to prevent data loss and corruption. Includes proactive AST validation for Python.
 
     Args:
         path: Path to the file to modify.
@@ -151,6 +185,15 @@ def edit_file(path: str, find_text: str, replace_text: str) -> str:
             # In that case, find_text should be empty.
             if find_text:
                 return f"Error: File '{path}' does not exist, so we cannot search for text. To create a new file, leave 'find_text' empty."
+
+            # AST Check for new Python files
+            if path.endswith(".py"):
+                import ast
+
+                try:
+                    ast.parse(replace_text)
+                except SyntaxError as e:
+                    return f"Error: New file '{path}' contains syntax errors: {e}"
 
             _atomic_write(path, replace_text)
 
@@ -178,11 +221,27 @@ def edit_file(path: str, find_text: str, replace_text: str) -> str:
                 f"to uniquely identify the target block."
             )
 
+        # Proactive AST Validation for Python files
+        if path.endswith(".py"):
+            import ast
+
+            # 1. Verify original is valid
+            import contextlib
+
+            with contextlib.suppress(SyntaxError):
+                ast.parse(content)
+
+            # 2. Verify result is valid
+            new_content = content.replace(find_text, replace_text, 1)
+            try:
+                ast.parse(new_content)
+            except SyntaxError as e:
+                return f"Error: Proposed change would introduce a syntax error in '{path}': {e}. Refusing to apply."
+        else:
+            new_content = content.replace(find_text, replace_text, 1)
+
         # Create a backup before proceeding in the centralized store
         backup_path = _create_backup(path)
-
-        # Apply replacement (safe: exactly one occurrence guaranteed above)
-        new_content = content.replace(find_text, replace_text, 1)
 
         # Atomic write: write to a temporary file in the same directory and then rename
         # This prevents file corruption if the process is interrupted during writing.

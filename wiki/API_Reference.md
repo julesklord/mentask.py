@@ -4,13 +4,25 @@ This section details the primary software contracts within mentask, including th
 
 ## `src/mentask/agent/`
 
-### **Class `AgentOrchestrator`** (`orchestrator.py`) [v0.11.0]
+### **Class `AgentOrchestrator`** (`orchestrator.py`) [v0.25.0 Hardened]
 
 The central reasoning engine. It coordinates managers to execute the cognitive loop autonomously.
 
-* **Method `run_thought_loop(prompt)`**: Executes the main *Thinking -> Action -> Observation* cycle.
-* **Method `process_tool_calls(calls)`**: Dispatches tools while enforcing security and trust checks.
-* **Method `setup()`**: Initializes all cognitive managers (Session, Context, Simulation).
+* **Method `run_query(prompt, history)`**: Executes the main *Thinking -> Action -> Observation* cycle with **Stall Detection**.
+* **Method `_get_level_instruction(level)`**: Returns dynamic system instructions based on the classified engineering rigor.
+* **Method `_perform_context_snap()`**: Summarizes history to stay within token limits.
+
+### **Class `TaskClassifier`** (`core/classifier.py`) [New in v0.25.0]
+
+* **Method `classify(prompt)`**: Uses a fast LLM pass to assign an `EngineeringLevel` (L0-L3) to the session.
+
+### **Enum `EngineeringLevel`** (`schema.py`) [New in v0.25.0]
+
+Defines the mindset of the orchestrator:
+- `L0_INQUIRY`: Pure info, no tools.
+- `L1_PRAGMATIC`: Fast execution, shell fallback.
+- `L2_STANDARD`: Standard Research-Execute cycle.
+- `L3_ARCHITECT`: Maximum rigor, forces formal planning.
 
 ### **Class `ChatAgent`** (`chat.py`)
 

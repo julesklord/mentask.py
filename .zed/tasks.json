@@ -1,0 +1,37 @@
+[
+  {
+    "label": "Validate: Lint (Ruff)",
+    "command": ".venv/Scripts/ruff",
+    "args": ["check", "src/", "tests/"],
+    "use_new_terminal": true,
+    "reveal": "always"
+  },
+  {
+    "label": "Validate: Format Check (Ruff)",
+    "command": ".venv/Scripts/ruff",
+    "args": ["format", "--check", "src/", "tests/"],
+    "use_new_terminal": true,
+    "reveal": "always"
+  },
+  {
+    "label": "Validate: Type Check (Mypy)",
+    "command": ".venv/Scripts/python",
+    "args": ["-m", "mypy", "src/"],
+    "use_new_terminal": true,
+    "reveal": "always"
+  },
+  {
+    "label": "Build: Create Distribution",
+    "command": ".venv/Scripts/python",
+    "args": ["-m", "build"],
+    "use_new_terminal": true,
+    "reveal": "always"
+  },
+  {
+    "label": "Test: Run All Tests (Fast)",
+    "command": ".venv/Scripts/pytest",
+    "args": ["tests/", "-q"],
+    "use_new_terminal": true,
+    "reveal": "always"
+  }
+]

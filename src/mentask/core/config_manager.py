@@ -61,6 +61,7 @@ class ConfigManager:
             "google_cx_id": "",
             "prompt_style": "atomic",  # atomic, simple, minimal, classic
             "nerdfonts_enabled": True,
+            "readonly_mode": False,
         }
         self.load_settings()
 

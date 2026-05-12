@@ -8,13 +8,22 @@ mentask
 
 ### Console Output Examples
 
-#### 1. Startup & Welcome (v0.20.1)
-When you launch mentask, you'll see the premium header indicating your active provider and security mode:
+#### 1. Startup & Welcome (v0.27.2)
+When you launch mentask, you'll see the premium header indicating your active provider, security mode, and the newly standard **Engineering Level**:
 
 ```text
- ✦ mentask v0.20.1  ·  gemini-2.0-flash  ·  manual mode
+ ✦ mentask v0.27.2  ·  ollama:qwen3.5  ·  manual mode
+ ⚡ Engineering Level: L1_PRAGMATIC
    Type /help for commands · Ctrl+O to expand last result · Ctrl+C to exit
 ```
+
+#### 2. Dynamic Engineering Levels (DEL)
+mentask now autonomously classifies your task into one of four levels to optimize speed vs. rigor:
+
+- **L0_INQUIRY**: Purely informational questions. No tools used. Ultra-fast response.
+- **L1_PRAGMATIC**: Simple technical tasks. mentask avoids over-analysis and uses shell commands (`cat`, `sed`, `echo`) if complex tools fail.
+- **L2_STANDARD**: Default development mode (Research -> Plan -> Execute).
+- **L3_ARCHITECT**: High-complexity tasks. Forces the creation of `.mentask_plan.md` and deep system-wide mapping.
 
 #### 2. Agent Reasoning & The Forge Engine
 mentask displays its internal reasoning loop. If it identifies a repetitive task, it may invoke **The Forge** to architect a native Python tool:
@@ -68,6 +77,16 @@ Every session has a unique ID stored in `.mentask/sessions/`. Resume exactly whe
 ```bash
 mentask 2026-04-26_15-30-10_f9a8b2
 ```
+
+**2. Local-First Mode (--local)**
+Run mentask entirely offline using Ollama. This mandates the use of **qwen3.5** for maximum reliability in local environments:
+
+```bash
+mentask --local
+```
+
+**3. Stall Detection & Auto-Reset**
+If mentask gets stuck in a "thinking loop" (repeating the same explanations without calling tools), the orquestrador will automatically detect it and force a **Strategy Reset**, forcing the agent to try a different path (like using shell commands instead of complex file tools).
 
 **2. Workspace Initialization (/init)**
 Launch mentask in any folder. If it's a new project, run `/init` to create the local isolation layer:

@@ -21,10 +21,21 @@ async def test_fragmented_tool_call_streaming():
 
     # Mock urllib.request.urlopen
     mock_response = MagicMock()
-    mock_response.__iter__.return_value = iter(chunks)
+    mock_response.readline.side_effect = chunks + [b""]
 
-    # We need to patch asyncio.to_thread to return our mock_response
-    with patch("asyncio.to_thread", return_value=mock_response):
+    # We need to patch asyncio.to_thread to execute the mock or return the mock
+    # Wait, the code does:
+    # response = await asyncio.to_thread(_do_request)
+    # line = await asyncio.to_thread(response.readline)
+
+    # We should patch asyncio.to_thread to just call the function directly
+    # because it will be called multiple times (once for _do_request, then for readline)
+    async def mock_to_thread(func, *args, **kwargs):
+        if getattr(func, "__name__", "") == "_do_request":
+            return mock_response
+        return func(*args, **kwargs)
+
+    with patch("asyncio.to_thread", side_effect=mock_to_thread):
         events = []
         async for event in provider.generate_stream([], []):
             events.append(event)
@@ -55,9 +66,14 @@ async def test_interleaved_multiple_tool_calls_streaming():
     provider.api_key = "test-key"
 
     mock_response = MagicMock()
-    mock_response.__iter__.return_value = iter(chunks)
+    mock_response.readline.side_effect = chunks + [b""]
 
-    with patch("asyncio.to_thread", return_value=mock_response):
+    async def mock_to_thread(func, *args, **kwargs):
+        if getattr(func, "__name__", "") == "_do_request":
+            return mock_response
+        return func(*args, **kwargs)
+
+    with patch("asyncio.to_thread", side_effect=mock_to_thread):
         events = []
         async for event in provider.generate_stream([], []):
             events.append(event)
@@ -84,9 +100,14 @@ async def test_mixed_text_and_tool_calls_streaming():
     provider.api_key = "test-key"
 
     mock_response = MagicMock()
-    mock_response.__iter__.return_value = iter(chunks)
+    mock_response.readline.side_effect = chunks + [b""]
 
-    with patch("asyncio.to_thread", return_value=mock_response):
+    async def mock_to_thread(func, *args, **kwargs):
+        if getattr(func, "__name__", "") == "_do_request":
+            return mock_response
+        return func(*args, **kwargs)
+
+    with patch("asyncio.to_thread", side_effect=mock_to_thread):
         events = []
         async for event in provider.generate_stream([], []):
             events.append(event)

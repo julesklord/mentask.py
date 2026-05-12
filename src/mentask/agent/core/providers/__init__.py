@@ -3,6 +3,7 @@ from typing import Any
 from mentask.core.models_hub import hub
 
 from .base import BaseProvider
+from .cli import CLIProvider
 from .gemini import GeminiProvider
 from .ollama import OllamaProvider
 from .openai import OpenAIProvider
@@ -26,6 +27,10 @@ def get_provider(model_name: str, config: Any) -> BaseProvider:
     if ":" in model_name:
         provider_prefix, pure_model_name = model_name.split(":", 1)
         provider_prefix = provider_prefix.lower()
+
+    # 1.5. Check for CLI bridge
+    if provider_prefix == "cli":
+        return CLIProvider(pure_model_name, config)
 
     # 2. Local/Specialized detect logic
     if is_local_mode or provider_prefix == "ollama" or "ollama" in pure_model_name.lower():

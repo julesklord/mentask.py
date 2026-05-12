@@ -1,0 +1,92 @@
+import logging
+from dataclasses import dataclass
+from enum import Enum
+from typing import Any
+
+logger = logging.getLogger(__name__)
+
+
+class TimeoutSeverity(Enum):
+    NETWORK = "network"
+    MODEL = "model"
+    UNKNOWN = "unknown"
+
+
+@dataclass
+class TimeoutContext:
+    elapsed: float
+    attempt: int
+    max_attempts: int = 3
+    error_msg: str = ""
+    provider: str = "unknown"
+
+    def classify(self) -> TimeoutSeverity:
+        if "connection" in self.error_msg.lower():
+            return TimeoutSeverity.NETWORK
+        elif self.elapsed > 60:
+            return TimeoutSeverity.MODEL
+        return TimeoutSeverity.UNKNOWN
+
+    def get_recovery_strategy(self) -> dict[str, Any]:
+        severity = self.classify()
+
+        if severity == TimeoutSeverity.NETWORK:
+            return {
+                "action": "retry_with_backoff",
+                "backoff_seconds": 2**self.attempt,
+                "max_retries": self.max_attempts,
+            }
+        elif severity == TimeoutSeverity.MODEL:
+            return {
+                "action": "reduce_context_and_retry",
+                "compression": "aggressive",
+                "fallback_model": "qwen2.5-7b",
+                "timeout_seconds": 30,
+            }
+        else:
+            return {"action": "simple_retry", "timeout_seconds": 45, "retries_left": self.max_attempts - self.attempt}
+
+
+class TimeoutRecoveryManager:
+    def __init__(self, max_global_attempts: int = 3):
+        self.max_global_attempts = max_global_attempts
+        self.timeout_history: list[TimeoutContext] = []
+        self.metrics_reporter = {
+            "total_timeouts": 0,
+            "timeouts_by_provider": {},
+            "timeouts_by_severity": {},
+            "successful_recoveries": 0,
+            "failed_recoveries": 0,
+        }
+
+    def get_metrics(self) -> dict[str, Any]:
+        return dict(self.metrics_reporter)
+
+    def handle_timeout(self, error: Exception, provider: str, elapsed: float, current_attempt: int) -> dict[str, Any]:
+        ctx = TimeoutContext(
+            elapsed=elapsed,
+            attempt=current_attempt,
+            max_attempts=self.max_global_attempts,
+            error_msg=str(error),
+            provider=provider,
+        )
+
+        self.timeout_history.append(ctx)
+        strategy = ctx.get_recovery_strategy()
+
+        # Update metrics
+        self.metrics_reporter["total_timeouts"] += 1
+        self.metrics_reporter["timeouts_by_provider"][provider] = (
+            self.metrics_reporter["timeouts_by_provider"].get(provider, 0) + 1
+        )
+        sev = ctx.classify().value
+        self.metrics_reporter["timeouts_by_severity"][sev] = (
+            self.metrics_reporter["timeouts_by_severity"].get(sev, 0) + 1
+        )
+
+        logger.warning(
+            f"Timeout en {provider} (intento {current_attempt}/{self.max_global_attempts}): "
+            f"{elapsed:.1f}s - Estrategia: {strategy['action']}"
+        )
+
+        return strategy

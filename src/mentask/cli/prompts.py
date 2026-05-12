@@ -9,7 +9,7 @@ from datetime import datetime
 from rich.text import Text
 
 from .themes import ThemeConfig
-from .ui_utils import get_git_info, get_python_info, get_model_info
+from .ui_utils import get_git_info, get_model_info, get_python_info
 
 
 @dataclass
@@ -41,25 +41,36 @@ class PromptEngine:
 
     # Powerline / Nerd Font characters
     @property
-    def L_HALF(self) -> str: return "" if self.use_nerdfonts else ""
+    def L_HALF(self) -> str:
+        return "" if self.use_nerdfonts else ""
+
     @property
-    def R_HALF(self) -> str: return "" if self.use_nerdfonts else ""
+    def R_HALF(self) -> str:
+        return "" if self.use_nerdfonts else ""
+
     @property
-    def L_TRI(self) -> str: return "" if self.use_nerdfonts else "<"
+    def L_TRI(self) -> str:
+        return "" if self.use_nerdfonts else "<"
+
     @property
-    def R_TRI(self) -> str: return "" if self.use_nerdfonts else ">"
+    def R_TRI(self) -> str:
+        return "" if self.use_nerdfonts else ">"
+
     @property
-    def L_ANGLE(self) -> str: return "" if self.use_nerdfonts else "("
+    def L_ANGLE(self) -> str:
+        return "" if self.use_nerdfonts else "("
+
     @property
-    def R_ANGLE(self) -> str: return "" if self.use_nerdfonts else ")"
+    def R_ANGLE(self) -> str:
+        return "" if self.use_nerdfonts else ")"
 
     def _render_atomic(self, segments: list[PromptSegment]) -> Text:
         """Renders segments in 'Atomic' pill style."""
         res = Text()
         if not segments:
             return res
-        
-        for i, seg in enumerate(segments):
+
+        for _i, seg in enumerate(segments):
             content = f"{seg.icon} {seg.text}" if seg.icon else seg.text
             res.append(self.L_HALF, style=seg.bg or seg.fg)
             res.append(f" {content} ", style=f"{seg.fg} on {seg.bg}" if seg.bg else seg.fg)
@@ -72,17 +83,17 @@ class PromptEngine:
         res = Text()
         if not segments:
             return res
-            
+
         for i, seg in enumerate(segments):
             content = f" {seg.icon} {seg.text} " if seg.icon else f" {seg.text} "
             res.append(content, style=f"{seg.fg} on {seg.bg}" if seg.bg else seg.fg)
-            
+
             if i < len(segments) - 1:
                 next_bg = segments[i + 1].bg
                 res.append(self.R_TRI, style=f"{seg.bg} on {next_bg}" if next_bg else seg.bg)
             else:
                 res.append(self.R_TRI, style=seg.bg or seg.fg)
-        
+
         res.append(" ")
         return res
 
@@ -128,10 +139,12 @@ class PromptEngine:
     def build_user_prompt(self, style_name: str, cwd: str, is_trusted: bool, cost: float, model_id: str = "") -> Text:
         """Builds the user prompt using the specified style."""
         segments = []
-        
+
         # 1. OS Icon
         os_icon = "󰀵" if os.name == "posix" else "󰖳"
-        segments.append(PromptSegment("", "black", self.theme.brand_primary, icon=os_icon if self.use_nerdfonts else ""))
+        segments.append(
+            PromptSegment("", "black", self.theme.brand_primary, icon=os_icon if self.use_nerdfonts else "")
+        )
 
         # 2. Security Status
         if is_trusted:
@@ -142,7 +155,7 @@ class PromptEngine:
             segments.append(
                 PromptSegment("UNTRUSTED", "black", self.theme.error, icon="󰚌" if self.use_nerdfonts else "✗")
             )
-            
+
         # 3. Path
         segments.append(
             PromptSegment(
@@ -152,20 +165,20 @@ class PromptEngine:
                 icon="" if self.use_nerdfonts else "",
             )
         )
-        
+
         # 4. Git Info
         git = get_git_info()
         if git["branch"]:
             git_icon = "󰊢" if self.use_nerdfonts else "git:"
             git_color = self.theme.git_dirty if git["is_dirty"] else self.theme.git_clean
             segments.append(PromptSegment(git["branch"], "black", git_color, icon=git_icon))
-            
+
         # 5. Python Info
         py = get_python_info()
         if py["venv"]:
             py_icon = "" if self.use_nerdfonts else "py:"
             segments.append(PromptSegment(py["venv"], "black", self.theme.python_venv, icon=py_icon))
-            
+
         # 6. Model Info
         if model_id:
             m = get_model_info(model_id)
@@ -176,7 +189,9 @@ class PromptEngine:
         cost_str = f"${cost:.3f}" if cost >= 0.01 else f"${cost:.4f}"
         if cost == 0:
             cost_str = "$0.000"
-        segments.append(PromptSegment(cost_str, "black", self.theme.cost_badge, icon="󰠠" if self.use_nerdfonts else "$"))
+        segments.append(
+            PromptSegment(cost_str, "black", self.theme.cost_badge, icon="󰠠" if self.use_nerdfonts else "$")
+        )
 
         renderer = self.STYLES.get(style_name, self._render_atomic)
         return renderer(segments)
@@ -191,7 +206,7 @@ class PromptEngine:
         segments.append(
             PromptSegment(now, self.theme.text_primary, self.theme.border, icon="󱑎" if self.use_nerdfonts else "")
         )
-        
+
         if tool:
             segments.append(
                 PromptSegment(tool, "white", self.theme.brand_secondary, icon="🛠️" if self.use_nerdfonts else ">")

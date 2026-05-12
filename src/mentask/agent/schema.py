@@ -63,3 +63,14 @@ class AgentTurnStatus(str, Enum):
     EXECUTING = "executing"
     ERROR = "error"
     COMPLETED = "completed"
+
+
+class EngineeringLevel(str, Enum):
+    """
+    Defines the level of architectural rigor and tool orchestration complexity.
+    """
+
+    L0_INQUIRY = "l0_inquiry"  # Pure questions, no tools needed.
+    L1_PRAGMATIC = "l1_pragmatic"  # Direct execution, minimal research, simple tools.
+    L2_STANDARD = "l2_standard"  # Research -> Plan -> Execute cycle. Default.
+    L3_ARCHITECT = "l3_architect"  # Deep analysis, repository mapping, subagent delegation.

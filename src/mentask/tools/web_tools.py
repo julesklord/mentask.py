@@ -46,7 +46,7 @@ def _google_search(query: str, api_key: str, cx_id: str) -> str:
         if not items:
             return "uups. Google doesn't return any results. Please check your query or try again later."
 
-        results = ["[RESULTADOS DE BÚSQUEDA (GOOGLE)]"]
+        results = ["[SEARCH RESULTS (GOOGLE)]"]
         for i, item in enumerate(items[:5], 1):
             results.append(f"{i}. {item['title']}")
             results.append(f"   URL: {item['link']}")
@@ -96,7 +96,7 @@ def _duckduckgo_search(query: str) -> str:
 
         return "\n".join(results)
     except Exception as e:
-        return f"Error en búsqueda de DuckDuckGo: {str(e)}"
+        return f"Error in DuckDuckGo search: {str(e)}"
 
 
 def is_safe_url(url: str) -> bool:

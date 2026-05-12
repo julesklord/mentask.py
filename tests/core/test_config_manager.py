@@ -233,3 +233,104 @@ class TestConfigManagerApiKey:
             mock_set.assert_called_once_with("mentask", "ANTHROPIC_API_KEY", "test-key-xyz")
             cm.console.print.assert_called_once()
             assert "[error]" in str(cm.console.print.call_args)
+
+    def test_save_api_key_default_provider(self):
+        with patch("keyring.set_password") as mock_set:
+            cm = ConfigManager(_mock_console)
+            cm.console = MagicMock()
+            result = cm.save_api_key("default-key")
+            assert result is True
+            mock_set.assert_called_once_with("mentask", "GOOGLE_API_KEY", "default-key")
+
+    def test_load_api_key_return_source(self):
+        with (
+            patch.dict(os.environ, {"GOOGLE_API_KEY": "env-key"}, clear=True),
+            patch("keyring.get_password", return_value="keyring-key"),
+            patch("mentask.core.config_manager.ConfigManager.load_settings"),
+        ):
+            cm = ConfigManager(_mock_console)
+            # Clear settings so we don't accidentally get Local Settings
+            cm.settings = {}
+            result = cm.load_api_key(return_source=True)
+            assert result == ("keyring-key", "Keyring")
+
+    def test_load_api_key_keyring_exception(self):
+        with (
+            patch.dict(os.environ, {"GOOGLE_API_KEY": "env-key"}, clear=True),
+            patch("keyring.get_password", side_effect=Exception("Keyring failed")),
+            patch("mentask.core.config_manager.ConfigManager.load_settings"),
+        ):
+            cm = ConfigManager(_mock_console)
+            cm.settings = {}
+            cm.console = MagicMock()
+            result = cm.load_api_key(return_source=True)
+            # Should fall back to environment variable
+            assert result == ("env-key", "Environment Variable")
+            cm.console.print.assert_called_once()
+            assert "[error]" in str(cm.console.print.call_args)
+
+    def test_load_api_key_local_settings(self):
+        with (
+            patch.dict(os.environ, {}, clear=True),
+            patch("keyring.get_password", return_value=None),
+        ):
+            cm = ConfigManager(_mock_console)
+            cm.settings["google_api_key"] = "local-key-123"
+            assert cm.load_api_key() == "local-key-123"
+
+    def test_load_api_key_skips_stored_in_keyring(self):
+        with (
+            patch.dict(os.environ, {"GOOGLE_API_KEY": "env-key-123"}),
+            patch("keyring.get_password", return_value=None),
+        ):
+            cm = ConfigManager(_mock_console)
+            cm.settings["google_api_key"] = "STORED_IN_KEYRING"
+            # Should skip local settings and fall back to env var
+            assert cm.load_api_key() == "env-key-123"
+
+    def test_load_api_key_keyring(self):
+        with (
+            patch.dict(os.environ, {}, clear=True),
+            patch("keyring.get_password", return_value="keyring-key-789"),
+        ):
+            cm = ConfigManager(_mock_console)
+            cm.settings["google_api_key"] = ""
+            assert cm.load_api_key() == "keyring-key-789"
+
+    def test_load_api_key_env_var(self):
+        with (
+            patch.dict(os.environ, {"GOOGLE_API_KEY": "env-key-123"}),
+            patch("keyring.get_password", return_value=None),
+        ):
+            cm = ConfigManager(_mock_console)
+            cm.settings["google_api_key"] = ""
+            assert cm.load_api_key() == "env-key-123"
+
+    def test_load_api_key_google_fallback(self):
+        with (
+            patch.dict(os.environ, {"GEMINI_API_KEY": "gemini-key-123"}, clear=True),
+            patch("keyring.get_password", return_value=None),
+        ):
+            cm = ConfigManager(_mock_console)
+            cm.settings["google_api_key"] = ""
+            assert cm.load_api_key() == "gemini-key-123"
+
+    def test_load_api_key_none(self, tmp_path):
+        with (
+            patch.dict(os.environ, {}, clear=True),
+            patch("keyring.get_password", return_value=None),
+            patch("mentask.core.config_manager.get_config_path", return_value=str(tmp_path / "nonexistent.key")),
+        ):
+            cm = ConfigManager(_mock_console)
+            cm.settings["google_api_key"] = ""
+            assert cm.load_api_key() is None
+
+    def test_save_api_key_strips_whitespace(self):
+        with patch("keyring.set_password") as mock_set:
+            cm = ConfigManager(_mock_console)
+            cm.console = MagicMock()
+
+            result = cm.save_api_key("  dummy_val  \n", "OpenAI")
+
+            assert result is True
+            mock_set.assert_called_once_with("mentask", "OPENAI_API_KEY", "dummy_val")

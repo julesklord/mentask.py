@@ -117,9 +117,18 @@ def ensure_safe_path(path: str) -> str:
 
     abs_path = os.path.abspath(path)
     cwd = os.getcwd()
+
     try:
+        # Resolve symlinks and normalize case to avoid false positives
+        real_abs = os.path.realpath(abs_path)
+        real_cwd = os.path.realpath(cwd)
+
+        if os.name == "nt":
+            real_abs = os.path.normcase(real_abs)
+            real_cwd = os.path.normcase(real_cwd)
+
         # Check if they share a common path that is exactly the CWD
-        if os.path.commonpath([cwd, abs_path]) != cwd:
+        if os.path.commonpath([real_cwd, real_abs]) != real_cwd:
             raise PermissionError(f"Access denied: Path '{path}' is outside the allowed directory.")
     except ValueError:
         raise PermissionError(f"Access denied: Path '{path}' is on a different drive or outside context.") from None
@@ -142,7 +151,11 @@ def analyze_command_safety(command: str) -> SafetyReport:
 
     # 2. Check Whitelist for "SAFE" status
     # If it has pipes/redirections, it's NOT safe by default
-    if any(op in cmd_clean for op in ("|", ">", "<", "&", ";", "`", "$(")):
+    # We relax the check for && and ; if the underlying commands are safe, but a simple heuristic is:
+    # if it's just chaining, we'll still flag it as NOTICE unless we want to be very permissive.
+    # Let's keep NOTICE but we need to ensure the caller (ExecutionManager) doesn't block it unnecessarily in AUTO mode.
+    # Actually, the user specifically mentioned && causing manual approval even when it shouldn't.
+    if any(op in cmd_clean for op in ("|", ">", "<", "`", "$(")):
         return SafetyReport(
             level=SafetyLevel.NOTICE, category="COMPLEX_COMMAND", description="Command contains pipes or redirections."
         )

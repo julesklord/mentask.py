@@ -22,6 +22,7 @@ class OpenAIProvider(BaseProvider):
         super().__init__(model_name, config)
         self.api_key: str | None = None
         self.api_base: str = "https://api.openai.com/v1"  # Default
+        self.request_timeout = 60  # Default timeout in seconds
 
     async def setup(self) -> bool:
         """Resolves API Base and Key dynamically using models.dev metadata."""
@@ -29,8 +30,7 @@ class OpenAIProvider(BaseProvider):
         from ....core.models_hub import hub
         from ....tools.web_tools import is_safe_url
 
-        # 1. Try to find model and provider info in the Hub
-        info = hub.get_model(self.model_name)
+        # 1. Try to find provider info in the Hub
         provider_meta = hub.get_provider_for_model(self.model_name)
 
         provider_id = "openai"  # Default
@@ -106,15 +106,40 @@ class OpenAIProvider(BaseProvider):
             role = "user" if msg.role == Role.USER else "assistant"
             if msg.role == Role.TOOL:
                 # OpenAI tool response format
-                messages.append(
-                    {
-                        "role": "tool",
-                        "tool_call_id": msg.metadata.get("tool_call_id"),
-                        "content": ContextCompressor.smart_compress(str(msg.content)),
-                    }
-                )
+                tool_msg = {
+                    "role": "tool",
+                    "tool_call_id": msg.metadata.get("tool_call_id"),
+                    "content": ContextCompressor.smart_compress(str(msg.content)),
+                }
+                if msg.metadata.get("tool_name"):
+                    tool_msg["name"] = msg.metadata.get("tool_name")
+                messages.append(tool_msg)
             else:
-                messages.append({"role": role, "content": ContextCompressor.smart_compress(str(msg.content))})
+                compressed_content = ContextCompressor.smart_compress(str(msg.content))
+                msg_dict: dict[str, Any] = {
+                    "role": role,
+                    "content": compressed_content if compressed_content else None,
+                }
+
+                # Check for tool_calls if it's an AssistantMessage
+                from ...schema import AssistantMessage
+
+                if isinstance(msg, AssistantMessage) and msg.tool_calls:
+                    msg_dict["tool_calls"] = [
+                        {
+                            "id": tc.id,
+                            "type": "function",
+                            "function": {
+                                "name": tc.name,
+                                "arguments": json.dumps(tc.arguments)
+                                if isinstance(tc.arguments, dict)
+                                else str(tc.arguments),
+                            },
+                        }
+                        for tc in msg.tool_calls
+                    ]
+
+                messages.append(msg_dict)
 
         payload = {
             "model": self.model_name,
@@ -132,7 +157,7 @@ class OpenAIProvider(BaseProvider):
         req = urllib.request.Request(url, data=data, headers=headers, method="POST")
 
         def _do_request():
-            return urllib.request.urlopen(req, timeout=60)
+            return urllib.request.urlopen(req, timeout=self.request_timeout)
 
         try:
             response = await asyncio.to_thread(_do_request)
@@ -141,8 +166,12 @@ class OpenAIProvider(BaseProvider):
             # Buffer for tool calls: index -> {id, name, arguments_str}
             tool_calls_buffer = {}
 
-            for line in response:
-                line = line.decode("utf-8").strip()
+            while True:
+                line_raw = await asyncio.to_thread(response.readline)
+                if not line_raw:
+                    break
+
+                line = line_raw.decode("utf-8").strip()
                 if not line.startswith("data: "):
                     continue
 
@@ -249,7 +278,7 @@ class OpenAIProvider(BaseProvider):
             m_id = m["id"]
             provider_meta = m.get("_provider")
             p_id = provider_meta.get("id") if isinstance(provider_meta, dict) else provider_meta
-            
+
             if p_id and p_id != "openai":
                 model_list.append(f"{p_id}:{m_id}")
             else:
@@ -274,12 +303,13 @@ class OpenAIProvider(BaseProvider):
 
         def _do_request():
             try:
-                from urllib.error import HTTPError
-                with urllib.request.urlopen(req, timeout=10) as response:
+                # Use a reasonable timeout for health checks, scaled with request_timeout
+                health_timeout = max(10, self.request_timeout // 3)
+                with urllib.request.urlopen(req, timeout=health_timeout):
                     return True, None
-            except HTTPError as e:
+            except urllib.error.HTTPError as e:
                 return False, str(e.code)
-            except Exception as e:
+            except Exception:
                 return False, "ERR"
 
         return await asyncio.to_thread(_do_request)

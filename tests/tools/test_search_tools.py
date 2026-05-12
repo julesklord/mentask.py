@@ -68,4 +68,4 @@ def test_glob_find_nested(temp_workspace):
 def test_glob_find_no_match(temp_workspace):
     """Verifies behavior when no files match the glob."""
     result = glob_find("*.nonexistent", str(temp_workspace))
-    assert "No files found" in result
+    assert "No files or directories found" in result

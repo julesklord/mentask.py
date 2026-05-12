@@ -2,6 +2,62 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.27.0] - 2026-05-09
+
+### Added
+- **Agentic Delegation**: Introduced the `SubagentTool` to allow MentAsk to spawn isolated sub-agents for specific tasks.
+- **Generalist Blueprint**: Added a `generalist` sub-agent profile that has full access to the workspace for complex, multi-step problem solving.
+- **Enhanced Loop Protection**: The `AgentOrchestrator` now intercepts identical text outputs and tool calls across turns to break infinite loops effectively.
+
+## [0.26.1] - 2026-05-09
+
+### Fixed
+- **Tool Chaining (Local Models)**: Fixed a bug where local models (e.g. Ollama, Qwen) would stop generating after a tool result because of strict API constraints. The agent now properly passes the `name` attribute back in tool responses and encodes empty assistant text correctly as `null`.
+
+## [0.26.0] - 2026-05-09
+
+### Added
+- **Observability Metrics**: Added robust metrics tracking for `TimeoutRecoveryManager` and `FileReadingSession`.
+- **Session Reporting**: Added `get_session_report` to `AgentOrchestrator` to export timeout and file reading metrics.
+- **Graceful Shutdown**: Added signal handling (SIGINT/SIGTSTP) in `cli/main.py` to cleanly abort pending tasks, cancel running tool operations, and save checkpoints.
+
+### Fixed
+- **Infinite Loop Detection**: Integrated line-based constraints into `FileReadingSession` to preemptively intercept and abort repetitive or looping `read_file` calls.
+- **Tool Timeouts**: Refactored `ExecutionManager` to wrap all tool executions inside an async `BlockingOperationManager`, preventing indefinite hangs with a strict visible timeout ceiling.
+- **Model Timeouts**: Implemented `TimeoutRecoveryManager` in `AgentOrchestrator` to dynamically detect network stalls and model timeouts, applying context-reduction heuristics and exponential backoffs automatically.
+- **Deprecations**: Replaced `asyncio.iscoroutinefunction` with `inspect.iscoroutinefunction` for Python 3.16 future-proofing.
+- **Performance**: Eradicated an O(n) bottleneck when reading large files that was causing triple-reads to count lines.
+
+
+## [0.25.2] - 2026-05-09
+
+### Fixed
+- **Folder Discovery**: Fixed a bug where `glob_find` only returned files, causing the agent to fail when searching for directories. Also updated `ensure_safe_path` to resolve symlinks and normalize case to prevent false "Access denied" errors.
+- **Command Security**: Relaxed the security warning for chained shell commands (e.g., `&&`, `|`) so that the agent doesn't unnecessarily prompt for manual approval in `/mode auto` unless the command contains explicitly dangerous patterns.
+
+## [0.25.1] - 2026-05-09
+
+### Fixed
+- **Agent Amnesia**: Fixed a critical bug in `OpenAIProvider` where the agent would "forget" previous conversation turns. This was caused by the provider discarding tool calls when serializing the `AssistantMessage` history into the OpenAI payload format, leading to malformed conversation sequences that broke context retention in models like Ollama.
+
+## [0.25.0] - 2026-05-08
+
+### Added
+- **CLI Bridging Architecture**: MentAsk can now be orchestrated by external CLI agents (like `gemini-cli`, `codex`, `opencode`) using the new `CLIProvider`.
+- **Auto-Discovery**: `ModelsHub` automatically detects supported CLI agents in the user's `PATH` and exposes them via the `cli:` provider prefix (e.g., `/model cli:gemini-cli`).
+- **Prompt Translation**: Implemented dynamic translation of MentAsk's internal tool schemas into a strict JSON-enforced instruction manual for external agents.
+
+## [0.24.4] - 2026-05-08
+
+### Fixed
+- **Streaming Stability**: Refactored the response stream reader in `OpenAIProvider` to use non-blocking `readline` calls via `asyncio.to_thread`. This resolves a critical issue where the event loop would block during streaming, causing 60s timeout leaks regardless of the configured timeout.
+
+## [0.24.3] - 2026-05-08
+
+### Fixed
+- **Ollama Stability**: Increased the default request timeout for local models from 60s to 300s to prevent frequent timeouts during model loading on systems like Gentoo.
+- **Dynamic Timeouts**: Refactored the provider base class to support configurable timeouts for both streaming and health checks.
+
 ## [0.24.2] - 2026-05-08
 
 ### Changed

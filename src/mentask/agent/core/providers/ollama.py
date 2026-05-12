@@ -19,6 +19,7 @@ class OllamaProvider(OpenAIProvider):
         )
         super().__init__(pure_model, config)
         self.api_base = "http://localhost:11434/v1"
+        self.request_timeout = 300  # Ollama needs more time to load models
 
     async def setup(self) -> bool:
         """

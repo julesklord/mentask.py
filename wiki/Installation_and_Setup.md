@@ -6,6 +6,20 @@
 * **API Key:** Required from [Google AI Studio](https://aistudio.google.com/).
 * **System Deps:** Access to standard OS commands (bash on UNIX, pwsh on Windows) to populate agent utilities.
 
+## Local LLM Setup (Ollama)
+
+mentask v0.25.0+ supports local execution via **Ollama**. To use mentask entirely offline:
+
+1.  **Install Ollama:** Follow the instructions at [ollama.com](https://ollama.com).
+2.  **Pull the Mandated Model:** mentask is optimized for **qwen3.5**.
+    ```bash
+    ollama pull qwen3.5
+    ```
+3.  **Run with Local Flag:**
+    ```bash
+    mentask --local
+    ```
+
 ## Installation Steps
 
 Recommended local development linkage:

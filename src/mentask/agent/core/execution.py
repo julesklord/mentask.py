@@ -3,6 +3,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from ...core.execution import BlockingOperationManager, OperationTimeout
 from ...core.trust_manager import TrustManager
 from ..schema import ToolResult
 from .lsp_client import LSPClient
@@ -13,10 +14,12 @@ class ExecutionManager:
     Manages tool execution, security verification, and diagnostic injection.
     """
 
-    def __init__(self, tool_registry):
+    def __init__(self, tool_registry, config=None):
         self.tools = tool_registry
+        self.config = config
         self.trust = TrustManager()
         self.lsp: LSPClient | None = None
+        self.operation_mgr = BlockingOperationManager(global_timeout=120)
 
     async def ensure_lsp_started(self) -> None:
         if self.lsp is None:
@@ -42,7 +45,16 @@ class ExecutionManager:
                 ensure_safe_path(str(resolved_path))
 
                 # 2. Check for Critical Asset Modification (Intelligent Safety)
-                if tool_call.name in ("write_file", "edit_file", "replace"):
+                if tool_call.name in ("write_file", "edit_file", "replace", "delete_file", "move_file"):
+                    # Check Read-Only Mode
+                    if self.config and self.config.settings.get("readonly_mode", False):
+                        if tool_call.name in ("delete_file", "move_file"):
+                            return f"READ-ONLY MODE: Modification tool '{tool_call.name}' is forbidden."
+
+                        # For write/edit, only allow if the file DOES NOT exist
+                        if resolved_path.exists():
+                            return f"READ-ONLY MODE: Modification of existing file '{resolved_path.name}' is forbidden."
+
                     report = analyze_path_safety(str(resolved_path))
                     if report.level != SafetyLevel.SAFE:
                         return f"SECURITY RISK ({report.category}): {report.description}"
@@ -86,19 +98,37 @@ class ExecutionManager:
         confirmation_callback: Callable | None,
         security_warning: str,
     ) -> ToolResult | None:
-        is_dir_trusted = self.trust.is_trusted(Path.cwd().resolve())
+        is_dir_trusted = self.trust.is_trusted(str(Path.cwd().resolve()))
         force_confirmation = bool(security_warning)
+
+        # Check edit mode
+        edit_mode = "manual"
+        if hasattr(self, "config") and self.config and hasattr(self.config, "settings"):
+            edit_mode = self.config.settings.get("edit_mode", "manual")
 
         # 1. If tool doesn't need confirmation or there's no UI to ask, skip
         if not (tool and tool.requires_confirmation and confirmation_callback):
             return None
 
-        # 2. If it's a dangerous command (warning exists), we MUST confirm
-        if force_confirmation:
-            pass
-        # 3. If the directory is trusted, we skip confirmation for non-dangerous tools
-        elif is_dir_trusted or tool_call.name == "execute_command":
-            return None
+        # 2. In auto mode, we only confirm if it's an explicit DANGEROUS/SECURITY warning
+        if edit_mode == "auto":
+            if (
+                "DANGEROUS" in security_warning
+                or "SECURITY ERROR" in security_warning
+                or "SECURITY RISK" in security_warning
+            ):
+                # Force confirmation for severe risks even in auto mode
+                pass
+            elif is_dir_trusted or tool_call.name == "execute_command":
+                # In auto mode, trusted dirs skip confirmation. execute_command also skips if not dangerous.
+                return None
+        else:
+            # Manual mode logic:
+            if force_confirmation:
+                pass
+            elif is_dir_trusted and tool_call.name != "execute_command":
+                # In manual mode, we still allow trusted file edits to pass if no warning
+                return None
 
         try:
             allowed = await confirmation_callback(tool_call.name, tool_call.arguments, warning=security_warning)
@@ -112,8 +142,21 @@ class ExecutionManager:
         return None
 
     async def call_tool_safely(self, tool_call) -> ToolResult:
-        try:
+        import time
+
+        async def run_tool():
             return await self.tools.call_tool(tool_call.name, tool_call.id, tool_call.arguments)
+
+        try:
+            result = await self.operation_mgr.execute_long_operation(
+                op_id=f"tool_{tool_call.id}_{time.time()}",
+                description=f"Executing tool: {tool_call.name}",
+                operation=run_tool,
+                timeout_seconds=60,
+            )
+            if isinstance(result, OperationTimeout):
+                return ToolResult(tool_call_id=tool_call.id, content=f"Tool timeout: {result}", is_error=True)
+            return result
         except Exception as exc:
             return ToolResult(tool_call_id=tool_call.id, content=f"Tool execution failed: {exc}", is_error=True)
 
@@ -164,6 +207,8 @@ class ExecutionManager:
                     diag_msg += f"- [{severity}] line {line}: {diagnostic.get('message')}\n"
                 diag_msg += "\n[!] Please fix these errors in your next turn."
                 result.content += diag_msg
-        except Exception:
-            pass
+        except Exception as exc:
+            from logging import getLogger
+
+            getLogger("mentask").warning(f"Failed to append LSP diagnostics: {exc}")
         return result

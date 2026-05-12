@@ -9,8 +9,10 @@ from mentask.core.paths import (
     get_global_config_dir,
     get_heartbeat_path,
     get_history_dir,
+    get_local_knowledge_path,
     get_memory_path,
     get_standard_knowledge_dir,
+    get_tasks_path,
 )
 
 
@@ -99,6 +101,17 @@ def test_get_heartbeat_path(mock_home):
     assert heartbeat_path == expected_path
 
 
+def test_get_tasks_path(mock_home):
+    tasks_path = get_tasks_path()
+
+    # Check that it returns a string
+    assert isinstance(tasks_path, str)
+
+    # Check that the path is correct
+    expected_path = str(mock_home / ".mentask" / "tasks.md")
+    assert tasks_path == expected_path
+
+
 def test_get_standard_knowledge_dir():
     knowledge_dir = get_standard_knowledge_dir()
 
@@ -109,3 +122,24 @@ def test_get_standard_knowledge_dir():
     assert knowledge_dir.name == "standard"
     assert knowledge_dir.parent.name == "agent"
     assert knowledge_dir.parent.parent.name == "mentask"
+
+
+def test_get_local_knowledge_path(tmp_path):
+    with patch("pathlib.Path.cwd", return_value=tmp_path):
+        local_knowledge_path = get_local_knowledge_path()
+        assert isinstance(local_knowledge_path, str)
+        expected_path = str(tmp_path / ".mentask_knowledge.md")
+        assert local_knowledge_path == expected_path
+
+
+def test_get_global_memory_path(mock_home):
+    from mentask.core.paths import get_global_memory_path
+
+    memory_path = get_global_memory_path()
+
+    # Check that it returns a string
+    assert isinstance(memory_path, str)
+
+    # Check that the path is correct
+    expected_path = str(mock_home / ".mentask" / "memory.md")
+    assert memory_path == expected_path

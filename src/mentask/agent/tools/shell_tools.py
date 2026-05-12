@@ -23,6 +23,16 @@ class ShellTool(BaseTool):
         self.config = config
 
     async def execute(self, command: str) -> ToolResult:
+        # SECURITY BLOCK: Automated git commits/pushes via shell are forbidden.
+        blocked_commands = ["git commit", "git push"]
+        if any(blocked in command for blocked in blocked_commands):
+            return ToolResult(
+                tool_call_id="",
+                content="SECURITY BLOCK: Automated git commits/pushes via shell are forbidden. "
+                "Do not try to clean the working directory. Ask the user for assistance.",
+                is_error=True,
+            )
+
         timeout = 60
         if self.config:
             timeout = self.config.settings.get("bash_timeout", 60)

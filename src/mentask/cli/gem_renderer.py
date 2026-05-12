@@ -228,8 +228,14 @@ class GemStyleRenderer:
         if self._thinking_status:
             return
 
+        from .ui_utils import get_random_thinking_message
+
+        base_msg = _("dashboard.prompt_thinking")
+        funny_msg = get_random_thinking_message()
+        full_msg = f"{base_msg} - [dim]{funny_msg}[/]"
+
         self._thinking_status = self.console.status(
-            _("dashboard.prompt_thinking"),
+            full_msg,
             spinner="dots",
             spinner_style=f"bold {self.C_THINK}",
         )
@@ -244,14 +250,15 @@ class GemStyleRenderer:
     def _build_view(self, show_cursor: bool = True) -> Group:
         """Construct a Group with only the UNPRINTED committed content + live text."""
         items = list(self.committed_buffer[self.printed_count :])
-        
+
         # Natural message inline header logic
         if hasattr(self, "_active_header") and self._active_header and self.printed_count == 0 and not items:
             from rich.table import Table
+
             grid = Table.grid(padding=(0, 1))
             grid.add_column()
             grid.add_column()
-            
+
             cursor = f" {icons.brand}" if show_cursor else ""
             # We use Text for the live stream part to avoid Markdown jitter
             grid.add_row(self._active_header, Text(self.live_text + cursor, style=f"bold {self.C_BRAND}"))
@@ -294,25 +301,22 @@ class GemStyleRenderer:
         self._last_stream_time = time.time()
 
     def update_stream(self, chunk: str) -> None:
-        now = time.time()
-        elapsed = now - self._last_stream_time
-        if elapsed < self._stream_delay:
-            time.sleep(self._stream_delay - elapsed)
+        # Accumulate delta — provider now sends chunk only, not full accumulated text
+        self.live_text += chunk
 
-        # We expect accumulated text from ChatAgent
-        self.live_text = chunk
-
-        # Detección inline de segmentos completos
+        # Inline detection of full segments
         if "</think>" in self.live_text or "</thinking>" in self.live_text:
             self._maybe_commit_think_block()
 
         if "```" in self.live_text:
             self._maybe_commit_code_block()
 
-        if self._live:
+        # Throttle Live updates to ~80ms intervals — the Live panel has its own
+        # refresh_per_second=12 but forcing update() on every token is still expensive.
+        now = time.time()
+        if self._live and (now - self._last_stream_time) >= 0.08:
             self._live.update(self._build_view())
-
-        self._last_stream_time = time.time()
+            self._last_stream_time = now
 
     def _maybe_commit_think_block(self) -> None:
         """If a thought block is complete, commit it to the buffer."""

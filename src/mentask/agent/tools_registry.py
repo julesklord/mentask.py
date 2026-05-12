@@ -138,7 +138,7 @@ class ToolDispatcher:
         if tool_name == "delete_file":
             path = args.get("path", "")
             if self.config.settings.get("edit_mode", "manual") == "manual" and not await self.ui.confirm_action(
-                f"¿Eliminar archivo [bold]'{path}'[/bold]?"
+                f"Delete file [bold]'{path}'[/bold]?"
             ):
                 return _("tool.denied.edit")
             return await asyncio.to_thread(delete_file, path)
@@ -147,7 +147,7 @@ class ToolDispatcher:
             source = args.get("source", "")
             destination = args.get("destination", "")
             if self.config.settings.get("edit_mode", "manual") == "manual":
-                message = f"¿Mover [bold]'{source}'[/bold] a [bold]'{destination}'[/bold]?"
+                message = f"Move [bold]'{source}'[/bold] to [bold]'{destination}'[/bold]?"
                 if not await self.ui.confirm_action(message):
                     return _("tool.denied.edit")
             return await asyncio.to_thread(move_file, source, destination)

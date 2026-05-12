@@ -1,20 +1,21 @@
-<p align="center">
-  <img src="docs/assets/logo.svg" width="160" alt="mentask logo">
-</p>
-
-# mentask
-
-<p align="center">
-  <strong>The Self-Evolving Autonomous Agent for Engineers Who love to work with the CLI<br/>(yes, i use Arch, why do you ask?)</strong>
-</p>
-
-<p align="center">
-  <a href="https://pypi.org/project/mentask/"><img src="https://img.shields.io/pypi/v/mentask.svg" alt="PyPI version"></a>
-  <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.10%2B-blue.svg" alt="Python 3.10+"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"></a>
-  <a href="https://models.dev/"><img src="https://img.shields.io/badge/Powered%20by-models.dev-6366f1" alt="Powered by models.dev"></a>
-  <a href="https://github.com/astral-sh/ruff"><img src="https://img.shields.io/badge/code%20style-ruff-000000.svg" alt="Code style: ruff"></a>
-</p>
+<table border="0">
+  <tr>
+    <td width="200" align="center" valign="top">
+      <img src="docs/assets/logo.svg" width="180" alt="mentask logo">
+    </td>
+    <td valign="top">
+      <h1>mentask</h1>
+      <p><strong>The Self-Evolving Autonomous Agent for Engineers Who love to work with the CLI</strong><br/>
+      <p>
+        <a href="https://pypi.org/project/mentask/"><img src="https://img.shields.io/pypi/v/mentask.svg" alt="PyPI version"></a>
+        <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.10%2B-blue.svg" alt="Python 3.10+"></a>
+        <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"></a>
+        <a href="https://models.dev/"><img src="https://img.shields.io/badge/Powered%20by-models.dev-6366f1" alt="Powered by models.dev"></a>
+        <a href="https://github.com/astral-sh/ruff"><img src="https://img.shields.io/badge/code%20style-ruff-000000.svg" alt="Code style: ruff"></a>
+      </p>
+    </td>
+  </tr>
+</table>
 
 ---
 
@@ -53,9 +54,11 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -e ".[dev]"
 ```
 
-**Fast Track (PyPI):**
+**Local-First Mode (Offline):**
+Install [Ollama](https://ollama.com) and pull the mandated model:
 ```bash
-pip install mentask
+ollama pull qwen3.5
+mentask --local
 ```
 
 ### First Run & Configuration
@@ -106,6 +109,21 @@ This is not an agent. This is a clipboard exercise with extra steps.
 Most critically: **it builds its own tools.** When mentask encounters a repetitive engineering problem it can't solve efficiently with existing tools, it doesn't ask you. It synthesizes a new Python module, validates the AST, loads it hot into memory, and immediately uses it in the next turn. Your workflow evolves in place.
 
 This isn't conversation. This is **autonomy**.
+
+---
+
+### Dynamic Engineering Levels (DEL)
+
+mentask v0.27.2 introduces the **Task Classifier**, which pre-flights every prompt to set the correct engineering rigor:
+
+- **L0_INQUIRY**: Informational mode. Zero tool noise. Direct answers.
+- **L1_PRAGMATIC**: Speed mode. Uses direct shell commands (`cat`, `sed`, `echo`) and avoids deep mapping.
+- **L2_STANDARD**: Research-first mode. Balanced development loop.
+- **L3_ARCHITECT**: High-rigor mode. Forces formal planning in `.mentask_plan.md` and full system dependency mapping.
+
+### Stall Detection & Strategy Reset
+
+If the agent gets stuck explaining things without taking action (thinking loops), the orchestrator triggers a **Strategy Reset**. It forces the agent to stop talking and try a different execution path, typically falling back to raw shell tools if specialized ones fail.
 
 ---
 
@@ -335,6 +353,15 @@ mentask will:
 
 You now have a reusable audio batch conversion tool. Forever.
 
+### Workflow 4: Orchestration via External CLI Agents (CLI Bridging)
+
+MentAsk can act as the execution "body" while being orchestrated by another CLI agent (the "brain"). If you have tools like `gemini-cli` or `codex` installed in your PATH, MentAsk will auto-discover them.
+
+```bash
+/model cli:gemini-cli
+```
+MentAsk will seamlessly translate its internal tool schemas and conversation history into a structured prompt, execute the external binary, and parse its standard output to execute tools on its behalf.
+
 ---
 
 ## The Guard (Zero-Trust Security)
@@ -384,45 +411,6 @@ A Rich-powered terminal interface that streams the agent's internal monologue in
 | **memory** | `/memory [search\|clear]` | Search the semantic memory index or clear it. |
 | **clear** | `/clear` | Clear the current session history and start fresh. |
 | **exit** | `/exit` or `Ctrl-C` | Gracefully shut down mentask. Persists session state. |
-
-### Example Session
-
-```
-$ mentask
-Welcome to mentask v0.20.0
-
-/init
-✓ Initialized .mentask/ directory
-✓ Created SQLite history database
-✓ Ready to go
-
-> add a health check endpoint to the api server that returns {status: "ok"}
-[THINK] Task: Add health endpoint. Need to find server entrypoint, identify routing framework, add endpoint.
-[ACT]   Reading src/server.ts (AST parse)
-[ACT]   Executing: ruff check src/server.ts
-[OBSERVE] No syntax errors. Framework detected: Express.
-
-[THINK] Express. Need to add app.get('/health', ...). Simple task.
-[ACT]   Modifying src/server.ts (line 42 insertion)
-[ACT]   Running tests: npm test
-[OBSERVE] 2 new tests pass. 1 test fails (wrong status code expected).
-
-[THINK] Test expects 200, we returned 201. Fixing return.
-[ACT]   Modifying src/server.ts (line 45 update)
-[ACT]   Running tests: npm test
-[OBSERVE] All 47 tests pass.
-
-✓ Task complete. Added GET /health endpoint. Returns {status: "ok"} with 200 status.
-
-/stats
-Tokens used this session: 4,203 / 1,000,000 (cost: ~$0.008)
-Execution time: 12.3s
-Tool invocations: 5
-Files modified: 1
-
-/exit
-Session saved. Resume later with: mentask /resume
-```
 
 ---
 
@@ -568,4 +556,4 @@ If mentask saves you hours of boring work, consider:
 **Last updated:** May 2026
 **Status:** Actively maintained
 **Python support:** 3.10–3.14
-**API Providers:** Gemini 2.5, Claude 3.5 Sonnet, DeepSeek V3
+**API Providers:** Gemini 2.0/2.5, Claude 3.5 Sonnet, DeepSeek V3, Ollama (qwen3.5 standard)

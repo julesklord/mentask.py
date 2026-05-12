@@ -1,8 +1,6 @@
 from argparse import Namespace
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from mentask.cli.main import _parse_args, run_chatbot
 
 

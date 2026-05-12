@@ -22,9 +22,11 @@ class TrustManager:
                 with open(self.path, encoding="utf-8") as f:
                     data = json.load(f)
                     if isinstance(data, list):
-                        self.trusted_paths = set(os.path.abspath(p) for p in data)
-            except Exception:
-                pass
+                        self.trusted_paths = set(os.path.normcase(os.path.normpath(os.path.abspath(p))) for p in data)
+            except Exception as e:
+                import logging
+
+                logging.getLogger("mentask").error(f"Failed to load trust config: {e}")
 
     async def load_trust(self) -> None:
         """Loads trusted paths from the global config directory."""
@@ -44,7 +46,7 @@ class TrustManager:
             logging.getLogger("mentask").error(f"Failed to save trust config: {e}")
 
     def _write_trust_file(self) -> None:
-        """Síncrono, corrido en thread pool."""
+        """Synchronous, run in a thread pool."""
         with open(self.path, "w", encoding="utf-8") as f:
             import json
 
@@ -52,7 +54,7 @@ class TrustManager:
 
     def is_trusted(self, path: str) -> bool:
         """Checks if a given path (or any of its parents) is trusted (session or permanent)."""
-        abs_path = os.path.abspath(path)
+        abs_path = os.path.normcase(os.path.normpath(os.path.abspath(path)))
 
         # Check direct or parent matches in both permanent and session sets
         all_trusted = self.trusted_paths.union(self.session_trusted_paths)
@@ -60,18 +62,18 @@ class TrustManager:
 
     async def add_trust(self, path: str) -> None:
         """Adds a path to the universal trusted list."""
-        abs_path = os.path.abspath(path)
+        abs_path = os.path.normcase(os.path.normpath(os.path.abspath(path)))
         self.trusted_paths.add(abs_path)
         await self.save_trust()
 
     def add_session_trust(self, path: str) -> None:
         """Adds a path to the session-only trusted list."""
-        abs_path = os.path.abspath(path)
+        abs_path = os.path.normcase(os.path.normpath(os.path.abspath(path)))
         self.session_trusted_paths.add(abs_path)
 
     async def remove_trust(self, path: str) -> None:
         """Removes a path from the trust list."""
-        abs_path = os.path.abspath(path)
+        abs_path = os.path.normcase(os.path.normpath(os.path.abspath(path)))
         if abs_path in self.trusted_paths:
             self.trusted_paths.remove(abs_path)
             await self.save_trust()

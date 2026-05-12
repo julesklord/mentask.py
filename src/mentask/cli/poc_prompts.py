@@ -83,16 +83,16 @@ def run_poc():
     # Simulate User Input
     user_p = prompt.render_user_prompt(os.getcwd(), untrust=True, cost=0.012)
     console.print(user_p, end="")
-    console.print("¿Cómo está el clima hoy y qué archivos hay aquí?")
+    console.print("How's the weather today and what files are here?")
 
     time.sleep(0.5)
 
     # Simulate Agent Response
     agent_h = prompt.render_agent_header(tool="list_dir")
     console.print(f"\n{agent_h}")
-    console.print("  [dim]│[/] Analizando el directorio actual...")
-    console.print("  [dim]│[/] He encontrado 5 archivos de configuración.")
-    console.print("\n  Aquí tienes la lista de lo que veo en [bold]g:\\DEVELOPMENT\\mentask.py[/]:")
+    console.print("  [dim]│[/] Analyzing the current directory...")
+    console.print("  [dim]│[/] I've found 5 configuration files.")
+    console.print("\n  Here is the list of what I see in [bold]g:\\DEVELOPMENT\\mentask.py[/]:")
     console.print("  - [green]src/[/]")
     console.print("  - [blue]tests/[/]")
     console.print("  - README.md")
@@ -102,12 +102,12 @@ def run_poc():
     # Trusted version
     user_p2 = prompt.render_user_prompt(os.getcwd(), untrust=False, cost=0.015)
     console.print(user_p2, end="")
-    console.print("Excelente, ahora borra los temporales.")
+    console.print("Excellent, now delete the temporary files.")
 
     agent_h2 = prompt.render_agent_header(tool="rm", status="error")
     console.print(f"\n{agent_h2}")
-    console.print("  [dim]│[/] Intentando borrar .tmp/...")
-    console.print("  [red]✘ Error:[/] No tienes permisos para borrar esa carpeta.")
+    console.print("  [dim]│[/] Attempting to delete .tmp/...")
+    console.print("  [red]✘ Error:[/] You don't have permissions to delete that folder.")
 
 
 if __name__ == "__main__":

@@ -6,8 +6,47 @@ The Textual TUI has been removed — see cli/dashboard.py for the deprecation no
 """
 
 import asyncio
+import logging
 import os
+import signal
 import sys
+
+
+class GracefulShutdown:
+    def __init__(self, agent):
+        self.agent = agent
+        self.interrupted = False
+        signal.signal(signal.SIGINT, self._handle_interrupt)
+
+        if sys.platform != "win32":
+            signal.signal(signal.SIGTSTP, self._handle_suspend)
+
+    def _handle_interrupt(self, signum, frame):
+        logger = logging.getLogger("mentask")
+        logger.warning("\nSIGINT received - stopping gracefully...")
+        self.interrupted = True
+
+        if (
+            hasattr(self.agent, "orchestrator")
+            and hasattr(self.agent.orchestrator, "executor")
+            and hasattr(self.agent.orchestrator.executor, "operation_mgr")
+        ):
+            ops = self.agent.orchestrator.executor.operation_mgr.active_operations
+            for op_id in list(ops.keys()):
+                logger.info(f"Canceling operation: {op_id}")
+
+        if hasattr(self.agent, "save_checkpoint"):
+            self.agent.save_checkpoint()
+
+        sys.exit(130)
+
+    def _handle_suspend(self, signum, frame):
+        logger = logging.getLogger("mentask")
+        logger.info("\nSIGTSTP received - suspending agent...")
+        if hasattr(self.agent, "pause"):
+            self.agent.pause()
+        signal.signal(signal.SIGTSTP, signal.SIG_DFL)
+        os.kill(os.getpid(), signal.SIGTSTP)
 
 
 def _parse_args():
@@ -44,6 +83,7 @@ async def _run_async_chatbot(args):
     from ..agent.chat import ChatAgent
 
     agent = ChatAgent(session_id=args.session_id, local_mode=args.local)
+    _shutdown = GracefulShutdown(agent)
     loop = asyncio.get_running_loop()
     try:
         await agent.start()
@@ -70,7 +110,7 @@ def run_chatbot() -> None:
     """Main entry point for the mentask CLI."""
     args = _parse_args()
 
-    # Si se pide listado, no arrancamos el chatbot
+    # If listing is requested, do not start the chatbot
     if args.list:
         from ..cli.console import console
         from ..core.audit_manager import AuditManager

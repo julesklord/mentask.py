@@ -301,13 +301,8 @@ class GemStyleRenderer:
         self._last_stream_time = time.time()
 
     def update_stream(self, chunk: str) -> None:
-        now = time.time()
-        elapsed = now - self._last_stream_time
-        if elapsed < self._stream_delay:
-            time.sleep(self._stream_delay - elapsed)
-
-        # We expect accumulated text from ChatAgent
-        self.live_text = chunk
+        # Accumulate delta — provider now sends chunk only, not full accumulated text
+        self.live_text += chunk
 
         # Inline detection of full segments
         if "</think>" in self.live_text or "</thinking>" in self.live_text:
@@ -316,10 +311,12 @@ class GemStyleRenderer:
         if "```" in self.live_text:
             self._maybe_commit_code_block()
 
-        if self._live:
+        # Throttle Live updates to ~80ms intervals — the Live panel has its own
+        # refresh_per_second=12 but forcing update() on every token is still expensive.
+        now = time.time()
+        if self._live and (now - self._last_stream_time) >= 0.08:
             self._live.update(self._build_view())
-
-        self._last_stream_time = time.time()
+            self._last_stream_time = now
 
     def _maybe_commit_think_block(self) -> None:
         """If a thought block is complete, commit it to the buffer."""

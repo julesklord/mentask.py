@@ -30,7 +30,7 @@ class ProviderManager:
 
             if chunk_type == "text":
                 assistant_msg.content += chunk_content
-                yield {"type": "text", "content": assistant_msg.content}
+                yield {"type": "text", "content": chunk_content}  # yield delta only, not accumulated
             elif chunk_type == "thought":
                 assistant_msg.thought = chunk_content
                 yield {"type": "thought", "content": chunk_content}

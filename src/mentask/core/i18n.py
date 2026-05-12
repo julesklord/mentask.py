@@ -92,10 +92,17 @@ class Translator:
             str: The translated, formatted output string.
         """
         text = self.translations.get(key, key)
+        if isinstance(text, list):
+            return text[0] if text else key
         if kwargs:
             with contextlib.suppress(KeyError):
                 text = text.format(**kwargs)
         return text
+
+    def get_list(self, key: str) -> list[str]:
+        """Returns a list of translated strings."""
+        val = self.translations.get(key, [])
+        return val if isinstance(val, list) else [str(val)]
 
 
 # Singleton instance
@@ -113,6 +120,11 @@ def _(key: str, **kwargs: Any) -> str:
         str: Resolved string instance.
     """
     return _i18n.get(key, **kwargs)
+
+
+def _list(key: str) -> list[str]:
+    """Shorthand for retrieving list of translations."""
+    return _i18n.get_list(key)
 
 
 def get_current_language() -> str:

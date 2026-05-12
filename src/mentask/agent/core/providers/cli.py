@@ -1,9 +1,11 @@
 import asyncio
 import json
 import logging
+import re
 import shlex
 import uuid
 from collections.abc import AsyncGenerator
+from pathlib import Path
 from typing import Any
 
 from ....core.compression import ContextCompressor
@@ -11,6 +13,40 @@ from ...schema import Message, Role, ToolCall, UsageMetrics
 from .base import BaseProvider
 
 _logger = logging.getLogger("mentask")
+
+# Patterns to ignore in stderr (repetitive system warnings)
+_IGNORED_STDERR_PATTERNS = [
+    r"Windows 10 detected",
+    r"Windows 11 is recommended",
+    r"Ripgrep is not available",
+    r"Falling back to GrepTool",
+    r"True color \(24-bit\) support not detected",
+    r"DEP0190",  # Node.js deprecation warning for shell option
+    r"Use `node --trace-deprecation",
+]
+
+
+# Alias map: user-facing shorthand → list of candidate binary names (in priority order)
+_CLI_ALIAS_MAP: dict[str, list[str]] = {
+    "gemini": ["gemini", "gemini-cli"],
+    "gemini-cli": ["gemini-cli", "gemini"],
+    "codex": ["codex"],
+    "opencode": ["opencode"],
+    "claude": ["claude"],
+    "aider": ["aider"],
+}
+
+
+def _resolve_binary(name: str) -> str | None:
+    """Resolves a CLI alias or binary name to its full path. Returns None if not found."""
+    import shutil
+
+    candidates = _CLI_ALIAS_MAP.get(name.lower(), [name])
+    for candidate in candidates:
+        path = shutil.which(candidate)
+        if path:
+            return path
+    return None
 
 
 class CLIProvider(BaseProvider):
@@ -20,23 +56,33 @@ class CLIProvider(BaseProvider):
     """
 
     def __init__(self, model_name: str, config: Any):
-        # We strip the 'cli:' prefix if present
-        pure_cmd = model_name.split(":", 1)[1] if ":" in model_name and model_name.startswith("cli:") else model_name
+        # Strip 'cli:' prefix if present
+        pure_cmd = model_name.removeprefix("cli:")
         super().__init__(pure_cmd, config)
-        # cli_command can be just the binary 'gemini-cli' or a template 'gemini-cli --system "..." {prompt}'
+        # cli_command is the user-facing alias or a full template string
         self.cli_command = pure_cmd
+        # Resolved binary path (set in setup())
+        self._binary_path: str | None = None
+        # Display name for renderer
+        self.display_name = pure_cmd
 
     async def setup(self) -> bool:
-        import shutil
-
-        # Extract binary from command (first part)
+        # If the command is a template string (contains spaces or {prompt}), extract the binary
         try:
-            binary = shlex.split(self.cli_command)[0]
-            if shutil.which(binary) is None:
-                _logger.error(f"CLI binary '{binary}' not found in PATH.")
-                return False
+            first_token = shlex.split(self.cli_command)[0]
         except Exception:
+            first_token = self.cli_command
+
+        resolved = _resolve_binary(first_token)
+        if resolved is None:
+            _logger.error(
+                f"CLI binary '{first_token}' not found in PATH. "
+                f"Tried aliases: {_CLI_ALIAS_MAP.get(first_token.lower(), [first_token])}"
+            )
             return False
+
+        self._binary_path = resolved
+        _logger.info(f"CLI Bridge: resolved '{first_token}' → '{resolved}'")
         return True
 
     def _build_prompt(self, history: list[Message], tools_schema: list[dict[str, Any]], system_instruction: str) -> str:
@@ -85,6 +131,40 @@ class CLIProvider(BaseProvider):
         prompt_parts.append("\n### YOUR RESPONSE (AGENT):")
         return "\n".join(prompt_parts)
 
+    def _build_cli_args(self, full_prompt: str) -> tuple[list[str], bool]:
+        """
+        Builds the argv list for the subprocess.
+        Returns a tuple of (args, uses_stdin).
+        """
+        binary = self._binary_path or self.cli_command
+        binary_name = Path(binary).stem.lower()
+
+        # Non-interactive / pipe-friendly flags per known CLI tool
+        _NON_INTERACTIVE_FLAGS: dict[str, list[str]] = {
+            "gemini": ["-p", "-"],  # gemini -p - (read from stdin)
+            "gemini-cli": ["-p", "-"],
+            "codex": ["--full-auto", "-q"],  # codex --full-auto -q
+            "opencode": ["run"],
+            "claude": ["-p"],
+            "aider": ["--message"],
+        }
+
+        if "{prompt}" in self.cli_command:
+            # User-defined template: replace {prompt} and split
+            cmd_str = self.cli_command.replace("{prompt}", full_prompt)
+            parts = shlex.split(cmd_str)
+            parts[0] = binary
+            return parts, False
+
+        flags = _NON_INTERACTIVE_FLAGS.get(binary_name, [])
+
+        # Heuristic: if flags include a way to read from stdin, or if prompt is large
+        # We prefer stdin for gemini specifically as we know it supports it via '-p -'
+        if binary_name in ("gemini", "gemini-cli"):
+            return [binary, *flags], True
+
+        return [binary, *flags, full_prompt], False
+
     async def generate_stream(
         self,
         history: list[Message],
@@ -94,78 +174,129 @@ class CLIProvider(BaseProvider):
 
         system_instruction = config.get("system_instruction", "") if config else ""
         full_prompt = self._build_prompt(history, tools_schema, system_instruction)
+        args, use_stdin = self._build_cli_args(full_prompt)
 
-        # Build command. If {prompt} is in the string, replace it. Otherwise append.
-        if "{prompt}" in self.cli_command:
-            cmd_str = self.cli_command.replace("{prompt}", full_prompt)
-            args = shlex.split(cmd_str)
-        else:
-            args = shlex.split(self.cli_command) + [full_prompt]
-
-        _logger.debug(f"Invoking CLI Bridge: {args[0]} (prompt len: {len(full_prompt)})")
+        _logger.debug(f"Invoking CLI Bridge: {args[0]} (prompt len: {len(full_prompt)}, stdin: {use_stdin})")
 
         try:
             process = await asyncio.create_subprocess_exec(
-                *args, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+                *args,
+                stdin=asyncio.subprocess.PIPE if use_stdin else None,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
             )
 
-            if process.stdout is None:
-                raise RuntimeError("Failed to open stdout pipe")
+            if use_stdin and process.stdin:
+                process.stdin.write(full_prompt.encode("utf-8"))
+                await process.stdin.drain()
+                process.stdin.close()
+
+            if process.stdout is None or process.stderr is None:
+                raise RuntimeError("Failed to open process pipes")
 
             json_buffer = ""
             in_json_block = False
 
-            # Read stdout line by line
-            while True:
-                line_bytes = await process.stdout.readline()
-                if not line_bytes:
-                    break
+            async def read_stream(stream, is_stderr=False):
+                nonlocal in_json_block, json_buffer
+                while True:
+                    line_bytes = await stream.readline()
+                    if not line_bytes:
+                        break
 
-                line = line_bytes.decode("utf-8")
+                    try:
+                        line = line_bytes.decode("utf-8", errors="replace")
+                    except Exception:
+                        line = str(line_bytes)
 
-                # Logic to detect JSON blocks even if mixed with text
-                if "```json" in line:
-                    in_json_block = True
-                    json_buffer = ""
-                    # If there's text before the block on the same line, yield it
-                    pre = line.split("```json")[0]
-                    if pre.strip():
-                        yield {"type": "text", "content": pre}
-                    continue
+                    if is_stderr:
+                        # Filter out ignored patterns
+                        if any(re.search(p, line) for p in _IGNORED_STDERR_PATTERNS):
+                            continue
 
-                if in_json_block:
-                    if "```" in line:
-                        in_json_block = False
-                        # Handle text after the block
-                        post = line.split("```")[1]
+                        # Yield stderr as text but only if it looks like an error or a useful warning
+                        if line.strip():
+                            yield {"type": "text", "content": f"[stderr] {line}"}
+                        continue
 
-                        try:
-                            # Clean potential trailing characters from json_buffer
-                            clean_json = json_buffer.strip()
-                            parsed = json.loads(clean_json)
-                            if "mentask_tool_call" in parsed:
-                                tc_data = parsed["mentask_tool_call"]
-                                yield {
-                                    "type": "tool_call",
-                                    "content": ToolCall(
-                                        id=str(uuid.uuid4()),
-                                        name=tc_data.get("name", ""),
-                                        arguments=tc_data.get("arguments", {}),
-                                    ),
-                                }
-                            else:
+                    # Logic to detect JSON blocks even if mixed with text
+                    if "```json" in line:
+                        in_json_block = True
+                        json_buffer = ""
+                        pre = line.split("```json")[0]
+                        if pre.strip():
+                            yield {"type": "text", "content": pre}
+                        continue
+
+                    if in_json_block:
+                        if "```" in line:
+                            in_json_block = False
+                            post = line.split("```")[1]
+                            try:
+                                clean_json = json_buffer.strip()
+                                parsed = json.loads(clean_json)
+                                if "mentask_tool_call" in parsed:
+                                    tc_data = parsed["mentask_tool_call"]
+                                    yield {
+                                        "type": "tool_call",
+                                        "content": ToolCall(
+                                            id=str(uuid.uuid4()),
+                                            name=tc_data.get("name", ""),
+                                            arguments=tc_data.get("arguments", {}),
+                                        ),
+                                    }
+                                else:
+                                    yield {"type": "text", "content": "```json\n" + json_buffer + "\n```"}
+                            except Exception:
                                 yield {"type": "text", "content": "```json\n" + json_buffer + "\n```"}
-                        except Exception:
-                            yield {"type": "text", "content": "```json\n" + json_buffer + "\n```"}
 
-                        if post.strip():
-                            yield {"type": "text", "content": post}
+                            if post.strip():
+                                yield {"type": "text", "content": post}
+                        else:
+                            json_buffer += line
                     else:
-                        json_buffer += line
-                else:
-                    yield {"type": "text", "content": line}
+                        yield {"type": "text", "content": line}
+
+            async def stream_merger():
+                queue = asyncio.Queue()
+
+                async def producer(generator):
+                    try:
+                        async for item in generator:
+                            await queue.put(item)
+                    except Exception as e:
+                        _logger.error(f"Producer error: {e}")
+
+                tasks = [
+                    asyncio.create_task(producer(read_stream(process.stdout, is_stderr=False))),
+                    asyncio.create_task(producer(read_stream(process.stderr, is_stderr=True))),
+                ]
+
+                while True:
+                    if all(t.done() for t in tasks) and queue.empty():
+                        break
+
+                    try:
+                        item = await asyncio.wait_for(queue.get(), timeout=0.05)
+                        yield item
+                    except asyncio.TimeoutError:
+                        continue
+
+            async def stream_merger_wrapper():
+                async for event in stream_merger():
+                    yield event
+
+            async for event in stream_merger_wrapper():
+                yield event
 
             await process.wait()
+
+            if process.returncode != 0:
+                _logger.warning(f"CLI Bridge process exited with code {process.returncode}")
+
+            # Flush json_buffer if we died mid-block
+            if in_json_block and json_buffer:
+                yield {"type": "text", "content": "```json\n" + json_buffer + "\n```"}
 
             # Emit dummy metrics
             yield {"type": "metrics", "content": UsageMetrics(input_tokens=len(full_prompt) // 4, output_tokens=0)}
@@ -175,16 +306,23 @@ class CLIProvider(BaseProvider):
             yield {"type": "error", "content": f"CLI Bridge Error: {e}"}
 
     async def list_models(self) -> list[str]:
-        # CLI models are usually dynamic or just represent the binary name
-        return [self.cli_command]
+        # Return the resolved binary path if available, else the original command
+        name = self._binary_path or self.cli_command
+        return [name]
 
     async def check_health(self, model_name: str) -> tuple[bool, str | None]:
-        import shutil
-
+        # model_name here is the user alias, not necessarily a binary name
+        alias = model_name.removeprefix("cli:")
         try:
-            binary = shlex.split(model_name)[0]
-            if shutil.which(binary) is not None:
-                return True, None
+            first_token = shlex.split(alias)[0]
         except Exception:
-            pass
-        return False, "Binary not found in PATH"
+            first_token = alias
+
+        path = _resolve_binary(first_token)
+        if path is not None:
+            return True, None
+        return False, f"Binary not found in PATH (tried: {_CLI_ALIAS_MAP.get(first_token.lower(), [first_token])})"
+
+    @property
+    def key_source(self) -> str:
+        return "local binary"

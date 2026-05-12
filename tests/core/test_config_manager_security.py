@@ -28,7 +28,6 @@ def test_save_settings_does_not_leak_key_on_keyring_failure(tmp_path):
         with open(settings_file) as f:
             saved_settings = json.load(f)
 
-        # AFTER FIX: This should pass (it should not be equal to plaintext)
         assert saved_settings["google_search_api_key"] != plaintext_key
         assert saved_settings["google_search_api_key"] == ""
 

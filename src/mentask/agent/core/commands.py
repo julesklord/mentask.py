@@ -47,6 +47,11 @@ COMMAND_METADATA = {
         "category": "Config",
     },
     "/theme": {"desc": "List or change UI themes", "example": "/theme [name]", "category": "Config"},
+    "/thinking": {
+        "desc": "Toggle visibility of agent's thought process",
+        "example": "/thinking [true|false]",
+        "category": "Config",
+    },
     "/multiline": {"desc": "Toggle multiline prompt mode", "example": "/multiline [true|false]", "category": "Config"},
     "/init": {"desc": "Initialize local project configuration directory", "example": "/init", "category": "Config"},
     "/prompt": {"desc": "Customize prompt style and icons", "example": "/prompt --theme atomic", "category": "Config"},
@@ -125,6 +130,8 @@ class CommandHandler:
             return self._cmd_stats()
         elif command == "/theme":
             return self._cmd_theme(args)
+        elif command == "/thinking":
+            return self._cmd_thinking(args)
         elif command == "/multiline":
             return self._cmd_multiline(args)
         elif command == "/artifacts":
@@ -212,7 +219,6 @@ class CommandHandler:
         # Add global shortcuts
         table.add_section()
         table.add_row("[bold magenta]Global Shortcuts[/]", "", "")
-        table.add_row("  [bold]Ctrl+O[/]", "Expand last tool artifact", "N/A")
         table.add_row("  [bold]Ctrl+C[/]", "Interrupt generation or exit", "N/A")
 
         return table
@@ -535,6 +541,30 @@ class CommandHandler:
         if hasattr(self.agent, "active_renderer"):
             self.agent.active_renderer.apply_theme(new_theme)
         return f"[success]Theme switched to:[/success] [bold]{new_theme}[/bold]"
+
+    def _cmd_thinking(self, args: list[str]) -> str:
+        """Toggles visibility of agent's thought process."""
+        if not args:
+            current = self.agent.config.settings.get("show_thinking", True)
+            state = "ON" if current else "OFF"
+            return f"[info]Thinking visibility is currently [bold]{state}[/bold][/info]\n[dim]Usage: /thinking true | /thinking false[/dim]"
+
+        val_str = args[0].lower()
+        if val_str in ("true", "on", "yes", "1"):
+            show = True
+        elif val_str in ("false", "off", "no", "0"):
+            show = False
+        else:
+            return "[error]Invalid argument. Use 'true' or 'false'.[/error]"
+
+        self.agent.config.settings["show_thinking"] = show
+        self.agent.config.save_settings()
+
+        if hasattr(self.agent, "active_renderer"):
+            self.agent.active_renderer.show_thinking_details = show
+
+        state = "ON" if show else "OFF"
+        return f"[success]Thinking visibility turned [bold]{state}[/bold][/success]"
 
     def _cmd_multiline(self, args: list[str]) -> str:
         """Toggles multiline input mode for the prompt."""

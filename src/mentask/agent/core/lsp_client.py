@@ -78,11 +78,14 @@ class LSPClient:
                     break
         finally:
             # If the loop ends, fail all pending requests to prevent hangs
-            _logger.warning("LSP Reader loop terminated. Failing all pending requests.")
-            for future in self._pending_requests.values():
-                if not future.done():
-                    future.set_exception(RuntimeError("LSP server disconnected or crashed."))
-            self._pending_requests.clear()
+            if self._pending_requests:
+                _logger.warning(f"LSP Reader loop terminated with {len(self._pending_requests)} pending requests.")
+                for future in self._pending_requests.values():
+                    if not future.done():
+                        future.set_exception(RuntimeError("LSP server disconnected or crashed."))
+                self._pending_requests.clear()
+            else:
+                _logger.debug("LSP Reader loop finished cleanly.")
 
     def _handle_message(self, msg: dict[str, Any]):
         """Dispatches incoming messages to pending requests or notification handlers."""

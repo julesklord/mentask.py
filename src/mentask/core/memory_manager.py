@@ -69,68 +69,124 @@ class MemoryManager:
                 f.write(content)
 
     def scan_memories(self) -> list[dict]:
-        """Scans the memories directory for additional context files."""
+        """Scans the memories directory for additional context files using a metadata cache."""
         memories = []
+        if not os.path.exists(self.memory_dir):
+            return []
+
+        cache_path = os.path.join(self.memory_dir, ".metadata_cache.json")
+        import json
+        cache = {}
+        if os.path.exists(cache_path):
+            try:
+                with open(cache_path, encoding="utf-8") as f:
+                    cache = json.load(f)
+            except Exception:
+                cache = {}
+
+        updated_cache = False
         for file in os.listdir(self.memory_dir):
-            if file.endswith(".md"):
+            if file.endswith(".md") and not file.startswith("."):
                 path = os.path.join(self.memory_dir, file)
-                # Quick read for description (first few lines)
+                mtime = os.path.getmtime(path)
+
+                # Check cache first
+                if file in cache and cache[file].get("mtime") == mtime:
+                    memories.append(cache[file])
+                    continue
+
+                # Cache miss or outdated: Read and parse
                 try:
                     with open(path, encoding="utf-8") as f:
                         content = f.read(1000)
+                    
+                    lines = [l.strip() for l in content.splitlines() if l.strip()]
                     desc = ""
-                    # Simple heuristic for description: first line after title or first paragraph
-                    lines = content.splitlines()
-                    if len(lines) > 2:
-                        desc = lines[2] if lines[0].startswith("#") else lines[0]
-
-                    memories.append(
-                        {"filename": file, "path": path, "description": desc[:200], "mtime": os.path.getmtime(path)}
-                    )
+                    if lines:
+                        desc = lines[1] if lines[0].startswith("#") and len(lines) > 1 else lines[0]
+                    
+                    entry = {
+                        "filename": file,
+                        "path": path,
+                        "description": desc[:200],
+                        "mtime": mtime,
+                    }
+                    memories.append(entry)
+                    cache[file] = entry
+                    updated_cache = True
                 except Exception:
                     continue
+
+        if updated_cache:
+            try:
+                with open(cache_path, "w", encoding="utf-8") as f:
+                    json.dump(cache, f)
+            except Exception:
+                pass
+
         return sorted(memories, key=lambda x: x["mtime"], reverse=True)
 
     async def find_relevant_memories(self, query: str, orchestrator: Any) -> str:
-        """Uses a side-query to select the most relevant memories for the current task."""
+        """Uses a side-query to select the most relevant memories for the current task.
+        
+        This implements the 'Selective Memory' pattern from the Reference Synergy initiative.
+        """
         memories = self.scan_memories()
         if not memories:
             return ""
 
-        manifest = "\n".join([f"- {m['filename']}: {m['description']}" for m in memories[:50]])
+        # Limit manifest to top 100 most recent memories to avoid context bloat in side-query
+        manifest_entries = [f"- {m['filename']}: {m['description']}" for m in memories[:100]]
+        manifest = "\n".join(manifest_entries)
 
         selection_prompt = (
-            "You are a memory retrieval system. Given the USER QUERY and the AVAILABLE MEMORIES, "
-            "select up to 3 filenames that are MOST relevant to answering the query.\n"
+            "You are a selective memory retrieval system for MentAsk.\n"
+            "Given the USER QUERY and a list of AVAILABLE MEMORY FILES (with brief descriptions), "
+            "identify which files contain information that would be CRITICAL to answering the query accurately.\n\n"
             f"AVAILABLE MEMORIES:\n{manifest}\n\n"
             f"USER QUERY: {query}\n\n"
-            "Respond ONLY with a comma-separated list of filenames, or 'NONE' if no relevant memories found."
+            "INSTRUCTIONS:\n"
+            "1. Select up to 3 filenames.\n"
+            "2. Respond ONLY with a comma-separated list of filenames (e.g., 'coding_patterns.md, api_keys.md').\n"
+            "3. If none are truly relevant, respond exactly with 'NONE'.\n"
+            "4. Do not provide any explanation or markdown formatting."
         )
 
         try:
-            # We use the provided orchestrator to run a non-history side-query
+            # We use a lower temperature and a dedicated call for the side-query
             selected_raw = ""
+            # We use the provider directly for a stateless, clean turn
             async for event in orchestrator.provider.stream_turn(
-                [{"role": "user", "content": selection_prompt}], [], config={"temperature": 0.1}
+                [{"role": "user", "content": selection_prompt}], [], config={"temperature": 0.0}
             ):
                 if event["type"] == "text":
                     selected_raw += event["content"]
 
-            if "NONE" in selected_raw.upper():
+            selected_raw = selected_raw.strip().strip("\"'")
+            if "NONE" in selected_raw.upper() or not selected_raw:
                 return ""
 
-            selected_files = [
-                f.strip() for f in selected_raw.split(",") if f.strip() in [m["filename"] for m in memories]
-            ]
+            # Parse filenames, being careful with comma/newline variations
+            candidates = [f.strip() for f in selected_raw.replace("\n", ",").split(",")]
+            valid_filenames = {m["filename"] for m in memories}
+            selected_files = [f for f in candidates if f in valid_filenames]
 
-            relevant_content = "\n--- RELEVANT CONTEXT FROM MEMORY ---\n"
+            if not selected_files:
+                return ""
+
+            relevant_content = "\n--- SELECTIVE MEMORY (Relevant Context) ---\n"
             for filename in selected_files:
                 path = os.path.join(self.memory_dir, filename)
-                with open(path, encoding="utf-8") as f:
-                    relevant_content += f"\nFile: {filename}\n{f.read()}\n"
+                try:
+                    with open(path, encoding="utf-8") as f:
+                        file_content = f.read()
+                    relevant_content += f"\n[File: {filename}]\n{file_content}\n"
+                except Exception as e:
+                    _logger.warning(f"Failed to read selected memory {filename}: {e}")
 
-            return relevant_content
-        except Exception:
+            return relevant_content + "--- END SELECTIVE MEMORY ---\n"
+        except Exception as e:
+            _logger.error(f"Error in selective memory retrieval: {e}")
             return ""
 
     def read_memory(self, scope: str = "all") -> str:

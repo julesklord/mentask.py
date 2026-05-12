@@ -140,3 +140,35 @@ def test_reset_historical_file_not_exists(mock_get_log_path, mock_exists, mock_r
     assert clean_tracker.total_saved_tokens == 0
     assert clean_tracker.total_prompt_tokens == 0
     assert clean_tracker.total_candidate_tokens == 0
+
+def test_total_tokens_edge_cases(clean_tracker):
+    tracker = clean_tracker
+    assert tracker.total_tokens == 0
+
+    # Test None defaults handled by add_usage
+    tracker.add_usage(None, None)
+    assert tracker.total_tokens == 0
+
+    # Test adding 0
+    tracker.add_usage(0, 0)
+    assert tracker.total_tokens == 0
+
+    # Test adding only prompt tokens
+    tracker.add_usage(100, 0)
+    assert tracker.total_tokens == 100
+
+    # Test adding only candidate tokens
+    tracker.add_usage(0, 50)
+    assert tracker.total_tokens == 150
+
+
+def test_add_savings(clean_tracker):
+    tracker = clean_tracker
+    tracker.reset_historical()  # ensure clean state
+    assert tracker.total_saved_tokens == 0
+
+    tracker.add_savings(500)
+    assert tracker.total_saved_tokens == 500
+
+    tracker.add_savings(250)
+    assert tracker.total_saved_tokens == 750

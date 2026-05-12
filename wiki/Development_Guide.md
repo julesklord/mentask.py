@@ -23,6 +23,7 @@ Tests are mapped inside `tests/` leveraging `pytest` and the **Simulation Layer*
 As of **v0.25.0**, all tests involving local models **MUST** use **Ollama** with the **qwen3.5** model. 
 
 The test suite includes a session-wide fixture (`tests/conftest.py`) that:
+
 1. Automatically starts the Ollama server if it's not running.
 2. Pulls the mandated `qwen3.5` model.
 3. Shuts down the server after the tests finish.

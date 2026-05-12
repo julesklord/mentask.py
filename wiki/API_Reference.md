@@ -19,10 +19,11 @@ The central reasoning engine. It coordinates managers to execute the cognitive l
 ### **Enum `EngineeringLevel`** (`schema.py`) [New in v0.25.0]
 
 Defines the mindset of the orchestrator:
-- `L0_INQUIRY`: Pure info, no tools.
-- `L1_PRAGMATIC`: Fast execution, shell fallback.
-- `L2_STANDARD`: Standard Research-Execute cycle.
-- `L3_ARCHITECT`: Maximum rigor, forces formal planning.
+
+* `L0_INQUIRY`: Pure info, no tools.
+* `L1_PRAGMATIC`: Fast execution, shell fallback.
+* `L2_STANDARD`: Standard Research-Execute cycle.
+* `L3_ARCHITECT`: Maximum rigor, forces formal planning.
 
 ### **Class `ChatAgent`** (`chat.py`)
 

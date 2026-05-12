@@ -86,5 +86,31 @@
   "dashboard.sidebar.error": "Error",
   "dashboard.prompt_placeholder": "Type your message...",
   "dashboard.prompt_thinking": "mentask is thinking...",
-  "dashboard.prompt_tooltip": "Type your prompt here or start with / for commands (e.g., /help)"
+  "dashboard.prompt_tooltip": "Type your prompt here or start with / for commands (e.g., /help)",
+  "thinking.messages": [
+    "mentask is untangling the code webs...",
+    "Hold on, I'm convincing the bugs to leave...",
+    "Consulting the Silicon Oracle...",
+    "Reheating the coffee before I answer...",
+    "Calculating the meaning of life, universe and everything...",
+    "Reticulating splines...",
+    "Searching for the missing semicolon...",
+    "Downloading more RAM (just kidding)...",
+    "Teaching the AI how to code... and maybe how to love...",
+    "Polishing the transistors...",
+    "Mining for digital gold...",
+    "Brewing some fresh logic...",
+    "Distilling the essence of your request...",
+    "Decoding the Matrix... don't tell Neo...",
+    "Spinning up the hamster wheels...",
+    "Charging the flux capacitor...",
+    "Asking the rubber duck for advice...",
+    "Parsing the invisible characters...",
+    "Negotiating with the compiler...",
+    "Adding more 'magic' to the script...",
+    "Counting to infinity... twice...",
+    "Bending the laws of physics... slightly...",
+    "Waking up the GPUs...",
+    "Aligning the planets for better performance..."
+  ]
 }

@@ -108,12 +108,81 @@ class AgentOrchestrator:
             _logger.error(f"Unexpected error reading plan file: {e}")
             return ""
 
+    def _build_tool_context(self, level: EngineeringLevel) -> str:
+        """
+        Generates a compact, context-aware summary of available tools for the current session.
+        Injected into the system prompt so the LLM knows WHEN and HOW to use each tool,
+        not just what its schema is.
+        """
+        cwd = os.getcwd()
+        is_git = os.path.exists(os.path.join(cwd, ".git"))
+        has_python = os.path.exists(os.path.join(cwd, "pyproject.toml")) or os.path.exists(
+            os.path.join(cwd, "setup.py")
+        )
+        has_node = os.path.exists(os.path.join(cwd, "package.json"))
+
+        lines = [
+            "\n\n## TOOL USAGE GUIDE (read before every action)",
+            f"CWD: {cwd}",
+        ]
+
+        if is_git:
+            lines.append(
+                "GIT REPO DETECTED: Use `run_shell_command` for git operations "
+                "(git log, git diff, git status). Prefer shell over read_file for git metadata."
+            )
+        if has_python:
+            lines.append(
+                "PYTHON PROJECT: Use `python_repl` for fast one-off computations, data inspection, "
+                "or import checks. Use `run_shell_command` for package ops (uv, pip, pytest)."
+            )
+        if has_node:
+            lines.append(
+                "NODE PROJECT: Use `run_shell_command` for npm/yarn/pnpm ops. "
+                "Prefer read_file for package.json inspection."
+            )
+
+        # Level-specific tool priority hints
+        if level == EngineeringLevel.L0_INQUIRY:
+            lines.append(
+                "INQUIRY MODE: DO NOT call any tools. Answer from memory and context only."
+            )
+        elif level == EngineeringLevel.L1_PRAGMATIC:
+            lines.append(
+                "PRAGMATIC MODE: Use the MINIMUM number of tools. One tool call is usually enough. "
+                "Avoid list_dir unless you don't know where the file is."
+            )
+        elif level == EngineeringLevel.L3_ARCHITECT:
+            lines.append(
+                "ARCHITECT MODE: Map the repo first (list_dir + grep_search), then write a plan. "
+                "Never edit files without reading them first. Use glob_find for pattern discovery."
+            )
+        else:  # L2
+            lines.append(
+                "STANDARD MODE: Read before writing. Use grep_search to locate symbols before editing. "
+                "Prefer edit_file over write_file for partial changes."
+            )
+
+        # Always-on tool safety rules
+        lines += [
+            "TOOL RULES:",
+            "  - read_file: use for file content. Do NOT read binary files.",
+            "  - edit_file: for partial changes. Only the EXACT lines to change.",
+            "  - write_file: only for new files or full rewrites. Destructive.",
+            "  - run_shell_command: powerful fallback for anything the specialized tools can't do.",
+            "  - python_repl: stateless per call. Variables do NOT persist between calls.",
+            "  - ask_user: ONLY when the task is genuinely ambiguous. Do not over-ask.",
+        ]
+
+        return "\n".join(lines)
+
     def _build_turn_config(
         self, config: Any | None, level: EngineeringLevel = EngineeringLevel.L2_STANDARD
     ) -> Any | None:
         plan_context = self._build_plan_context()
         level_instruction = self._get_level_instruction(level)
-        extra_instructions = f"{plan_context}{level_instruction}"
+        tool_context = self._build_tool_context(level)
+        extra_instructions = f"{plan_context}{level_instruction}{tool_context}"
 
         if not extra_instructions or not config:
             return config
@@ -274,7 +343,7 @@ class AgentOrchestrator:
             if current_calls and current_calls == previous_calls:
                 is_loop = True
                 loop_reason = "Repeated tool calls"
-            elif not current_calls and current_text and current_text == previous_text:
+            elif not current_calls and current_text and current_text.strip() == previous_text.strip():
                 # Only flag text loop if no tools are involved, to allow tool-using agents to talk
                 is_loop = True
                 loop_reason = "Repeated text response"

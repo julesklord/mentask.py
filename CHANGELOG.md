@@ -2,9 +2,58 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.27.8] - 2026-05-12
+
+### Added
+- **Thought Process Toggle**: Introduced the `/thinking [true|false]` command to show or hide the agent's internal reasoning loop.
+- **Unified Status Line**: Merged the session status bar and turn divider into a single, cohesive line that matches the user's prompt theme.
+
+### Fixed
+- **CLI Bridge Robustness**: Refactored `CLIProvider` to use `stdin` for prompt delivery, bypassing OS command-line length limits on Windows.
+- **Improved Diagnostics**: Implemented parallel reading of `stdout` and `stderr` for CLI providers, enabling the capture of system warnings and errors.
+- **UI Layout**: Removed aggressive grid-based padding in agent responses for a more natural conversational flow.
+- **Error Filtering**: Automatically suppress repetitive system warnings (e.g., Windows 10 detected, Ripgrep missing) in CLI output.
+
+## [0.27.7] - 2026-05-12
+
+### Fixed
+- **GemStyleRenderer**: Resolved a critical `NameError: name 'self' is not defined` during initialization by fixing the default parameter signature in the `__init__` method.
+
+## [0.27.5] - 2026-05-12
+
+### Added
+
+- **Selective Memory via Side-Query**: Implemented a lightweight "sidechain" selection mechanism to identify and inject only the most relevant memory files into the context.
+- **Memory Metadata Caching**: Introduced `.metadata_cache.json` in the memories directory to support thousands of learning files with zero performance lag.
+- **Intelligent Context Pre-selection**: Refactored `ContextManager` and `ChatAgent` to automatically pre-select relevant context based on the user query before every turn.
+
+## [0.27.2] - 2026-05-12
+
+### Changed
+
+- **LSP Diagnostics**: Implemented asynchronous file reading for LSP diagnostics to ensure a responsive TUI during large-scale code analysis.
+- **Testing Infrastructure**: Added comprehensive unit tests for `get_historical_report`, `ContextSnapper`, and `total_tokens` metrics.
+
+### Fixed
+
+- **Trust Manager**: Fixed a bug where exceptions were being silently swallowed, preventing proper directory trust resolution.
+- **Linting**: Resolved multiple static analysis warnings across the core engine to maintain CI integrity.
+
+## [0.27.1] - 2026-05-10
+
+### Added
+
+- **Diagnostic Build**: Consolidated various PRs and hotfixes into a unified diagnostic release for stability verification.
+
+### Fixed
+
+- **API Key Resolution**: Added missing edge-case tests for `ConfigManager.load_api_key`.
+- **Path Safety**: Improved validation logic in `analyze_path_safety` for safer directory scanning.
+
 ## [0.27.0] - 2026-05-09
 
 ### Added
+
 - **Agentic Delegation**: Introduced the `SubagentTool` to allow MentAsk to spawn isolated sub-agents for specific tasks.
 - **Generalist Blueprint**: Added a `generalist` sub-agent profile that has full access to the workspace for complex, multi-step problem solving.
 - **Enhanced Loop Protection**: The `AgentOrchestrator` now intercepts identical text outputs and tool calls across turns to break infinite loops effectively.
@@ -12,37 +61,42 @@ All notable changes to this project will be documented in this file.
 ## [0.26.1] - 2026-05-09
 
 ### Fixed
+
 - **Tool Chaining (Local Models)**: Fixed a bug where local models (e.g. Ollama, Qwen) would stop generating after a tool result because of strict API constraints. The agent now properly passes the `name` attribute back in tool responses and encodes empty assistant text correctly as `null`.
 
 ## [0.26.0] - 2026-05-09
 
 ### Added
+
 - **Observability Metrics**: Added robust metrics tracking for `TimeoutRecoveryManager` and `FileReadingSession`.
 - **Session Reporting**: Added `get_session_report` to `AgentOrchestrator` to export timeout and file reading metrics.
 - **Graceful Shutdown**: Added signal handling (SIGINT/SIGTSTP) in `cli/main.py` to cleanly abort pending tasks, cancel running tool operations, and save checkpoints.
 
 ### Fixed
+
 - **Infinite Loop Detection**: Integrated line-based constraints into `FileReadingSession` to preemptively intercept and abort repetitive or looping `read_file` calls.
 - **Tool Timeouts**: Refactored `ExecutionManager` to wrap all tool executions inside an async `BlockingOperationManager`, preventing indefinite hangs with a strict visible timeout ceiling.
 - **Model Timeouts**: Implemented `TimeoutRecoveryManager` in `AgentOrchestrator` to dynamically detect network stalls and model timeouts, applying context-reduction heuristics and exponential backoffs automatically.
 - **Deprecations**: Replaced `asyncio.iscoroutinefunction` with `inspect.iscoroutinefunction` for Python 3.16 future-proofing.
 - **Performance**: Eradicated an O(n) bottleneck when reading large files that was causing triple-reads to count lines.
 
-
 ## [0.25.2] - 2026-05-09
 
 ### Fixed
+
 - **Folder Discovery**: Fixed a bug where `glob_find` only returned files, causing the agent to fail when searching for directories. Also updated `ensure_safe_path` to resolve symlinks and normalize case to prevent false "Access denied" errors.
 - **Command Security**: Relaxed the security warning for chained shell commands (e.g., `&&`, `|`) so that the agent doesn't unnecessarily prompt for manual approval in `/mode auto` unless the command contains explicitly dangerous patterns.
 
 ## [0.25.1] - 2026-05-09
 
 ### Fixed
+
 - **Agent Amnesia**: Fixed a critical bug in `OpenAIProvider` where the agent would "forget" previous conversation turns. This was caused by the provider discarding tool calls when serializing the `AssistantMessage` history into the OpenAI payload format, leading to malformed conversation sequences that broke context retention in models like Ollama.
 
 ## [0.25.0] - 2026-05-08
 
 ### Added
+
 - **CLI Bridging Architecture**: MentAsk can now be orchestrated by external CLI agents (like `gemini-cli`, `codex`, `opencode`) using the new `CLIProvider`.
 - **Auto-Discovery**: `ModelsHub` automatically detects supported CLI agents in the user's `PATH` and exposes them via the `cli:` provider prefix (e.g., `/model cli:gemini-cli`).
 - **Prompt Translation**: Implemented dynamic translation of MentAsk's internal tool schemas into a strict JSON-enforced instruction manual for external agents.
@@ -50,17 +104,20 @@ All notable changes to this project will be documented in this file.
 ## [0.24.4] - 2026-05-08
 
 ### Fixed
+
 - **Streaming Stability**: Refactored the response stream reader in `OpenAIProvider` to use non-blocking `readline` calls via `asyncio.to_thread`. This resolves a critical issue where the event loop would block during streaming, causing 60s timeout leaks regardless of the configured timeout.
 
 ## [0.24.3] - 2026-05-08
 
 ### Fixed
+
 - **Ollama Stability**: Increased the default request timeout for local models from 60s to 300s to prevent frequent timeouts during model loading on systems like Gentoo.
 - **Dynamic Timeouts**: Refactored the provider base class to support configurable timeouts for both streaming and health checks.
 
 ## [0.24.2] - 2026-05-08
 
 ### Changed
+
 - **Local Mode Enforcement**: Hardened the `--local` flag to strictly enforce Ollama usage and prevent accidental cloud API calls.
 - **Provider Factory**: Updated `get_provider` to force `OllamaProvider` when `local_mode` is enabled, regardless of the requested model name.
 - **Initialization**: `ChatAgent` now ensures local-only providers during startup if the `--local` flag is provided.
@@ -68,9 +125,11 @@ All notable changes to this project will be documented in this file.
 ## [0.24.1] - 2026-05-08
 
 ### Added
+
 - **Inline Agent Header**: Refined the natural message layout to render the agent header inline with the response text, matching the user prompt's visual hierarchy.
 
 ### Fixed
+
 - **Diagnostics**: Resolved 24 static analysis errors in `ChatAgent`, `SessionManager`, and `OpenAIProvider`.
 - **Runtime Errors**: Fixed a `TypeError` in `ToolCall` attribute access (`args` vs `arguments`) and provider metadata handling.
 - **Async Compatibility**: Standardized `generate_stream` across providers to ensure consistent async generator behavior.
@@ -78,7 +137,8 @@ All notable changes to this project will be documented in this file.
 ## [0.24.0] - 2026-05-08
 
 ### Added
-- **UI Enhancements**: 
+
+- **UI Enhancements**:
   - Introduced `powerline` and `rainbow` prompt styles with Nerd Fonts support.
   - Added rich system context to the user prompt, including OS icon, Git branch/status, Python virtual environment, and active Model badge.
   - Added new themes: `neon_ghost` and `monochrome_pro`.
@@ -87,12 +147,14 @@ All notable changes to this project will be documented in this file.
 ## [0.23.3] - 2026-05-08
 
 ### Fixed
+
 - **Hotfix**: Resolved `TypeError` during model switching and initialization by correcting the dictionary lookup logic for `provider_meta` in the `ModelsHub` integration.
 - **Tests**: Fixed test suite failures caused by the `0.23.2` architecture updates.
 
 ## [0.23.2] - 2026-05-08
 
 ### Added
+
 - **Native Ollama Support**: Introduced a dedicated `OllamaProvider` for seamless interaction with local models.
 - **Local Mode**: New `--local` CLI flag that enforces a strict "no-cloud" policy, disabling external API calls for maximum privacy.
 - **Ollama Auto-Sync**: Automatic discovery of local Ollama models at startup, with dynamic integration into the `/model` autocompletion.
@@ -100,6 +162,7 @@ All notable changes to this project will be documented in this file.
 - **High-Precision Cost Tracking**: Enhanced token cost estimation with 4-decimal precision for low-cost models and accurate handling of free/local models.
 
 ### Fixed
+
 - **models.dev Integration**: Refactored `ModelsHub` and `OpenAIProvider` for robust endpoint and API key resolution using models.dev metadata.
 - **Session Stability**: Fixed `TokenTracker` pricing update when switching models mid-session.
 - **Environment**: Resolved `.venv` corruption issues caused by zombie `ruff` processes during environment recreation.
@@ -107,19 +170,22 @@ All notable changes to this project will be documented in this file.
 ## [0.23.1] - 2026-05-06
 
 ### Added
+
 - **Model Health Checks**: New `/model configure` command to verify real-time availability and quota for all provider models.
 - **Dynamic Autocompletion**: Tab-completion for `/model` now updates automatically based on the active provider's healthy models.
 - **UX Refinement**: Simplified trust prompts with single-letter shortcuts (`p`, `s`, `n`) for faster startup.
 - **Theme Unification**: Integrated all neon palettes directly into the standard `/theme` selector.
 
 ### Fixed
+
 - **Authentication Recovery**: Resolved critical auth failures caused by invalid keys persisting in the system keyring.
 - **Command Alias Integrity**: Audited all slash commands to ensure functional parity between primary commands and their aliases (`/q`, `/art`, `/cost`).
 
 ## [0.23.0] - "The Great Consolidation" - 2026-05-06
 
 ### Added
-- **Comprehensive Test Coverage**: 
+
+- **Comprehensive Test Coverage**:
   - Added unit tests for `ConfigManager.save_settings` and `save_api_key`, including error handling for file I/O and keyring failures.
   - Added robust test suite for `compress_code` and `smart_compress`, covering Python, JavaScript, TypeScript, C/C++, and Java with various edge cases.
   - Added unit tests for `metrics.calculate_cost` with hub pricing verification and fallbacks.
@@ -132,6 +198,7 @@ All notable changes to this project will be documented in this file.
   - **Dynamic Syntax Highlighting**: Tool artifacts now use language-aware highlighting by detecting file extensions from output headers.
 
 ### Fixed
+
 - **Security Hardening**: Fixed a path traversal vulnerability in `_create_backup` by sanitizing relative paths.
 - **Stability**: Fixed missing `Path` import in `plugin_loader.py` that caused test collection failures.
 - **Mock Consistency**: Updated all test mocks for `load_api_key` to match the new multi-return value signature (`key, source`).
@@ -140,6 +207,7 @@ All notable changes to this project will be documented in this file.
 ## [0.22.0] - 2026-04-26
 
 ### Fixed
+
 - **LSP Stability**: Resolved infinite hangs during the Ruff server handshake by implementing timeouts and robust error handling in the background reader loop.
 - **Security Hardening**: Added explicit validation to block Windows-style absolute paths (e.g., `C:\...`) on non-Windows systems to prevent path traversal bypasses.
 - **Environment Compatibility**: Integrated `keyrings.alt` as a fallback backend for headless Linux environments (containers/servers) to ensure API key persistence.
@@ -149,6 +217,7 @@ All notable changes to this project will be documented in this file.
 ## [0.20.0] - "The Spice Must Flow" - 2026-04-26
 
 ### Added
+
 - **Level 4 Autonomy**: Introduced the **Self-Evolving Tooling Architecture**. The agent can now create, validate, and integrate its own native tools.
 - **3-Layer Plugin Architecture**:
   - **Core Tools**: Standard built-in capabilities.
@@ -159,6 +228,7 @@ All notable changes to this project will be documented in this file.
 - **Security Hardening**: Refined `analyze_path_safety` to allow agent-driven modifications strictly within the plugins directory while maintaining workspace isolation.
 
 ### Changed
+
 - **Architectural Shift**: Decoupled the `ToolRegistry` from static tool definitions, enabling true run-time extensibility.
 - **Agent Guidelines**: Updated `AGENTS.md` to prioritize `forge_plugin` over transient scripts for repetitive engineering tasks.
 

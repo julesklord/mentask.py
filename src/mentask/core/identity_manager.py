@@ -54,6 +54,12 @@ class KnowledgeManager:
         if (Path.cwd() / ".mentask_knowledge.md").exists():
             index.append("- LOCAL: PROJECT_KNOWLEDGE (Legacy file)")
 
+        # Auto-discover root guides
+        root_guides = ["GEMINI.md", "STANDARD.md", "ARCHITECTURE.md"]
+        for guide in root_guides:
+            if (Path.cwd() / guide).exists():
+                index.append(f"- ROOT_GUIDE: {guide.replace('.md', '')}")
+
         if not index:
             return "No extended knowledge modules available."
 
@@ -79,6 +85,13 @@ class KnowledgeManager:
             legacy_path = Path.cwd() / ".mentask_knowledge.md"
             if legacy_path.exists():
                 return legacy_path.read_text(encoding="utf-8").strip()
+
+        # Check root guides
+        root_guides = {"gemini": "GEMINI.md", "standard": "STANDARD.md", "architecture": "ARCHITECTURE.md"}
+        if target in root_guides:
+            guide_path = Path.cwd() / root_guides[target]
+            if guide_path.exists():
+                return guide_path.read_text(encoding="utf-8").strip()
 
         return None
 
@@ -149,6 +162,18 @@ class KnowledgeManager:
         if local_path.exists():
             with contextlib.suppress(Exception):
                 identity.append(local_path.read_text(encoding="utf-8"))
+
+        # 4. Auto-inject Root Guides (GEMINI.md, STANDARD.md, ARCHITECTURE.md)
+        cwd = Path.cwd()
+        for guide in ["GEMINI.md", "STANDARD.md", "ARCHITECTURE.md"]:
+            guide_path = cwd / guide
+            if guide_path.exists():
+                with contextlib.suppress(Exception):
+                    content = guide_path.read_text(encoding="utf-8").strip()
+                    # Truncate to ~4000 characters (~1000 tokens) to prevent token bloat
+                    if len(content) > 4000:
+                        content = content[:4000] + f"\n\n... [Content truncated, use query_knowledge(module_name='{guide.replace('.md', '')}') to read full]"
+                    identity.append(f"## PROJECT CONTEXT ({guide})\n{content}")
 
         if not identity:
             return "You are mentask, a professional autonomous coding agent."

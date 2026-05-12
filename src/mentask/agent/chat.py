@@ -232,16 +232,14 @@ class ChatAgent:
         """Sets the callback for real-time status/debug logging."""
         self.orchestrator.status_callback = logger_func
 
-    def _build_config(self) -> dict[str, Any]:
+    def _build_config(self, relevant_memory: str = "") -> dict[str, Any]:
         """Builds a provider-agnostic configuration dictionary."""
         schemas = self.tools.get_all_schemas()
         temp = self.config.settings.get("temperature", 0.7)
 
         # Only include blueprint on the very first turn to save tokens
         is_first_turn = self.session_messages == 0
-        full_instruction = (
-            f"{self.system_prompt}\n\n{self.context.build_system_instruction(include_blueprint=is_first_turn)}"
-        )
+        full_instruction = f"{self.system_prompt}\n\n{self.context.build_system_instruction(include_blueprint=is_first_turn, relevant_memory=relevant_memory)}"
 
         return {
             "temperature": temp,
@@ -291,7 +289,13 @@ class ChatAgent:
         """Core logic: feeds input to orchestrator and updates UI."""
         renderer.reset_turn()
         processed_input = self._process_input(user_input)
-        config = self._build_config()
+
+        # Selective Memory via Side-Query (Reference Synergy Implementation)
+        relevant_memory = ""
+        if self.session_messages > 0 or self.local_mode:  # Don't bother on first turn if empty
+            relevant_memory = await self.context.get_relevant_context(user_input, self.orchestrator)
+
+        config = self._build_config(relevant_memory=relevant_memory)
 
         async for event in self.orchestrator.run_query(
             processed_input, self.messages, config=config, confirmation_callback=renderer.ask_confirmation
@@ -566,13 +570,25 @@ class ChatAgent:
 
         try:
             await self._stream_response(user_input, renderer)
-            if hasattr(renderer, "end_stream"):
+            # Guard against double end_stream: _handle_stream_event may have already
+            # called it (e.g. on EXECUTING transition mid-turn).
+            if hasattr(renderer, "end_stream") and renderer._streaming:
                 renderer.end_stream()
 
             # Compact turn metrics
             total_turn = self.turn_tokens_prompt + self.turn_tokens_candidate
             summary = f"{total_turn:,} tokens" if total_turn > 0 else ""
             renderer.print_metrics(summary)
+
+            # Update status bar data before each turn
+            cost = self.metrics.calculate_cost(self.metrics.total_prompt_tokens, self.metrics.total_candidate_tokens)
+            renderer.update_status_bar(
+                tokens=self.metrics.total_prompt_tokens + self.metrics.total_candidate_tokens, cost=cost
+            )
+
+            # Unify status bar and divider into one call
+            renderer.print_turn_divider(model=self.model_name)
+
             self._save_history()
         except KeyboardInterrupt:
             # Check if stream is active before ending
@@ -583,7 +599,6 @@ class ChatAgent:
             renderer.print_error(str(exc))
         finally:
             renderer.stop_thinking()
-            renderer.print_turn_divider(model=self.model_name)
 
     async def close(self):
         """Cleanup resources."""
@@ -679,6 +694,7 @@ class ChatAgent:
         renderer = GemStyleRenderer(
             console, theme_name=current_theme, stream_delay=stream_delay, use_nerdfonts=nf_enabled
         )
+        renderer.show_thinking_details = self.config.settings.get("show_thinking", True)
         self.active_renderer = renderer
         self.set_status_logger(renderer.print_status)
 
@@ -709,13 +725,6 @@ class ChatAgent:
         if HAS_PT and KeyBindings and PromptSession and patch_stdout:
             kb = KeyBindings()
 
-            @kb.add("c-o")
-            def _expand_last(event):
-                """Expand the last tool artifact on Ctrl+O."""
-                if patch_stdout:
-                    with patch_stdout(raw=True):
-                        renderer.expand_artifact(-1)
-
             # Initialize completer with dynamic data
             # In local mode, we sync local models once at start
             if self.local_mode:
@@ -742,8 +751,7 @@ class ChatAgent:
             session = PromptSession(key_bindings=kb, completer=self._completer)
         else:
             renderer.print_warning(
-                "Interactive features (Ctrl+O) disabled.\n"
-                "  Install: [bold white]pip install prompt_toolkit[/bold white]"
+                "Interactive features disabled.\n  Install: [bold white]pip install prompt_toolkit[/bold white]"
             )
 
         while self.running:
@@ -758,6 +766,14 @@ class ChatAgent:
 
                 user_prompt_rich = renderer.prompt_engine.build_user_prompt(
                     style, os.getcwd(), is_trusted, cost, model_id=self.model_name
+                )
+
+                # Update status bar data before each turn
+                renderer.update_status_bar(
+                    model=self.model_name,
+                    mode=self.edit_mode,
+                    tokens=self.metrics.total_prompt_tokens + self.metrics.total_candidate_tokens,
+                    cost=cost,
                 )
 
                 if HAS_PT and session and patch_stdout:

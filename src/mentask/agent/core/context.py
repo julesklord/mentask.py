@@ -9,6 +9,7 @@ import logging
 import os
 import platform
 from pathlib import Path
+from typing import Any
 
 from ...core.i18n import _
 from ...core.memory_manager import MemoryManager
@@ -124,13 +125,25 @@ class ContextManager:
     # ------------------------------------------------------------------
     # System Instruction Builder
     # ------------------------------------------------------------------
-    def build_system_instruction(self, include_blueprint: bool = False) -> str:
+    async def get_relevant_context(self, query: str, orchestrator: Any) -> str:
+        """Fetches relevant context from selective memory via side-query."""
+        try:
+            return await self.memory.find_relevant_memories(query, orchestrator)
+        except Exception as e:
+            _logger.warning("Failed to fetch selective memory context: %s", e)
+            return ""
+
+    def build_system_instruction(self, include_blueprint: bool = False, relevant_memory: str = "") -> str:
         """Assembles the system instruction.
         'include_blueprint' should only be True on initial turn or if specifically requested.
+        'relevant_memory' is pre-fetched context from selective memory.
         """
         # Base context
         base_context = _("sys.context", os=f"{platform.system()} {platform.release()}", cwd=os.getcwd())
         full_instruction = f"{base_context}\n\n"
+
+        if relevant_memory:
+            full_instruction += f"{relevant_memory}\n\n"
 
         if include_blueprint:
             try:
@@ -150,12 +163,13 @@ class ContextManager:
     def _get_efficiency_guidelines(self) -> str:
         """Returns guidelines for token management and autonomous analysis."""
         return """
-## TOKEN EFFICIENCY & ANALYSIS (LEVEL 403)
+## TOKEN EFFICIENCY & FAST PATH
 - **Be Concise**: Go straight to the point. Lead with the action. Skip "I will now...", "Let's begin by...".
-- **Analyze First**: Use `analyze_codebase` before any task involving 3+ files. Use `delegate_mission(specialist_type='explorer')` for deep research.
+- **Auto-Discovery**: Always check for `GEMINI.md`, `STANDARD.md`, or `README.md` at the start of a new complex task if they exist in the root to align with repository rules. Do not guess the architecture.
+- **Fast Path Execution**: If the solution is obvious, localized, or explicitly requested, skip deep research and execute immediately. Do not over-plan simple tasks.
 - **Surgical Reads**: Do not read full files to find a line. Use `grep_search` or `analyze_codebase(mode='map')`.
-- **Parallel Execution**: Emit multiple tool calls in a single turn whenever independent tasks exist.
-- **Context Management**: Use `delegate_mission` to offload massive research tasks. This keeps the main orchestrator's context clean and avoids token bloat.
+- **Parallel Execution**: Emit multiple tool calls in a single turn whenever independent tasks exist. Combine terminal commands (e.g. `git status && git diff`).
+- **Context Management**: Use `delegate_mission(specialist_type='explorer')` to offload massive research tasks.
 """
 
     def _get_tone_guidelines(self) -> str:

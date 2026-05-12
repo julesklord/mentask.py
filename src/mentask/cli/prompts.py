@@ -216,3 +216,43 @@ class PromptEngine:
 
         renderer = self.STYLES.get(style_name, self._render_atomic)
         return renderer(segments)
+
+    def build_status_bar(self, model_id: str, mode: str, tokens: int, cost: float) -> Text:
+        """Builds a professional status bar for the bottom of the screen."""
+        res = Text()
+        
+        # 1. Brand + Mode
+        res.append(f" {self.L_HALF}", style=self.theme.brand_primary)
+        brand_icon = "󱚣 " if self.use_nerdfonts else ""
+        res.append(f" {brand_icon}{mode.upper()} ", style=f"black on {self.theme.brand_primary}")
+        res.append(f"{self.R_HALF}", style=self.theme.brand_primary)
+        res.append(" ")
+
+        # 2. Model
+        m = get_model_info(model_id)
+        res.append(f"{self.L_HALF}", style=self.theme.model_badge)
+        m_icon = "󰚩 " if self.use_nerdfonts else ""
+        res.append(f" {m_icon}{m['name']} ", style=f"black on {self.theme.model_badge}")
+        res.append(f"{self.R_HALF}", style=self.theme.model_badge)
+        res.append(" ")
+
+        # 3. Git Info
+        git = get_git_info()
+        if git["branch"]:
+            res.append(f"{self.L_HALF}", style=self.theme.git_branch)
+            git_icon = "󰊢 " if self.use_nerdfonts else ""
+            res.append(f" {git_icon}{git['branch']} ", style=f"black on {self.theme.git_branch}")
+            res.append(f"{self.R_HALF}", style=self.theme.git_branch)
+            res.append(" ")
+
+        # 4. Metrics
+        cost_str = f"${cost:.3f}"
+        res.append(f"{self.L_HALF}", style=self.theme.cost_badge)
+        cost_icon = "󰠠 " if self.use_nerdfonts else ""
+        res.append(f" {cost_icon}{cost_str} ", style=f"black on {self.theme.cost_badge}")
+        
+        token_icon = " 󰮄 " if self.use_nerdfonts else " T:"
+        res.append(f"{token_icon}{tokens:,} ", style=f"black on {self.theme.cost_badge}")
+        res.append(f"{self.R_HALF}", style=self.theme.cost_badge)
+        
+        return res

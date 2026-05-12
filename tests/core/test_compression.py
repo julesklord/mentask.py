@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 from mentask.core.compression import ContextCompressor, ContextSnapper
 
 
@@ -129,21 +131,89 @@ def test_should_snap():
     assert snapper.should_snap(64_001)
 
 
-def test_get_token_status():
-    # ContextSnapper sets limit for "default" model to 128_000.
+@patch("mentask.core.models_hub.ModelsHub.sync")
+def test_get_token_status_safe(mock_sync):
+    snapper = ContextSnapper("default")
+    status = snapper.get_token_status(64000)
+    assert status["tokens"] == 64000
+    assert status["limit"] == 128000
+    assert status["percentage"] == 50.0
+    assert status["is_dangerous"] is False
+
+
+@patch("mentask.core.models_hub.ModelsHub.sync")
+def test_get_token_status_dangerous(mock_sync):
+    snapper = ContextSnapper("default")
+    status = snapper.get_token_status(120000)
+    assert status["tokens"] == 120000
+    assert status["limit"] == 128000
+    assert status["percentage"] == 93.75
+    assert status["is_dangerous"] is True
+
+
+@patch("mentask.core.models_hub.ModelsHub.sync")
+def test_get_token_status_boundary(mock_sync):
     snapper = ContextSnapper("default")
 
-    # Safe count (e.g. 50% of 128_000)
-    status_safe = snapper.get_token_status(64_000)
-    assert status_safe["tokens"] == 64_000
-    assert status_safe["limit"] == 128_000
-    assert status_safe["percentage"] == 50.0
-    assert not status_safe["is_dangerous"]
+    # Exactly 90% is not dangerous according to current_tokens > (self.limit * 0.90)
+    limit = 128000
+    status = snapper.get_token_status(int(limit * 0.90))
+    assert status["is_dangerous"] is False
 
-    # Dangerous count (> 90% of 128_000, i.e., > 115_200)
-    status_danger = snapper.get_token_status(115_201)
-    assert status_danger["tokens"] == 115_201
-    assert status_danger["limit"] == 128_000
-    # percentage will be round(115201/128000*100, 2)
-    assert status_danger["percentage"] >= 90.0
-    assert status_danger["is_dangerous"]
+    # Just above 90%
+    status = snapper.get_token_status(int(limit * 0.90) + 1)
+    assert status["is_dangerous"] is True
+
+
+def test_compress_code_exhaustive():
+    # Test consecutive newlines normalization
+    code_with_newlines = "def foo():\n\n\n\n    return 1\n\n"
+    assert ContextCompressor.compress_code(code_with_newlines, "python") == "def foo():\n    return 1"
+
+    # Test Python inline comments removal
+    python_code = "x = 1  # inline comment\n# Full line comment\ny = 2"
+    assert ContextCompressor.compress_code(python_code, "python") == "x = 1\ny = 2"
+
+    # Test Javascript multiline comments removal
+    js_code = "/* block \n comment */\nfunction test() {\n    // line comment\n    return true;\n}"
+    assert ContextCompressor.compress_code(js_code, "javascript") == "function test() {\n    \n    return true;\n}"
+
+    # Test Javascript consecutive newlines
+    js_code_newlines = "let x = 1;\n\n\n\nlet y = 2;\n"
+    assert ContextCompressor.compress_code(js_code_newlines, "javascript") == "let x = 1;\nlet y = 2;"
+
+    # Test stripping leading/trailing whitespace
+    padded_code = "   \n\n  def test():\n    pass  \n\n   "
+    assert ContextCompressor.compress_code(padded_code, "python") == "def test():\n    pass"
+
+    # Test Python without language specified - shouldn't touch comments
+    python_no_lang = "# comment\nprint('hello')  # inline"
+    assert ContextCompressor.compress_code(python_no_lang) == "# comment\nprint('hello')  # inline"
+
+
+def test_code_replacer_direct():
+    import re
+    # Create a mock match object
+    text = "```python\n# comment\nx = 1\n```"
+    match = re.search(r"```(\w*)\n?(.*?)(?:```|$)", text, flags=re.DOTALL)
+
+    result = ContextCompressor.code_replacer(match)
+    assert result == "```python\nx = 1\n```"
+
+
+def test_code_replacer_empty_lang():
+    import re
+    text = "```\n// comment\nx = 1\n```"
+    match = re.search(r"```(\w*)\n?(.*?)(?:```|$)", text, flags=re.DOTALL)
+
+    result = ContextCompressor.code_replacer(match)
+    assert result == "```\n// comment\nx = 1\n```"
+
+
+def test_code_replacer_empty_body():
+    import re
+    text = "```python\n```"
+    match = re.search(r"```(\w*)\n?(.*?)(?:```|$)", text, flags=re.DOTALL)
+
+    result = ContextCompressor.code_replacer(match)
+    assert result == "```python\n\n```"

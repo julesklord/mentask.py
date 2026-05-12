@@ -3,6 +3,7 @@
 ## Development Commands
 
 Use `uv` (uv.lock present):
+
 - **Setup:** `uv sync --all-extras --dev`
 - **All tests:** `uv run pytest` or `tox`
 - **CLI tests:** `uv run pytest tests/cli -q`

@@ -119,36 +119,39 @@ class CLIProvider(BaseProvider):
         prompt_parts.append("\n### YOUR RESPONSE (AGENT):")
         return "\n".join(prompt_parts)
 
-    def _build_cli_args(self, full_prompt: str) -> list[str]:
+    def _build_cli_args(self, full_prompt: str) -> tuple[list[str], bool]:
         """
         Builds the argv list for the subprocess.
-        Uses the resolved binary path and injects non-interactive flags per known CLI.
+        Returns a tuple of (args, uses_stdin).
         """
         binary = self._binary_path or self.cli_command
-        binary_name = Path(binary).stem.lower()  # e.g. 'gemini', 'gemini-cli', 'codex'
+        binary_name = Path(binary).stem.lower()
 
         # Non-interactive / pipe-friendly flags per known CLI tool
-        # These prevent the CLI from opening a TUI or waiting for keyboard input
         _NON_INTERACTIVE_FLAGS: dict[str, list[str]] = {
-            "gemini": ["-p"],           # gemini -p "<prompt>"
-            "gemini-cli": ["-p"],
-            "codex": ["--full-auto", "-q"],  # codex --full-auto -q "<prompt>"
-            "opencode": ["run"],        # opencode run "<prompt>"
-            "claude": ["-p"],           # claude -p "<prompt>"
-            "aider": ["--message"],     # aider --message "<prompt>"
+            "gemini": ["-p", "-"],  # gemini -p - (read from stdin)
+            "gemini-cli": ["-p", "-"],
+            "codex": ["--full-auto", "-q"],  # codex --full-auto -q
+            "opencode": ["run"],
+            "claude": ["-p"],
+            "aider": ["--message"],
         }
 
         if "{prompt}" in self.cli_command:
             # User-defined template: replace {prompt} and split
             cmd_str = self.cli_command.replace("{prompt}", full_prompt)
-            # Replace the first token with the resolved binary path
             parts = shlex.split(cmd_str)
             parts[0] = binary
-            return parts
+            return parts, False
 
-        # Auto-build args from alias
         flags = _NON_INTERACTIVE_FLAGS.get(binary_name, [])
-        return [binary, *flags, full_prompt]
+
+        # Heuristic: if flags include a way to read from stdin, or if prompt is large
+        # We prefer stdin for gemini specifically as we know it supports it via '-p -'
+        if binary_name in ("gemini", "gemini-cli"):
+            return [binary, *flags], True
+
+        return [binary, *flags, full_prompt], False
 
     async def generate_stream(
         self,
@@ -159,73 +162,125 @@ class CLIProvider(BaseProvider):
 
         system_instruction = config.get("system_instruction", "") if config else ""
         full_prompt = self._build_prompt(history, tools_schema, system_instruction)
-        args = self._build_cli_args(full_prompt)
+        args, use_stdin = self._build_cli_args(full_prompt)
 
-        _logger.debug(f"Invoking CLI Bridge: {args[0]} (prompt len: {len(full_prompt)})")
-        _logger.debug(f"Full argv: {args[:3]}...")  # Only log first 3 tokens to avoid dumping the full prompt
+        _logger.debug(f"Invoking CLI Bridge: {args[0]} (prompt len: {len(full_prompt)}, stdin: {use_stdin})")
 
         try:
             process = await asyncio.create_subprocess_exec(
-                *args, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+                *args,
+                stdin=asyncio.subprocess.PIPE if use_stdin else None,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
             )
 
-            if process.stdout is None:
-                raise RuntimeError("Failed to open stdout pipe")
+            if use_stdin and process.stdin:
+                process.stdin.write(full_prompt.encode("utf-8"))
+                await process.stdin.drain()
+                process.stdin.close()
+
+            if process.stdout is None or process.stderr is None:
+                raise RuntimeError("Failed to open process pipes")
 
             json_buffer = ""
             in_json_block = False
 
-            # Read stdout line by line
-            while True:
-                line_bytes = await process.stdout.readline()
-                if not line_bytes:
-                    break
+            async def read_stream(stream, is_stderr=False):
+                nonlocal in_json_block, json_buffer
+                while True:
+                    line_bytes = await stream.readline()
+                    if not line_bytes:
+                        break
 
-                line = line_bytes.decode("utf-8")
+                    try:
+                        line = line_bytes.decode("utf-8", errors="replace")
+                    except Exception:
+                        line = str(line_bytes)
 
-                # Logic to detect JSON blocks even if mixed with text
-                if "```json" in line:
-                    in_json_block = True
-                    json_buffer = ""
-                    # If there's text before the block on the same line, yield it
-                    pre = line.split("```json")[0]
-                    if pre.strip():
-                        yield {"type": "text", "content": pre}
-                    continue
+                    if is_stderr:
+                        # Yield stderr as text but only if it looks like an error or a useful warning
+                        if line.strip():
+                            yield {"type": "text", "content": f"[stderr] {line}"}
+                        continue
 
-                if in_json_block:
-                    if "```" in line:
-                        in_json_block = False
-                        # Handle text after the block
-                        post = line.split("```")[1]
+                    # Logic to detect JSON blocks even if mixed with text
+                    if "```json" in line:
+                        in_json_block = True
+                        json_buffer = ""
+                        pre = line.split("```json")[0]
+                        if pre.strip():
+                            yield {"type": "text", "content": pre}
+                        continue
 
-                        try:
-                            # Clean potential trailing characters from json_buffer
-                            clean_json = json_buffer.strip()
-                            parsed = json.loads(clean_json)
-                            if "mentask_tool_call" in parsed:
-                                tc_data = parsed["mentask_tool_call"]
-                                yield {
-                                    "type": "tool_call",
-                                    "content": ToolCall(
-                                        id=str(uuid.uuid4()),
-                                        name=tc_data.get("name", ""),
-                                        arguments=tc_data.get("arguments", {}),
-                                    ),
-                                }
-                            else:
+                    if in_json_block:
+                        if "```" in line:
+                            in_json_block = False
+                            post = line.split("```")[1]
+                            try:
+                                clean_json = json_buffer.strip()
+                                parsed = json.loads(clean_json)
+                                if "mentask_tool_call" in parsed:
+                                    tc_data = parsed["mentask_tool_call"]
+                                    yield {
+                                        "type": "tool_call",
+                                        "content": ToolCall(
+                                            id=str(uuid.uuid4()),
+                                            name=tc_data.get("name", ""),
+                                            arguments=tc_data.get("arguments", {}),
+                                        ),
+                                    }
+                                else:
+                                    yield {"type": "text", "content": "```json\n" + json_buffer + "\n```"}
+                            except Exception:
                                 yield {"type": "text", "content": "```json\n" + json_buffer + "\n```"}
-                        except Exception:
-                            yield {"type": "text", "content": "```json\n" + json_buffer + "\n```"}
 
-                        if post.strip():
-                            yield {"type": "text", "content": post}
+                            if post.strip():
+                                yield {"type": "text", "content": post}
+                        else:
+                            json_buffer += line
                     else:
-                        json_buffer += line
-                else:
-                    yield {"type": "text", "content": line}
+                        yield {"type": "text", "content": line}
+
+            async def stream_merger():
+                queue = asyncio.Queue()
+
+                async def producer(generator):
+                    try:
+                        async for item in generator:
+                            await queue.put(item)
+                    except Exception as e:
+                        _logger.error(f"Producer error: {e}")
+
+                tasks = [
+                    asyncio.create_task(producer(read_stream(process.stdout, is_stderr=False))),
+                    asyncio.create_task(producer(read_stream(process.stderr, is_stderr=True))),
+                ]
+
+                while True:
+                    if all(t.done() for t in tasks) and queue.empty():
+                        break
+
+                    try:
+                        item = await asyncio.wait_for(queue.get(), timeout=0.05)
+                        yield item
+                    except asyncio.TimeoutError:
+                        continue
+
+            async def stream_merger_wrapper():
+                async for event in stream_merger():
+                    yield event
+
+            async for event in stream_merger_wrapper():
+                yield event
 
             await process.wait()
+
+            if process.returncode != 0:
+                _logger.warning(f"CLI Bridge process exited with code {process.returncode}")
+
+            # Flush json_buffer if we died mid-block
+            if in_json_block and json_buffer:
+                yield {"type": "text", "content": "```json\n" + json_buffer + "\n```"}
 
             # Emit dummy metrics
             yield {"type": "metrics", "content": UsageMetrics(input_tokens=len(full_prompt) // 4, output_tokens=0)}

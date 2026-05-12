@@ -11,6 +11,6 @@ The Agent class is a specialized autonomous coding assistant that:
 - Manages git worktrees and subagents
 """
 
-from .orchestrator import Agent
+from .orchestrator import AgentOrchestrator as Agent
 
 __all__ = ["Agent"]

@@ -5,6 +5,7 @@ from mentask.core.models_hub import hub
 from .base import BaseProvider
 from .cli import CLIProvider
 from .gemini import GeminiProvider
+from .gemma import GemmaProvider
 from .ollama import OllamaProvider
 from .openai import OpenAIProvider
 
@@ -34,7 +35,9 @@ def get_provider(model_name: str, config: Any) -> BaseProvider:
 
     # 2. Local/Specialized detect logic
     if is_local_mode or provider_prefix == "ollama" or "ollama" in pure_model_name.lower():
-        # Force OllamaProvider in local mode
+        # Special case: Gemma through Ollama needs Gemma formatting
+        if "gemma" in pure_model_name.lower():
+            return GemmaProvider(model_name, config)
         return OllamaProvider(model_name, config)
 
     # 3. Consult models.dev Hub for metadata
@@ -48,6 +51,9 @@ def get_provider(model_name: str, config: Any) -> BaseProvider:
     if active_provider_id == "google" or any(x in pure_model_name.lower() for x in ["gemini", "learnlm"]):
         # Special handling for Google Gemini native SDK
         return GeminiProvider(pure_model_name, config)
+
+    if active_provider_id == "gemma" or "gemma" in pure_model_name.lower():
+        return GemmaProvider(pure_model_name, config)
 
     if active_provider_id == "openai":
         # Pure OpenAI (not just compatible)

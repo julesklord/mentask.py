@@ -90,61 +90,8 @@ class OpenAIProvider(BaseProvider):
     ) -> AsyncGenerator[dict[str, Any], None]:
 
         url = f"{self.api_base}/chat/completions"
-        # Prepare messages
-        messages = []
         system_instruction = config.get("system_instruction") if config else None
-
-        if system_instruction:
-            messages.append({"role": "system", "content": system_instruction})
-
-        from ....core.compression import ContextCompressor
-
-        for msg in history:
-            if msg.role == Role.SYSTEM:
-                continue  # Already handled or will be merged
-
-            role = "user" if msg.role == Role.USER else "assistant"
-            if msg.role == Role.TOOL:
-                # OpenAI tool response format
-                tool_msg = {
-                    "role": "tool",
-                    "tool_call_id": msg.metadata.get("tool_call_id"),
-                    "content": ContextCompressor.smart_compress(str(msg.content)),
-                }
-                if msg.metadata.get("tool_name"):
-                    tool_msg["name"] = msg.metadata.get("tool_name")
-                messages.append(tool_msg)
-            else:
-                compressed_content = ContextCompressor.smart_compress(str(msg.content))
-                msg_dict: dict[str, Any] = {
-                    "role": role,
-                    "content": compressed_content,
-                }
-
-                # Check for tool_calls if it's an AssistantMessage
-                from ...schema import AssistantMessage
-
-                if isinstance(msg, AssistantMessage) and msg.tool_calls:
-                    msg_dict["tool_calls"] = [
-                        {
-                            "id": tc.id,
-                            "type": "function",
-                            "function": {
-                                "name": tc.name,
-                                "arguments": json.dumps(tc.arguments)
-                                if isinstance(tc.arguments, dict)
-                                else str(tc.arguments),
-                            },
-                        }
-                        for tc in msg.tool_calls
-                    ]
-                    # Local models/Ollama often expect content to be strictly null if there are tool_calls and no text
-                    if not compressed_content:
-                        msg_dict["content"] = None
-                elif not compressed_content:
-                    msg_dict["content"] = ""
-
-                messages.append(msg_dict)
+        messages = self._build_messages(history, system_instruction)
 
         payload = {
             "model": self.model_name,
@@ -252,6 +199,61 @@ class OpenAIProvider(BaseProvider):
         except Exception as e:
             _logger.error(f"OpenAIProvider error: {e}")
             raise e
+
+    def _build_messages(self, history: list[Message], system_instruction: str | None) -> list[dict[str, Any]]:
+        messages = []
+        if system_instruction:
+            messages.append({"role": "system", "content": system_instruction})
+
+        from ....core.compression import ContextCompressor
+
+        for msg in history:
+            if msg.role == Role.SYSTEM:
+                continue  # Already handled or will be merged
+
+            role = "user" if msg.role == Role.USER else "assistant"
+            if msg.role == Role.TOOL:
+                # OpenAI tool response format
+                tool_msg = {
+                    "role": "tool",
+                    "tool_call_id": msg.metadata.get("tool_call_id"),
+                    "content": ContextCompressor.smart_compress(str(msg.content)),
+                }
+                if msg.metadata.get("tool_name"):
+                    tool_msg["name"] = msg.metadata.get("tool_name")
+                messages.append(tool_msg)
+            else:
+                compressed_content = ContextCompressor.smart_compress(str(msg.content))
+                msg_dict: dict[str, Any] = {
+                    "role": role,
+                    "content": compressed_content,
+                }
+
+                # Check for tool_calls if it's an AssistantMessage
+                from ...schema import AssistantMessage
+
+                if isinstance(msg, AssistantMessage) and msg.tool_calls:
+                    msg_dict["tool_calls"] = [
+                        {
+                            "id": tc.id,
+                            "type": "function",
+                            "function": {
+                                "name": tc.name,
+                                "arguments": json.dumps(tc.arguments)
+                                if isinstance(tc.arguments, dict)
+                                else str(tc.arguments),
+                            },
+                        }
+                        for tc in msg.tool_calls
+                    ]
+                    # Local models/Ollama often expect content to be strictly null if there are tool_calls and no text
+                    if not compressed_content:
+                        msg_dict["content"] = None
+                elif not compressed_content:
+                    msg_dict["content"] = ""
+
+                messages.append(msg_dict)
+        return messages
 
     async def list_models(self) -> list[str]:
         """Returns models from the Hub that are compatible with this provider."""

@@ -78,7 +78,7 @@ class TestWorktreeTools(unittest.TestCase):
         self.assertIn("Success", result)
         self.assertIn("test-branch", result)
         mock_chdir.assert_called()
-        
+
         expected_path = os.path.join("/repo/root", ".mentask/worktrees", "test-branch")
 
         mock_run.assert_any_call(

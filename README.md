@@ -42,8 +42,8 @@ mentask is designed to run locally with a minimal footprint. No cloud nonsense, 
 
 Clone and install in a virtual environment for isolation:
 
-```bash
-git clone https://github.com/julesklord/mentask
+```zsh
+git clone https://github.com/TropicalDevApps/mentask
 cd mentask
 
 # Create and activate virtual environment
@@ -56,7 +56,8 @@ pip install -e ".[dev]"
 
 **Local-First Mode (Offline):**
 Install [Ollama](https://ollama.com) and pull the mandated model:
-```bash
+
+```zsh
 ollama pull qwen3.5
 mentask --local
 ```
@@ -65,7 +66,7 @@ mentask --local
 
 Launch mentask in your project directory:
 
-```bash
+```zsh
 mentask
 ```
 
@@ -78,7 +79,8 @@ On first run, you'll be prompted for your API key. mentask stores all provider k
 Keys are **never written to disk in plaintext**. Your `.mentask/config.json` contains only metadata.
 
 **Bypass the prompt with environment variables:**
-```bash
+
+```zsh
 export GEMINI_API_KEY="your-key-here"
 export OPENAI_API_KEY="your-key-here"
 export DEEPSEEK_API_KEY="your-key-here"
@@ -148,7 +150,6 @@ Scenario: You have 50 CSV files with inconsistent timestamp formats. You need to
 5. **Immediate Execution**: The agent invokes its newly forged tool in the very next turn, as if it always existed.
 
 6. **Persistence**: The tool is saved to `.mentask/plugins/` and remains available for the entire project lifecycle. You didn't write it. You didn't restart anything. The system just evolved.
-
 
 ---
 
@@ -239,38 +240,38 @@ node_tasks -->|"persists"| node_paths
 node_orchestrator -->|"enforces"| node_security
 node_orchestrator -->|"enforces"| node_trust
 
-click node_run_py "https://github.com/julesklord/mentask.py/blob/main/run.py"
-click node_cli_main "https://github.com/julesklord/mentask.py/blob/main/src/mentask/cli/main.py"
-click node_cli_renderer "https://github.com/julesklord/mentask.py/blob/main/src/mentask/cli/gem_renderer.py"
-click node_cli_console "https://github.com/julesklord/mentask.py/blob/main/src/mentask/cli/console.py"
-click node_tui_layout "https://github.com/julesklord/mentask.py/blob/main/src/mentask/cli/tui/layout.py"
-click node_ui_interface "https://github.com/julesklord/mentask.py/blob/main/src/mentask/agent/ui_interface.py"
-click node_orchestrator "https://github.com/julesklord/mentask.py/blob/main/src/mentask/agent/orchestrator.py"
-click node_chat "https://github.com/julesklord/mentask.py/blob/main/src/mentask/agent/chat.py"
-click node_schema "https://github.com/julesklord/mentask.py/blob/main/src/mentask/agent/schema.py"
-click node_commands "https://github.com/julesklord/mentask.py/blob/main/src/mentask/agent/core/commands.py"
-click node_session "https://github.com/julesklord/mentask.py/blob/main/src/mentask/agent/core/session.py"
-click node_context "https://github.com/julesklord/mentask.py/blob/main/src/mentask/agent/core/context.py"
-click node_execution "https://github.com/julesklord/mentask.py/blob/main/src/mentask/agent/core/execution.py"
-click node_provider "https://github.com/julesklord/mentask.py/blob/main/src/mentask/agent/core/provider.py"
-click node_providers "https://github.com/julesklord/mentask.py/tree/main/src/mentask/agent/core/providers"
-click node_tools_registry "https://github.com/julesklord/mentask.py/blob/main/src/mentask/agent/tools_registry.py"
-click node_agent_tools "https://github.com/julesklord/mentask.py/tree/main/src/mentask/agent/tools"
-click node_plugin_loader "https://github.com/julesklord/mentask.py/blob/main/src/mentask/core/plugin_loader.py"
-click node_mcp_manager "https://github.com/julesklord/mentask.py/blob/main/src/mentask/core/mcp_manager.py"
-click node_security "https://github.com/julesklord/mentask.py/blob/main/src/mentask/core/security.py"
-click node_trust "https://github.com/julesklord/mentask.py/blob/main/src/mentask/core/trust_manager.py"
-click node_paths "https://github.com/julesklord/mentask.py/blob/main/src/mentask/core/paths.py"
-click node_config "https://github.com/julesklord/mentask.py/blob/main/src/mentask/core/config_manager.py"
-click node_history "https://github.com/julesklord/mentask.py/blob/main/src/mentask/core/history_manager.py"
-click node_memory "https://github.com/julesklord/mentask.py/blob/main/src/mentask/core/memory_manager.py"
-click node_tasks "https://github.com/julesklord/mentask.py/blob/main/src/mentask/core/tasks_manager.py"
-click node_shell_tools "https://github.com/julesklord/mentask.py/blob/main/src/mentask/tools/system_tools.py"
-click node_file_tools "https://github.com/julesklord/mentask.py/blob/main/src/mentask/tools/file_tools.py"
-click node_search_tools "https://github.com/julesklord/mentask.py/blob/main/src/mentask/tools/search_tools.py"
-click node_web_tools "https://github.com/julesklord/mentask.py/blob/main/src/mentask/tools/web_tools.py"
-click node_memory_tools "https://github.com/julesklord/mentask.py/blob/main/src/mentask/tools/memory_tools.py"
-click node_analysis_tools "https://github.com/julesklord/mentask.py/blob/main/src/mentask/tools/analysis_logic.py"
+click node_run_py "https://github.com/TropicalDevApps/mentask.py/blob/main/run.py"
+click node_cli_main "https://github.com/TropicalDevApps/mentask.py/blob/main/src/mentask/cli/main.py"
+click node_cli_renderer "https://github.com/TropicalDevApps/mentask.py/blob/main/src/mentask/cli/gem_renderer.py"
+click node_cli_console "https://github.com/TropicalDevApps/mentask.py/blob/main/src/mentask/cli/console.py"
+click node_tui_layout "https://github.com/TropicalDevApps/mentask.py/blob/main/src/mentask/cli/tui/layout.py"
+click node_ui_interface "https://github.com/TropicalDevApps/mentask.py/blob/main/src/mentask/agent/ui_interface.py"
+click node_orchestrator "https://github.com/TropicalDevApps/mentask.py/blob/main/src/mentask/agent/orchestrator.py"
+click node_chat "https://github.com/TropicalDevApps/mentask.py/blob/main/src/mentask/agent/chat.py"
+click node_schema "https://github.com/TropicalDevApps/mentask.py/blob/main/src/mentask/agent/schema.py"
+click node_commands "https://github.com/TropicalDevApps/mentask.py/blob/main/src/mentask/agent/core/commands.py"
+click node_session "https://github.com/TropicalDevApps/mentask.py/blob/main/src/mentask/agent/core/session.py"
+click node_context "https://github.com/TropicalDevApps/mentask.py/blob/main/src/mentask/agent/core/context.py"
+click node_execution "https://github.com/TropicalDevApps/mentask.py/blob/main/src/mentask/agent/core/execution.py"
+click node_provider "https://github.com/TropicalDevApps/mentask.py/blob/main/src/mentask/agent/core/provider.py"
+click node_providers "https://github.com/TropicalDevApps/mentask.py/tree/main/src/mentask/agent/core/providers"
+click node_tools_registry "https://github.com/TropicalDevApps/mentask.py/blob/main/src/mentask/agent/tools_registry.py"
+click node_agent_tools "https://github.com/TropicalDevApps/mentask.py/tree/main/src/mentask/agent/tools"
+click node_plugin_loader "https://github.com/TropicalDevApps/mentask.py/blob/main/src/mentask/core/plugin_loader.py"
+click node_mcp_manager "https://github.com/TropicalDevApps/mentask.py/blob/main/src/mentask/core/mcp_manager.py"
+click node_security "https://github.com/TropicalDevApps/mentask.py/blob/main/src/mentask/core/security.py"
+click node_trust "https://github.com/TropicalDevApps/mentask.py/blob/main/src/mentask/core/trust_manager.py"
+click node_paths "https://github.com/TropicalDevApps/mentask.py/blob/main/src/mentask/core/paths.py"
+click node_config "https://github.com/TropicalDevApps/mentask.py/blob/main/src/mentask/core/config_manager.py"
+click node_history "https://github.com/TropicalDevApps/mentask.py/blob/main/src/mentask/core/history_manager.py"
+click node_memory "https://github.com/TropicalDevApps/mentask.py/blob/main/src/mentask/core/memory_manager.py"
+click node_tasks "https://github.com/TropicalDevApps/mentask.py/blob/main/src/mentask/core/tasks_manager.py"
+click node_shell_tools "https://github.com/TropicalDevApps/mentask.py/blob/main/src/mentask/tools/system_tools.py"
+click node_file_tools "https://github.com/TropicalDevApps/mentask.py/blob/main/src/mentask/tools/file_tools.py"
+click node_search_tools "https://github.com/TropicalDevApps/mentask.py/blob/main/src/mentask/tools/search_tools.py"
+click node_web_tools "https://github.com/TropicalDevApps/mentask.py/blob/main/src/mentask/tools/web_tools.py"
+click node_memory_tools "https://github.com/TropicalDevApps/mentask.py/blob/main/src/mentask/tools/memory_tools.py"
+click node_analysis_tools "https://github.com/TropicalDevApps/mentask.py/blob/main/src/mentask/tools/analysis_logic.py"
 
 classDef toneNeutral fill:#f8fafc,stroke:#334155,stroke-width:1.5px,color:#0f172a
 classDef toneBlue fill:#dbeafe,stroke:#2563eb,stroke-width:1.5px,color:#172554
@@ -315,7 +316,7 @@ You have 30 TypeScript files with inconsistent error handling. You want to:
 
 Instead of running 30 separate CLI commands, you give mentask the task once:
 
-```
+```zsh
 > refactor the error handling in src/services/*.ts to use our custom ErrorBoundary
 ```
 
@@ -344,7 +345,7 @@ Need to find "all places where we're querying the user table but not filtering b
 
 You realize mentask needs a tool to batch-convert audio files using FFmpeg. You don't write it manually:
 
-```
+```zsh
 > create a tool that converts audio files in batch using ffmpeg, accepts input_dir, output_format, and bitrate
 ```
 
@@ -362,9 +363,10 @@ You now have a reusable audio batch conversion tool. Forever.
 
 MentAsk can act as the execution "body" while being orchestrated by another CLI agent (the "brain"). If you have tools like `gemini-cli` or `codex` installed in your PATH, MentAsk will auto-discover them.
 
-```bash
+```zsh
 /model cli:gemini-cli
 ```
+
 MentAsk will seamlessly translate its internal tool schemas and conversation history into a structured prompt, execute the external binary, and parse its standard output to execute tools on its behalf.
 
 ---
@@ -462,7 +464,8 @@ Total dependency tree (including transitive): ~35 packages. A minimal agent shou
 ### Q: What happens if the API key expires?
 
 **A:** mentask will throw an auth error. Update your key via:
-```bash
+
+```zsh
 keyring set mentask gemini_api_key
 # Then paste your new key
 ```
@@ -496,6 +499,7 @@ Or export a new key and restart mentask.
 ### Q: Can mentask write tests for my code?
 
 **A:** Yes. Just ask:
+
 ```
 > write unit tests for src/utils.ts using jest
 ```
@@ -519,7 +523,7 @@ We accept contributions. Fork, branch, submit a PR. Code style is enforced via R
 ### Development Setup
 
 ```bash
-git clone https://github.com/julesklord/mentask
+git clone https://github.com/TropicalDevApps/mentask
 cd mentask
 python -m venv .venv
 source .venv/bin/activate

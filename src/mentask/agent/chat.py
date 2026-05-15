@@ -211,7 +211,7 @@ class ChatAgent:
         registry.register(SubagentTool(self.session, registry, self.config))
         registry.register(EnterWorktreeTool())
         registry.register(ExitWorktreeTool())
-        
+
         from .tools.git_tools import GitCommitTool
         registry.register(GitCommitTool())
 

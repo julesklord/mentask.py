@@ -71,19 +71,19 @@ class PromptEngine:
             return res
 
         # Line 1: Metadata segments as pills (The "Status Line")
-        res.append("\n ") 
+        res.append("\n ")
         for seg in segments:
             content = f"{seg.icon} {seg.text}" if seg.icon else seg.text
             res.append(self.L_HALF, style=seg.bg or seg.fg)
             res.append(f" {content} ", style=f"{seg.fg} on {seg.bg}" if seg.bg else seg.fg)
             res.append(self.R_HALF, style=seg.bg or seg.fg)
             res.append(" ")
-        
+
         # Line 2: Contextual prompt (The "Action Line")
         cwd = os.getcwd()
         home = os.path.expanduser("~")
         display_path = cwd.replace(home, "~")
-        
+
         res.append("\n ")
         if self.use_nerdfonts:
             res.append("", style=self.theme.brand_primary)
@@ -92,7 +92,7 @@ class PromptEngine:
             res.append(" ❯ ", style=f"bold {self.theme.brand_primary}")
         else:
             res.append(f"{display_path} ❯ ", style=f"bold {self.theme.brand_primary}")
-        
+
         return res
 
     def _render_rainbow(self, segments: list[PromptSegment]) -> Text:
@@ -237,7 +237,7 @@ class PromptEngine:
     def build_status_bar(self, model_id: str, mode: str, tokens: int, cost: float) -> Text:
         """Builds a professional status bar for the bottom of the screen."""
         res = Text()
-        
+
         # 1. Brand + Mode
         res.append(f" {self.L_HALF}", style=self.theme.brand_primary)
         brand_icon = "󱚣 " if self.use_nerdfonts else ""
@@ -267,9 +267,9 @@ class PromptEngine:
         res.append(f"{self.L_HALF}", style=self.theme.cost_badge)
         cost_icon = "󰠠 " if self.use_nerdfonts else ""
         res.append(f" {cost_icon}{cost_str} ", style=f"black on {self.theme.cost_badge}")
-        
+
         token_icon = " 󰮄 " if self.use_nerdfonts else " T:"
         res.append(f"{token_icon}{tokens:,} ", style=f"black on {self.theme.cost_badge}")
         res.append(f"{self.R_HALF}", style=self.theme.cost_badge)
-        
+
         return res

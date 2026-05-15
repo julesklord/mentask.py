@@ -2,11 +2,7 @@
 Tests for tools/analysis_logic.py
 """
 
-import os
-import subprocess
 from unittest.mock import MagicMock, patch
-
-import pytest
 
 from mentask.tools.analysis_logic import (
     detect_project_blueprint,

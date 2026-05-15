@@ -99,12 +99,12 @@ class MemoryManager:
                 try:
                     with open(path, encoding="utf-8") as f:
                         content = f.read(1000)
-                    
+
                     lines = [l.strip() for l in content.splitlines() if l.strip()]
                     desc = ""
                     if lines:
                         desc = lines[1] if lines[0].startswith("#") and len(lines) > 1 else lines[0]
-                    
+
                     entry = {
                         "filename": file,
                         "path": path,

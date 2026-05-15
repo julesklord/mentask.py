@@ -1,6 +1,6 @@
 import logging
 from collections.abc import AsyncGenerator
-from typing import Any, Union
+from typing import Any
 
 from ..schema import AssistantMessage, Message
 
@@ -60,9 +60,7 @@ class ProviderManager:
                     elif chunk_type == "metrics":
                         assistant_msg.usage = chunk_content
                         yield {"type": "metrics", "usage": chunk_content}
-                    elif chunk_type == "error":
-                        yield chunk
-                    elif chunk_type == "info":
+                    elif chunk_type == "error" or chunk_type == "info":
                         yield chunk
                     else:
                         _logger.warning(f"Unknown chunk type: {chunk_type}")

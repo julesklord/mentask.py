@@ -1,11 +1,10 @@
-import json
 import os
-import sys
 from unittest.mock import mock_open, patch
 
 import pytest
 
-from mentask.core.i18n import Translator, _, get_current_language, _i18n
+from mentask.core.i18n import Translator, _, _i18n, get_current_language
+
 
 @pytest.fixture
 def fresh_translator():
@@ -32,17 +31,15 @@ class TestTranslatorLanguageDetection:
 
     @patch.dict(os.environ, {}, clear=True)
     def test_detect_language_locale_getlocale(self):
-        with patch("sys.version_info", (3, 11)):
-            with patch("locale.getlocale", return_value=("it_IT", "cp1252")):
-                t = Translator()
-                assert t._detect_language() == "it"
+        with patch("sys.version_info", (3, 11)), patch("locale.getlocale", return_value=("it_IT", "cp1252")):
+            t = Translator()
+            assert t._detect_language() == "it"
 
     @patch.dict(os.environ, {}, clear=True)
     def test_detect_language_locale_getlocale_none(self):
-        with patch("sys.version_info", (3, 11)):
-            with patch("locale.getlocale", return_value=(None, None)):
-                t = Translator()
-                assert t._detect_language() == "en"
+        with patch("sys.version_info", (3, 11)), patch("locale.getlocale", return_value=(None, None)):
+            t = Translator()
+            assert t._detect_language() == "en"
 
     @patch.dict(os.environ, {}, clear=True)
     def test_detect_language_fallback_on_exception(self):

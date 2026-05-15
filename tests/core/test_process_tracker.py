@@ -1,8 +1,10 @@
 import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
 
 from mentask.core.process_tracker import ProcessTracker
+
 
 @pytest.fixture(autouse=True)
 def reset_tracker():

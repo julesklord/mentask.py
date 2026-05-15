@@ -1,7 +1,8 @@
 import argparse
+import os
 import subprocess
 import sys
-import os
+
 
 def is_git_repo(path):
     """Check if the given path is inside a git repository."""
@@ -47,7 +48,7 @@ def main():
         )
         # Return diff text to stdout
         sys.stdout.write(result.stdout)
-        
+
     except subprocess.CalledProcessError as e:
         print(f"Git diff failed with exit code {e.returncode}:", file=sys.stderr)
         print(e.stderr, file=sys.stderr)

@@ -36,7 +36,29 @@ class HistoryManager:
 
         self.console = ui_console or console
         self.history_dir = get_history_dir()
+        self._migrate_old_history()
         self.current_session_id = str(uuid.uuid4())
+
+    @staticmethod
+    def _migrate_old_history():
+        """Moves session files from old ``history/`` dir to ``sessions/``."""
+        from .paths import get_config_dir
+
+        config = Path(get_config_dir())
+        old_dir = config / "history"
+        new_dir = config / "sessions"
+        if old_dir.is_dir() and new_dir.is_dir() and old_dir != new_dir:
+            import shutil
+
+            for f in old_dir.glob("*.json"):
+                dest = new_dir / f.name
+                if not dest.exists():
+                    shutil.move(str(f), str(dest))
+                    _logger.debug("Migrated %s → %s", f.name, dest)
+            try:
+                old_dir.rmdir()
+            except OSError:
+                _logger.debug("old history/ dir not empty, left in place")
 
     def _deserialize_message(self, data: dict) -> Message | None:
         try:
@@ -53,11 +75,13 @@ class HistoryManager:
                 tool_calls = []
                 for tc in raw_calls:
                     if isinstance(tc, dict) and "name" in tc:
-                        tool_calls.append(ToolCall(
-                            id=tc.get("id", ""),
-                            name=tc["name"],
-                            arguments=tc.get("arguments", {}),
-                        ))
+                        tool_calls.append(
+                            ToolCall(
+                                id=tc.get("id", ""),
+                                name=tc["name"],
+                                arguments=tc.get("arguments", {}),
+                            )
+                        )
                 return AssistantMessage(
                     role=Role(role_str),
                     content=content,

@@ -26,7 +26,7 @@ def test_workspace_isolation_flow(mock_env):
 
     # 1. Initially, it should point to global home
     assert get_config_dir() == home / ".mentask"
-    assert get_history_dir() == str(home / ".mentask" / "history")
+    assert get_history_dir() == str(home / ".mentask" / "sessions")
 
     # 2. Simulate workspace initialization (creating .mentask in project)
     local_ws = project / ".mentask"
@@ -39,7 +39,7 @@ def test_workspace_isolation_flow(mock_env):
 
     # 4. History and other paths should follow the project root
     active_history = get_history_dir()
-    assert active_history == str(local_ws / "history")
+    assert active_history == str(local_ws / "sessions")
     assert "project" in active_history.lower()
 
 

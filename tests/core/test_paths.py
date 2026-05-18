@@ -75,7 +75,7 @@ def test_get_history_dir(mock_home):
     assert isinstance(history_dir, str)
 
     # Check that the path is correct
-    expected_path = str(mock_home / ".mentask" / "history")
+    expected_path = str(mock_home / ".mentask" / "sessions")
     assert history_dir == expected_path
 
 

@@ -6,9 +6,11 @@ user preferences, and project-specific context.
 """
 
 import os
+from pathlib import Path
 from typing import Any
 
 from .paths import (
+    ensure_dir,
     get_config_dir,
     get_local_knowledge_path,
     get_memory_path,
@@ -53,7 +55,7 @@ class MemoryManager:
         self.path_global = get_memory_path()
         self.path_local = get_local_knowledge_path()
         self.memory_dir = os.path.join(get_config_dir(), "memories")
-        os.makedirs(self.memory_dir, exist_ok=True)
+        ensure_dir(Path(self.memory_dir))
 
         self._ensure_memory_exists(self.path_global, DEFAULT_MEMORY_TEMPLATE)
 
@@ -64,7 +66,7 @@ class MemoryManager:
 
             project_name = os.path.basename(os.getcwd())
             content = template.format(date=datetime.now().strftime("%Y-%m-%d"), project=project_name)
-            os.makedirs(os.path.dirname(path), exist_ok=True)
+            ensure_dir(Path(os.path.dirname(path)))
             with open(path, "w", encoding="utf-8") as f:
                 f.write(content)
 

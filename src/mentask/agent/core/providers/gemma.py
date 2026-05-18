@@ -3,16 +3,17 @@ import logging
 from typing import Any
 
 from ...schema import Message, Role
-from .openai import OpenAIProvider
+from .ollama import OllamaProvider
 
 _logger = logging.getLogger("mentask")
 
 
-class GemmaProvider(OpenAIProvider):
+class GemmaProvider(OllamaProvider):
     """
     Provider specialized for Google's Gemma models (2, 3, 4).
     Gemma models are sensitive to role naming and often prefer system instructions
     to be part of the first user message or use a specific 'developer' role.
+    Runs through Ollama by default when prefixed with ollama:.
     """
 
     def __init__(self, model_name: str, config: Any):

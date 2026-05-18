@@ -516,6 +516,17 @@ The agent will generate test files, validate syntax, and run them. If tests fail
 
 ---
 
+## Documentation
+
+For a comprehensive technical breakdown, architectural ADRs, and operational guides, visit our official **[Wiki](docs/wiki/index.md)**.
+
+*   **[Installation Guide](docs/wiki/Installation_and_Setup.md)**
+*   **[CLI Reference](docs/wiki/Usage.md)**
+*   **[Technical Architecture](docs/wiki/Architecture.md)**
+*   **[Security Standard](docs/wiki/security.md)**
+
+---
+
 ## Contributing
 
 We accept contributions. Fork, branch, submit a PR. Code style is enforced via Ruff.

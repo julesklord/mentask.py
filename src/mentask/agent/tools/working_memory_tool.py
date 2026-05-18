@@ -30,7 +30,8 @@ class WorkingMemoryTool(BaseTool):
         self.memory_file = Path.cwd() / ".mentask" / "working_memory.json"
 
     def _ensure_dir(self):
-        self.memory_file.parent.mkdir(parents=True, exist_ok=True)
+        from mentask.core.paths import ensure_dir
+        ensure_dir(self.memory_file.parent)
 
     def _read_memory(self) -> dict:
         if self.memory_file.exists():

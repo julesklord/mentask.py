@@ -258,15 +258,18 @@ def discover_cli_models(cli_key: str, force: bool = False) -> list[str]:
     return models
 
 
-def discover_ollama_models(endpoint: str = "http://localhost:11434/api/tags") -> list[str]:
-    """Returns a list of model names from a local Ollama instance."""
-    try:
-        req = urllib.request.Request(endpoint)
-        with urllib.request.urlopen(req, timeout=2) as resp:
-            data = json.load(resp)
-            return [m["name"] for m in data.get("models", []) if m.get("name")]
-    except Exception:
-        return []
+def discover_ollama_models(config: Any = None, endpoint: str | None = None) -> list[str]:
+    """
+    Returns a list of model names from a local Ollama instance.
+
+    Accepts an optional *config* object (uses ``ollama_endpoint`` setting
+    with WSL fallback) or an explicit *endpoint* URL.  If neither is given,
+    falls back to ``http://localhost:11434/api/tags``.
+    """
+    from mentask.core.ollama_endpoint import fetch_ollama_models, resolve_base_url
+
+    base = endpoint.removesuffix("/api/tags").rstrip("/") if endpoint is not None else resolve_base_url(config)
+    return fetch_ollama_models(base)
 
 
 def get_installed_cli_binaries() -> list[str]:

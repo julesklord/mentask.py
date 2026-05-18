@@ -72,7 +72,6 @@ class ModelsHub:
                 json.dump(
                     {"last_sync": self._last_sync, "models_data": self._data},
                     f,
-                    indent=2,
                     ensure_ascii=False,
                 )
         except Exception as e:
@@ -115,41 +114,41 @@ class ModelsHub:
             self._flat_models[m_id] = m_info
             self._flat_models[f"ollama:{m_id}"] = m_info
 
-    def sync_local(self, endpoint: str = "http://localhost:11434/api/tags"):
-        """Discovers models from a local Ollama instance and local CLI binaries."""
-        _logger.debug(f"Syncing local models from {endpoint}...")
+    def sync_local(self, config: Any = None, endpoint: str | None = None):
+        """
+        Discovers models from a local Ollama instance and local CLI binaries.
+
+        Accepts an optional *config* to resolve the endpoint from settings
+        (with WSL fallback) or an explicit *endpoint* URL.
+        """
+        from mentask.core.ollama_endpoint import fetch_ollama_models, resolve_base_url
+
+        base = endpoint.removesuffix("/api/tags").rstrip("/") if endpoint is not None else resolve_base_url(config)
+
+        _logger.debug("Syncing local models from %s...", base)
 
         new_local = {}
 
         # 1. Discover Ollama models
         try:
-            req = urllib.request.Request(endpoint)
-            with urllib.request.urlopen(req, timeout=2) as response:
-                data = json.load(response)
-                models = data.get("models", [])
+            models = fetch_ollama_models(base)
 
-                for m in models:
-                    name = m.get("name")
-                    if not name:
-                        continue
-
-                    # Create a minimalist model info for the hub
-                    new_local[name] = {
-                        "id": name,
-                        "name": f"{name} (Local)",
-                        "cost": {"input": 0, "output": 0},
-                        "limit": {"context": 32768, "output": 4096},  # Conservative defaults
-                        "_provider": {
-                            "id": "ollama",
-                            "name": "Ollama (Local)",
-                            "api": endpoint.replace("/api/tags", "/v1"),
-                            "env": [],
-                        },
-                    }
+            for name in models:
+                new_local[name] = {
+                    "id": name,
+                    "name": f"{name} (Local)",
+                    "cost": {"input": 0, "output": 0},
+                    "limit": {"context": 32768, "output": 4096},
+                    "_provider": {
+                        "id": "ollama",
+                        "name": "Ollama (Local)",
+                        "api": f"{base}/v1",
+                        "env": [],
+                    },
+                }
 
                 _logger.info(f"Discovered {len(new_local)} local Ollama models.")
         except Exception as e:
-            # Silent fail for local discovery (e.g. Ollama not running)
             _logger.debug(f"Local Ollama sync skipped: {e}")
 
         # 2. Discover supported CLI agents

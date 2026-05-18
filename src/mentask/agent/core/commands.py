@@ -810,7 +810,6 @@ You are acting as the "Brain" for Mentask. When you see `### MENTASK CORE PROTOC
         cwd = Path.cwd()
         local_dir = cwd / ".mentask"
         local_settings = local_dir / "settings.json"
-        local_sessions = local_dir / "sessions"
         local_identity = local_dir / "identity.md"
         if local_settings.exists():
             return f"[warning]Local project already initialized:[/warning] [dim]{local_dir}[/dim]"
@@ -819,8 +818,9 @@ You are acting as the "Brain" for Mentask. When you see `### MENTASK CORE PROTOC
             import asyncio
 
             def _write_files():
-                local_dir.mkdir(parents=True, exist_ok=True)
-                local_sessions.mkdir(exist_ok=True)
+                from mentask.core.paths import ensure_dir
+
+                ensure_dir(local_dir)
                 with open(local_settings, "w", encoding="utf-8") as f:
                     json.dump(settings_data, f, indent=4)
                 if not local_identity.exists():

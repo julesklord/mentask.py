@@ -108,9 +108,10 @@ class ChatAgent:
 
         # Security: If local_mode is active, ensure we didn't accidentally pick a cloud provider
         if self.local_mode:
+            from .core.providers.gemma import GemmaProvider
             from .core.providers.ollama import OllamaProvider
 
-            if not isinstance(self.session.provider, OllamaProvider):
+            if not isinstance(self.session.provider, (OllamaProvider, GemmaProvider)):
                 # Re-initialize session with forced local provider if factory failed
                 self.model_name = "ollama:qwen3.5"
                 self.session = SessionManager(self.config, self.model_name)
@@ -213,6 +214,7 @@ class ChatAgent:
         registry.register(ExitWorktreeTool())
 
         from .tools.git_tools import GitCommitTool
+
         registry.register(GitCommitTool())
 
         if self.config.settings.get("web_search_enabled", True):
@@ -399,7 +401,8 @@ class ChatAgent:
             default=False,
         )
         if should_init:
-            local_ws.mkdir(parents=True, exist_ok=True)
+            from mentask.core.paths import ensure_dir
+            ensure_dir(local_ws)
             console.print(f"[success][✓] Workspace initialized at {local_ws}[/success]")
 
     async def _ensure_trust(self, renderer: Any) -> None:
@@ -464,6 +467,7 @@ class ChatAgent:
             self.messages.extend([message for message in history_data if message.role != Role.SYSTEM])
             # Restore model from last AssistantMessage if available
             from .schema import AssistantMessage
+
             for msg in reversed(history_data):
                 if isinstance(msg, AssistantMessage) and getattr(msg, "model", ""):
                     saved_model = msg.model
@@ -687,7 +691,7 @@ class ChatAgent:
 
         try:
             # 4a. Cloud models from models.dev (via hub)
-            hub.sync_local()
+            hub.sync_local(config=self.config)
             for m_id, m_info in hub._flat_models.items():
                 p_id = m_info.get("_provider", {}).get("id", "")
                 if self.local_mode and p_id not in ("ollama", "cli"):
@@ -708,7 +712,7 @@ class ChatAgent:
 
         try:
             # 4b. Ollama local models → 'ollama:<model>'
-            ollama_models = await asyncio.to_thread(discover_ollama_models)
+            ollama_models = await asyncio.to_thread(discover_ollama_models, self.config)
             for m in ollama_models:
                 model_options[f"ollama:{m}"] = None
                 model_options[m] = None
@@ -737,7 +741,6 @@ class ChatAgent:
             self._completer.options = new_completer.options
         else:
             self._completer = new_completer
-
 
         return self._completer
 
@@ -819,7 +822,7 @@ class ChatAgent:
             if self.local_mode:
                 from ..core.models_hub import hub
 
-                hub.sync_local()
+                hub.sync_local(config=self.config)
                 if not hub._local_models:
                     renderer.console.print("\n  [bold yellow]󰚌 OLLAMA NOT DETECTED[/bold yellow]")
                     renderer.console.print(
